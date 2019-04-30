@@ -1,7 +1,8 @@
-function extractlfptrial_m1dbs(animal, dateofexp, block, condition, therapy)
+function extractlfptrial_m1dbs(animal, dateofexp, block, condition, therapy, badtrials)
 % stop at the therapy part, Apr.26 2019, should identify this next week
 %
 %% extract trials for m1 and dbs lfp
+%  now just can be used in Windows
 %    
 %  Example usage: 
 %          extractlfptrial_m1dbs('Jo', '10-13-15', 8 ,'normal')      
@@ -10,6 +11,12 @@ function extractlfptrial_m1dbs(animal, dateofexp, block, condition, therapy)
 %   dateofexp: format ('10-13-15', 'mm-dd-yy')
 %   condition: 'normal', 'mild' or 'moderate'
 %   therapy:   ''
+%   badtrials: the trials will not be used.
+%   load files:
+%       lfpfile_utah  -   Z:\Animals\Jo\Recording\Processed\DataDatabase\Jo_101315\LFP\Block-8\Jo_CR1_DT1_101315_Block-8_LFPch*.nex 
+%       lfpfile_dbs   -   Z:\Animals\Jo\Recording\Processed\DataDatabase\Jo_101315\DBSLFP\Block-8\Jo_CR1_DT1_101315_Block-8_DBSLFP.nex
+%       mafile        -   Z:\Animals\Jo\Recording\Processed\DataDatabase\Jo_101315\Block-8\Jo20151013_8_cleaned_MA_SingleTargetKluver_Analyze2.mat
+%               
 %
 %  saveto: 
 %       H:\My Drive\NMRC_umn\Projects\FunctionalConnectivityAnalysis\data\Jo\
@@ -29,6 +36,12 @@ function extractlfptrial_m1dbs(animal, dateofexp, block, condition, therapy)
 
 
 %% start from here
+if strcmp(condition, 'normal') % no therapy for normal condition
+    therapy = [];
+end
+
+
+%% file path setup
 chn_lfputah = 96;
 if ispc
     drivedir = 'Z:';
@@ -46,8 +59,9 @@ addpath(genpath(fullfile(pwd, 'toolbox', 'NexMatlabFiles')))
 %% MA data
 % read the MA data
 mafolder = fullfile(onedaypath, ['Block-' num2str(block)]); % Z:\Animals\Jo\Recording\Processed\DataDatabase\Jo_101315\Block-8
-filename = [animal datestr(dateofexp, 'yyyymmdd') '_' num2str(block) '_cleaned_MA_SingleTargetKluver_Analyze2.mat'];
-load(fullfile(mafolder, filename)) % load SingleTargetKluverMAData
+mafile = dir(fullfile(mafolder, '*SingleTargetKluver_Analyze2.mat'));
+%filename = [animal datestr(dateofexp, 'yyyymmdd') '_' num2str(block) '_cleaned_MA_SingleTargetKluver_Analyze2.mat'];
+load(fullfile(mafolder, mafile.name)) % load SingleTargetKluverMAData
 fs_ma = SingleTargetKluverMAData.SR;
 
 % time indices for target onset, reach onset, touch screen, return and mouth
@@ -58,6 +72,7 @@ ReturnTimeix = round(SingleTargetKluverMAData.ReturnTimeix); % not integer in .R
 MouthTimeix = SingleTargetKluverMAData.MouthTimeix;
 
 timeixtbl_ma = [table(TargetTime) table(ReachTimeix) table(TouchTimeix) table(ReturnTimeix) table(MouthTimeix)];
+timeixtbl_ma(badtrials,:) = []; % remove the bad reaching trials
 clear TargetTime ReachTimeix TouchTimeix ReturnTimeix MouthTimeix
 
 %% utah array  LFP data
@@ -99,7 +114,7 @@ for chni = 1 : chn_lfputah
         idxtbl_lfptrialutah = timeixtbl_lfputah;
         idxtbl_lfptrialutah{:,:} = idxtbl_lfptrialutah{:,:} - repmat(idx_str,[1, n_timevars]);
         
-        clear timeixtbl_lfputah n_bef n_aft maxlen
+        clear timeixtbl_lfputah n_bef n_aft 
     else
         if fs_lfputah ~= nexlfp_utah.contvars{i_lfp}.ADFrequency % samping frequency is different
             disp(['sampling frequency is different for chni = ' num2str(chni)]);
@@ -109,11 +124,26 @@ for chni = 1 : chn_lfputah
     
     % extract each trial for lfp utah data
     for triali = 1: n_trial
+        if size(nexlfp_utah.contvars{i_lfp}.data,1) < idx_end(triali)
+            disp(mafile)
+            disp(filename)
+            disp(fs_ma)
+            disp(fs_lfputah)
+            disp(['idx in ma' num2str(timeixtbl_ma{1,end})])
+            disp(size(nexlfp_utah.contvars{i_lfp}.data,1))
+            disp(idx_end(triali))
+            disp(['maxlen  = ' num2str(maxlen)])
+        end
         lfptrial_utah(chni, :, triali) = nexlfp_utah.contvars{i_lfp}.data(idx_str(triali):idx_end(triali));
+        
     end
     
     clear filename i_lfp 
 end
+
+% disp play the max trial number
+disp(folder_lfputah)
+disp(['max trial time is ' num2str(maxlen/fs_lfputah)]);
 
 %% DBSLFP data
 % read DBSLFP in nex file
@@ -168,7 +198,10 @@ clear varName
 
 clear convars filename idx_stn idx_gp 
 
+if ispc % windows
+end
+
 savedir = 'H:\My Drive\NMRC_umn\Projects\FunctionalConnectivityAnalysis\data';
 savepath = fullfile(savedir, animal);
-savefile = [animal '_lfptrial_m1dbs_' condition '_' datestr(dateofexp,'mmddyy') '_block' num2str(block) '.mat'];
+savefile = [animal '_lfptrial_m1dbs_' condition therapy '_' datestr(dateofexp,'mmddyy') '_block' num2str(block) '.mat'];
 save(fullfile(savepath, savefile), 'lfptrial_utah', 'lfptrial_dbs', 'idxtbl_lfptrial', 'chantbl_dbs')
