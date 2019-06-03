@@ -9,15 +9,21 @@ import numpy as np
 
 def ciCoherence(signal1, signal2):
 	"""
-		corrected imaginary coherency
+		corrected imaginary coherency function
+		
 		ref:
 			C. J. Stam, G. Nolte, and A. Daffertshofer, “Phase lag index: assessment of functional connectivity 
 			from multi channel EEG and MEG with diminished bias from common sources,” 
 			Human brain mapping, vol. 28, no. 11, pp. 1178–1193, 2007.
-		@ parameter 
+		
+		Args: 
 			signal1, signal2: n_epochs * n_times
-		@ return
-			iCOH: imaginary coherence value for signal1 and signal 2 (1 * n_times) 
+		
+		Kwargs:
+			none
+
+		Returns:
+			iCOH: corrected imaginary coherence value for signal1 and signal 2 (1 * n_times) 
 	"""
 	analytic_s1 = hilbert(signal1, axis = 1) # analytic_s1: : n_epochs * n_times
 	analytic_s2 = hilbert(signal2, axis = 1) # analytic_s2: : n_epochs * n_times
@@ -34,6 +40,7 @@ def ciCoherence(signal1, signal2):
 	G_22 = np.mean(np.square(A2), axis = 0) # expect_A2Square : 1 * n_times
 
 	C = np.divide(G_12, np.sqrt(np.multiply(G_11, G_22)))
+    iCOH = np.imag(C)
 	ciCOH = np.divide(np.imag(C), np.sqrt(1-np.square(np.real(C))))
 
 	return ciCOH

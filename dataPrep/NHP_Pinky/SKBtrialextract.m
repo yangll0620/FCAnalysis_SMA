@@ -1,6 +1,6 @@
 function SKBtrialextract(animal)
 % SKBtrialextract extract all the single Kluver board task for animal
-% 
+%  down sampled to 500Hz
 % saveto: 
 %      ['H:\My Drive\NMRC_umn\Projects\FunctionalConnectivityAnalysis\data\' animal]
 % 
@@ -11,8 +11,17 @@ function SKBtrialextract(animal)
 if nargin < 1
     animal = 'Pinky';
 end
+
 googlesheetlink_Pinky = '1Mn_HcvWt4FVc2kcvRMbDj5jQffyGNrwppNOK6T5W-zI';
-savedir = 'H:\My Drive\NMRC_umn\Projects\FunctionalConnectivityAnalysis\data';
+
+if isunix
+    googledrive = fullfile('/home', 'lingling', 'yang7003@umn.edu');
+end
+
+if ispc
+    googledrive = fullfile('H:', 'My Drive');
+end
+savedir = fullfile(googledrive, 'NMRC_umn','Projects','FCAnalysis','data');
 savefolder = fullfile(savedir, animal);
 if ~exist(savefolder)
     mkdir(savefolder)
@@ -28,7 +37,7 @@ taskdisps = {'Kluver', 'Single Target Kluver', 'SKB', 'Single KB'  ...
     'single', 'single Kluver', 'single-target Kluver'};% different discriptions of Kluver board task
 
 %% add util path
-addpath(genpath(fullfile(fileparts(fileparts(pwd)), 'util')))
+addpath(genpath(fullfile('..','..', 'util')))
 
 %% get the google sheet
 googlesheetdata = GetGoogleSpreadsheet(googlesheetlink_Pinky);
@@ -41,8 +50,14 @@ coli_date =  col_match(varname_date);
 strs_taskdispinsheet = googlesheetdata(1:end,coli_taskdisp);
 row_match = @(strpattern) find(cell2mat(cellfun(@(x) ~isempty(find(strcmp(strpattern, x))), strs_taskdispinsheet, 'UniformOutput',0)));
 idxrow = row_match(taskdisps); % the index for one particular task
-driver = 'Y:';
-processedfolder = fullfile(driver, 'Animals2', 'Pinky', 'Recording', 'Processed', 'DataDatabase');
+if ispc
+    NMRCdriver = 'Y:';
+end
+if isunix
+    NMRCdriver = '/run/user/1000/gvfs/ftp:host=nmrc_dserver1.local/root2';
+end
+      
+processedfolder = fullfile(NMRCdriver, 'Animals2', 'Pinky', 'Recording', 'Processed', 'DataDatabase');
 
 % check whether date of that day has been processed
 for i = 1:length(idxrow)
@@ -86,13 +101,32 @@ for i = 1:length(idxrow)
         
         disp(['The ' num2str(i) 'th, rowi = ' num2str(rowi) ': ' animal '_' datestr(dateofexp, 'mmddyy') '-Block' num2str(block)])
         
-        [lfptrial_cortical, lfptrial_dbs,idxtbl_event ,chantbl_cortical, chantbl_dbs] = extractlfptrial(onedaypath, block);
+        [lfptrial_cortical, lfptrial_dbs,fs,idxtbl_event ,chantbl_cortical, chantbl_dbs] = extractlfptrial(onedaypath, block);
         
         % save
         condition = parsePDCondtion_Pinky(dateofexp);
         savefile = [animal '_lfptrial_' condition '_' datestr(dateofexp,'mmddyy') '_block' num2str(block) '.mat'];
-        save(fullfile(savefolder, savefile), 'lfptrial_cortical', 'lfptrial_dbs','idxtbl_event','chantbl_cortical', 'chantbl_dbs')
+        save(fullfile(savefolder, savefile), 'lfptrial_cortical', 'lfptrial_dbs','fs','idxtbl_event','chantbl_cortical', 'chantbl_dbs')
 
     end
 end
+end
 
+function lfptrial_new = resample_lfptrial(lfptrial, fs_now, fs_new)
+% Input:
+%   lfptrial: chns * ntemporal * ntrials
+[chns, ~, ntrials] = size(lfptrial);
+for chni = 1: chns
+    for triali = 1: ntrials
+        x = squeeze(lfptrial(chni,:, triali));
+        y = resample(x,fs_new,fs_now);
+        
+        if chni == 1 && triali == 1
+            ntemporal_new = length(y);
+            lfptrial_new = zeros(nchns, ntemporal_new ,ntrial);
+        end
+        lfptrial_new(chni, :, triali) =y;
+        clear tmp y
+    end
+end
+end

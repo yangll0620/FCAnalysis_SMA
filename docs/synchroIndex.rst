@@ -2,7 +2,7 @@
 Synchronization Index
 **********************
 
-.. automodule:: connectivityAnalysis
+.. automodule:: connAnalyTool
 
-.. automodule:: connectivityAnalysis.synchronization_index
+.. automodule:: connAnalyTool.synchronization_index
    :members:

@@ -1,4 +1,4 @@
-function [lfptrial_cortical, lfptrial_dbs, idxtbl_event,chantbl_cortical, chantbl_dbs] = extractlfptrial(onedaypath, block)
+function [lfptrial_cortical, lfptrial_dbs, fs ,idxtbl_event,chantbl_cortical, chantbl_dbs] = extractlfptrial(onedaypath, block)
 % extractlfptrial extract trials for LFP data
 %  [lfptrial_cortical, lfptrial_dbs, chantbl_cortical, chantbl_dbs] =
 %  extractlfptrial(onedaypath, block) return extracted LFP trials of 
@@ -12,7 +12,7 @@ function [lfptrial_cortical, lfptrial_dbs, idxtbl_event,chantbl_cortical, chantb
 %
 %  Inputs:
 %   onedaypath:  'Y:\Animals2\Pinky\Recording\Processed\DataDatabase\Pinky_071417'
-%   block: 1            
+%   block: 1  
 %          
 %  Outputs:
 %   lfptrial_cortical: lfp trials of cortical/subcortical channels 
@@ -20,6 +20,8 @@ function [lfptrial_cortical, lfptrial_dbs, idxtbl_event,chantbl_cortical, chantb
 %
 %        lfptrial_dbs: lfp trials of dbs channels
 %                      [chn_dbs * n_temporal * n_trial]
+%        fs: sample rate
+%
 %
 %        idxtbl_event: a table describes the index for events of target onset,
 %                      reach onset, touch screen, return and mouth in the trial
@@ -41,7 +43,7 @@ function [lfptrial_cortical, lfptrial_dbs, idxtbl_event,chantbl_cortical, chantb
 
 
 %% add NexMatablFiles path
-addpath(genpath(fullfile(fileparts(fileparts(pwd)), 'toolbox', 'NexMatlabFiles')))
+addpath(genpath(fullfile('..', '..', 'toolbox', 'NexMatlabFiles')))
 
 %% MA data
 % read the MA data
@@ -165,7 +167,7 @@ end
 % extract all the values of field 'name' in nexlfp_dbs.convars
 convars = cell2mat(nexlfp_dbs.contvars);
 name_list = extractfield(cell2mat(nexlfp_dbs.contvars),'name');
-% extract the indices representing STN and GP data in nexlfp_dbs.contvars (33×1 struct array)
+% extract the indices representing STN and GP data in nexlfp_dbs.contvars (33ï¿½1 struct array)
 idx_stn = find(contains(name_list, 'RAW_DBS_STNch')); %
 idx_gp = find(contains(name_list, 'RAW_DBS_GPch'));
 idx_dbs = [idx_stn idx_gp];
@@ -181,7 +183,7 @@ if(convars(idx_dbs(1)).ADFrequency ~= fs_lfpcortical)
     disp(['the sampling frequency of dbs is not the same as the lfp stored in separate channels'])
     return
 end
-fs_lfpdbs = fs_lfpcortical; % sampling frequency for dbs channels
+fs = fs_lfpcortical; % sampling frequency for dbs channels
 idxtbl_event = idxtbl_lfptrial_cortical;
 clear idxtbl_lfptrial_sepchn
 
