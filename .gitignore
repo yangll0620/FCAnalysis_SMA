@@ -2,3 +2,5 @@ toolbox/NexMatlabFiles
 docs/_build
 funcsmayref/
 .ipynb_checkpoints/
+
+*.asv

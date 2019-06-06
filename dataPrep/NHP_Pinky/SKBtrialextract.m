@@ -2,7 +2,7 @@ function SKBtrialextract(animal)
 % SKBtrialextract extract all the single Kluver board task for animal
 %  down sampled to 500Hz
 % saveto: 
-%      ['H:\My Drive\NMRC_umn\Projects\FunctionalConnectivityAnalysis\data\' animal]
+%      ['\NMRC_umn\Projects\FunctionalConnectivityAnalysis\data\' animal]
 % 
 % Description:
 %     deal with the PD condition ('normal', 'mild', or 'moderate')
@@ -19,10 +19,10 @@ if isunix
 end
 
 if ispc
-    googledrive = fullfile('H:', 'My Drive');
+    googledrive = fullfile('F:', 'yang7003@umn');
 end
 savedir = fullfile(googledrive, 'NMRC_umn','Projects','FCAnalysis','data');
-savefolder = fullfile(savedir, animal);
+savefolder = fullfile(savedir, animal, 'epochs');
 if ~exist(savefolder)
     mkdir(savefolder)
 end

@@ -1,0 +1,22 @@
+% describe the process of preparing data
+
+% (1) SKBtrialextract('Pinky'):
+%       store extracted epochs in \Projects\FCAnalysis\data\Pinky\epochs
+%
+%       post process: 
+%           a. (manually) delete the file not having lfptrial_cortical as the
+%                         variable is larger than 2G because of the very long execuation time (Pinky_050417-Block3)
+%   
+%           b. checktrials(): can check the sample rate, channel numbers
+%           across all the files
+%
+% (2) epochs_reorg():
+%       downsample the data to 1.017e+03 (fs for some files from (1) are 1.017e+03 or 3.0518+03) and extract the used channels 
+%
+%       store the reorganized extracted epochs to .\Pinky\epochs_reorg
+%       using data in Pinky\epochs
+%       
+%
+% (3) band filtered
+
+
