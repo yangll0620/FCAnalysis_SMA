@@ -11,6 +11,6 @@ docs/_build/
 
 ### Python ###
 # Byte-compiled / optimized / DLL files
-__pycache__/
+__pycache__
 
 *.asv
