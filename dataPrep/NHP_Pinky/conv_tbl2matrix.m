@@ -1,6 +1,6 @@
-function conv_tbl2struct(animal)
+function conv_tbl2matrix(animal)
 % python could not read the matlab table objects, thus convert the
-% idxtbl_event to idxstruct_event and idx_columns
+% idxtbl_event to idxevent and idx_varNames
 
 if nargin < 1
     animal = 'Pinky';
