@@ -1,6 +1,16 @@
+# actual toolboxs
 toolbox/NexMatlabFiles
-docs/_build
+
 funcsmayref/
-.ipynb_checkpoints/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Sphinx documentation
+docs/_build/
+
+### Python ###
+# Byte-compiled / optimized / DLL files
+__pycache__/
 
 *.asv
