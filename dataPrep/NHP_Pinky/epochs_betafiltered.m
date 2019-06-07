@@ -15,8 +15,7 @@ end
 folder = fullfile(googledrive, 'NMRC_umn','Projects','FCAnalysis','data', animal);
 loadfolder = fullfile(folder,'epochs_reorg');
 savefolder = fullfile(folder, 'epochs_reorg_filtered');
-files = extractfield(dir(loa
-dfolder),'name');
+files = extractfield(dir(loadfolder),'name');
 beta1 = [13 16];
 beta2 = [16 20];
 beta3 = [20 30];
