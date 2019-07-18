@@ -14,6 +14,7 @@ function condition = parsePDCondtion_Pinky(dateofexp)
 period_normal = [datenum(datetime('2017-01-13')) datenum(datetime('2017-04-28'))];
 period_mild = [datenum(datetime('2017-9-12')) datenum(datetime('2017-11-27'))];
 period_moderate = [datenum(datetime('2018-5-18')) datenum(datetime('2018-12-05'))];
+
 % identify the NHP PD condition
 if dateofexp >= period_moderate(1)
     condition = 'moderate';
