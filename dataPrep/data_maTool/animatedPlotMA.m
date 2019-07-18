@@ -1,6 +1,6 @@
-function animatedPlotMA(file_matrc, joint_name)
+function animatedPlotMA(file_matrc, marker_name)
 % Functionality: 
-%       show the trajectory of MA data for joint_name in file_matrc file
+%       show the trajectory of MA data for marker_name in file_matrc file
 %
 %   Example:
 %       file_matrc = fullfile('F:','yang7003@umn','NMRC_umn', 'Projects', ...
@@ -11,24 +11,24 @@ function animatedPlotMA(file_matrc, joint_name)
 %
 %   Input:
 %       file_matrc:  the full path of cleaned ma .trc file
-%       joint_name:  the name of one joint, can be found in .trc file (i.e. 'Shoulder', 'Elbow', 'Wrist' (default), 'Kluver')
+%       marker_name:  the name of one marker, can be found in .trc file (i.e. 'Shoulder', 'Elbow', 'Wrist' (default), 'Kluver')
 %
 %
 if nargin < 2
-    joint_name = 'Wrist';
+    marker_name = 'Wrist';
 end
 
-% extract ma_joint: the time stamp and x, y, z coordinates of joint, ntimes * 4 (timestamp, x, y, z)
-ma_joint = madata_joint(file_matrc, joint_name); 
+% extract ma_marker: the time stamp and x, y, z coordinates of marker, ntimes * 4 (timestamp, x, y, z)
+ma_marker = mamarkerdata_extract(file_matrc, marker_name); 
 
 % show the trajectory
-x = ma_joint(:,2);
-y = ma_joint(:,3);
-z = ma_joint(:,4);
+x = ma_marker(:,2);
+y = ma_marker(:,3);
+z = ma_marker(:,4);
 
 % decide the figure x, y, z lims
-v_max = ceil(max(ma_joint(:,2:4),[],1));
-v_min = floor(min(ma_joint(:,2:4),[],1));
+v_max = ceil(max(ma_marker(:,2:4),[],1));
+v_min = floor(min(ma_marker(:,2:4),[],1));
 x_minmax = [v_min(1), v_max(1)];
 y_minmax = [v_min(2), v_max(2)];
 z_minmax = [v_min(3), v_max(3)];
