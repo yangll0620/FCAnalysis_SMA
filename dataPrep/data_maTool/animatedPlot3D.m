@@ -18,7 +18,6 @@ y_minmax = [v_min(2), v_max(2)];
 z_minmax = [v_min(3), v_max(3)];
 
 % Animated Plot in 3D
-close all
 figure
 curve = animatedline('LineWidth', 2);
 xv_lim = x_minmax;

@@ -1,5 +1,5 @@
 function [idx_opennings, idx_closings, dis_rel] = idx_opencloseboard_extract(ma_kluver, fs)
-%% extract the indix of openning and closing kluver board for each trial
+%% extract all the indices of openning and closing kluver board for each trial
 %   openning: define as the time point the kluver board changing from close to open   
 %   closing: define as the time point the kluver board changing from open to close
 %
@@ -19,10 +19,11 @@ function [idx_opennings, idx_closings, dis_rel] = idx_opencloseboard_extract(ma_
 %       5. extract the index where from close to open and from open to close 
 %
 %   Input:
-%       ma_kluver: x, y, z coordinates of marker, ntimes * 3 (x, y, z)
+%       ma_kluver: timestamps and x, y, z coordinates of marker, ntimes * 4 (timestamp, x, y, z)
+%       fs: the sampling rate
 %
 %   Output:
-%       idx_opennings, idx_closings: indices of openning and closing kluver
+%       idx_opennings, idx_closings: all indices of openning and closing kluver
 %       board for each trial (1 * ntrials)
 %
 %       dis_rel: relative distance of marker kluver respect to the stpoint_kluver
