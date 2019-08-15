@@ -40,7 +40,6 @@ def ciCoherence(signal1, signal2):
 	G_22 = np.mean(np.square(A2), axis = 0) # expect_A2Square : 1 * n_times
 
 	C = np.divide(G_12, np.sqrt(np.multiply(G_11, G_22)))
-    iCOH = np.imag(C)
 	ciCOH = np.divide(np.imag(C), np.sqrt(1-np.square(np.real(C))))
 
 	return ciCOH

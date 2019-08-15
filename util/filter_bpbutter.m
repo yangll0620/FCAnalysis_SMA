@@ -13,12 +13,9 @@ if nargin < 3
     Fs = 512;
 end
 
-w_bpf = fre/(Fs/2);
 
 % the approximate order n
 % normalized frequency band edges Wn
-% F is a vector of band edge frequencies in Hz
-F = [fre(1)*0.9 fre fre(2)*1.05];
 data = double(data);
 resp = 'bandpassiir'; % Response type
 designMethod = 'butter'; % Design method

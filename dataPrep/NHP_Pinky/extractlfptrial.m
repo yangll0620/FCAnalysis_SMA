@@ -1,9 +1,11 @@
-function [lfptrial_cortical, lfptrial_dbs, fs ,idxtbl_event,chantbl_cortical, chantbl_dbs] = extractlfptrial(onedaypath, block)
+function [lfptrial_cortical, lfptrial_dbs, fs ,idxeventtbl, chantbl_dbs] = extractlfptrial(onedaypath, block)
 % extractlfptrial extract trials for LFP data
+%
 %  [lfptrial_cortical, lfptrial_dbs, chantbl_cortical, chantbl_dbs] =
 %  extractlfptrial(onedaypath, block) return extracted LFP trials of 
 %  cortical/subcortical data, dbs data, cortical/subcortical channel
-%  information and dbs channel information tables
+%  information and dbs channel information tables, only trials with both
+%  good reach and return are returned
 %    
 %  Example usage: 
 %   onedaypath = 'Y:\Animals2\Pinky\Recording\Processed\DataDatabase\Pinky_013017'
@@ -12,7 +14,13 @@ function [lfptrial_cortical, lfptrial_dbs, fs ,idxtbl_event,chantbl_cortical, ch
 %
 %  Inputs:
 %   onedaypath:  'Y:\Animals2\Pinky\Recording\Processed\DataDatabase\Pinky_071417'
-%   block: 1  
+%   block: 1 
+%
+%  Used files:
+%       lfpfile_utah  -   Y:\Animals2\Pinky\Recording\Processed\DataDatabase\Pinky_071417\LFP\Block-1\Pinky_GrayMatter_eyetracking_DT1_071417_Block-1_LFPch*.nex 
+%       lfpfile_dbs   -   Y:\Animals2\Pinky\Recording\Processed\DataDatabase\Pinky_071417\DBSLFP\Block-1\Pinky_GrayMatter_eyetracking_DT1_071417_Block-1_DBSLFP.nex
+%       mafile        -   Y:\Animals2\Pinky\Recording\Processed\DataDatabase\Pinky_071417\Block-1\pinky_20170714_1_cleaned_MA_SingleTargetKluver_Analyze2.mat  
+
 %          
 %  Outputs:
 %   lfptrial_cortical: lfp trials of cortical/subcortical channels 
@@ -23,10 +31,8 @@ function [lfptrial_cortical, lfptrial_dbs, fs ,idxtbl_event,chantbl_cortical, ch
 %        fs: sample rate
 %
 %
-%        idxtbl_event: a table describes the index for events of target onset,
+%        idxeventtbl: a table describes the index for events of target onset,
 %                      reach onset, touch screen, return and mouth in the trial
-%
-%    chantbl_cortical:  a table describes each cortical channel information
 %
 %         chantbl_dbs:  a table describes each dbs channel information
 %
@@ -35,12 +41,6 @@ function [lfptrial_cortical, lfptrial_dbs, fs ,idxtbl_event,chantbl_cortical, ch
 %       t_bef: the time before target on (default: t_bef = 1)
 %       t_aft: the time after mouth (default: t_aft = 0.5)
 %       one trailis from 't_target - t_bef'  to 't_mouth - t_after'
-%   load files:
-%       lfpfile_utah  -   Y:\Animals2\Pinky\Recording\Processed\DataDatabase\Pinky_071417\LFP\Block-1\Pinky_GrayMatter_eyetracking_DT1_071417_Block-1_LFPch*.nex 
-%       lfpfile_dbs   -   Y:\Animals2\Pinky\Recording\Processed\DataDatabase\Pinky_071417\DBSLFP\Block-1\Pinky_GrayMatter_eyetracking_DT1_071417_Block-1_DBSLFP.nex
-%       mafile        -   Y:\Animals2\Pinky\Recording\Processed\DataDatabase\Pinky_071417\Block-1\pinky_20170714_1_cleaned_MA_SingleTargetKluver_Analyze2.mat
-%   
-
 
 %% add NexMatablFiles path
 addpath(genpath(fullfile('..', '..', 'toolbox', 'NexMatlabFiles')))
@@ -49,6 +49,17 @@ addpath(genpath(fullfile('..', '..', 'toolbox', 'NexMatlabFiles')))
 % read the MA data
 mafolder = fullfile(onedaypath, ['Block-' num2str(block)]); %  'Y:\Animals2\Pinky\Recording\Processed\DataDatabase\Pinky_071417\Block-1'
 mafilestruct = dir(fullfile(mafolder, '*SingleTargetKluver_Analyze2.mat'));
+% ma file does not exist
+if isempty(mafilestruct)
+    disp([mafolder 'has no Analyze2.mat'])
+    
+    lfptrial_cortical = []; lfptrial_dbs = [];
+    fs = [];
+    idxeventtbl = []; chantbl_dbs = [];
+    
+    return;
+end
+
 load(fullfile(mafolder, mafilestruct.name)); % load SingleTargetKluverMAData
 fs_ma = SingleTargetKluverMAData.SR;
 
@@ -60,6 +71,29 @@ ReturnTimeix = round(SingleTargetKluverMAData.ReturnTimeix); % not integer in .R
 MouthTimeix = SingleTargetKluverMAData.MouthTimeix;
 
 timeixtbl_ma = [table(TargetTime) table(ReachTimeix) table(TouchTimeix) table(ReturnTimeix) table(MouthTimeix)];
+
+% the tag of good reach trials
+tag_goodreach = SingleTargetKluverMAData.goodix_reach;
+% the tag of good return trials
+tag_goodreturn = SingleTargetKluverMAData.goodix_return;
+
+% extract indices of good trials (both have good reach and return)
+idx_goodtrials = find(tag_goodreach .* tag_goodreturn == 1);
+
+% if no good trials can be found
+if isempty(idx_goodtrials)
+    disp(['no good trials are found in ' mafilestruct.name])
+    
+    lfptrial_cortical = []; lfptrial_dbs = []; 
+    fs = []; 
+    idxeventtbl = []; chantbl_dbs = [];
+    
+    return;
+end
+
+%
+timeixtbl_ma = timeixtbl_ma(idx_goodtrials,:);
+
 clear TargetTime ReachTimeix TouchTimeix ReturnTimeix MouthTimeix
 
 %% LFP data 
@@ -68,6 +102,18 @@ t_bef = 1; t_aft = 0.5; % t_bef: time before target on, t_aft: time after mouth
 
 % read each channel data in  LFP data to lfpdata (initialized when is the 1st channel)
 folder_cortical = fullfile(onedaypath, 'LFP', ['Block-' num2str(block)]);
+
+% files in folder_cortical are empty
+if isempty(dir(folder_cortical))
+    disp([folder_cortical ' has no files!'])
+    
+    lfptrial_cortical = []; lfptrial_dbs = []; 
+    fs = []; 
+    idxeventtbl = []; chantbl_dbs = [];
+    
+    return;
+end
+
 filenames = extractfield(dir(folder_cortical), 'name');
 match = cellfun(@(x) ~isempty(regexp(x, ['LFPch[0-9]*.nex'],'match')),filenames,'UniformOutput',false); % match channel file
 match = cell2mat(match);
@@ -145,14 +191,24 @@ for i = 1: length(chns)
     clear filename i_lfp 
 end
 
-% chantbl_cortical: a table describes each cortical channel information
-chantbl_cortical = table(chns);
-% disp play the max trial number
+% disp play the max trial time
 disp(['max trial time is ' num2str(maxlen/fs_lfpcortical)]);
 
 %% DBSLFP data
 % read DBSLFP in nex file
 dbslfpfolder = fullfile(onedaypath, 'DBSLFP', ['Block-' num2str(block)]); % 'Y:\Animals2\Pinky\Recording\Processed\DataDatabase\Pinky_071417\DBSLFP\Block-1'
+
+% dbs file does not exist
+if isempty(dir(fullfile(dbslfpfolder, '*_GrayMatter*DBSLFP.nex')))
+    disp([dbslfpfolder, '*_GrayMatter*DBSLFP.nex files do not exit!'])
+    
+    lfptrial_cortical = []; lfptrial_dbs = [];
+    fs = [];
+    idxeventtbl = []; chantbl_dbs = [];
+    
+    return;
+end
+
 filenames = extractfield(dir(fullfile(dbslfpfolder, '*_GrayMatter*DBSLFP.nex')),'name'); % Pinky_GrayMatter_eyetracking_DT1_071417_Block-1_DBSLFP.nex
 match = cellfun(@(x) ~isempty(regexp(x, ['[A-Z, a-z, 0-9]*.nex'],'match')),filenames,'UniformOutput',false); % match channel file
 match = cell2mat(match);
@@ -184,7 +240,7 @@ if(convars(idx_dbs(1)).ADFrequency ~= fs_lfpcortical)
     return
 end
 fs = fs_lfpcortical; % sampling frequency for dbs channels
-idxtbl_event = idxtbl_lfptrial_cortical;
+idxeventtbl = idxtbl_lfptrial_cortical;
 clear idxtbl_lfptrial_sepchn
 
 % extract each trial for lfp dbs data
