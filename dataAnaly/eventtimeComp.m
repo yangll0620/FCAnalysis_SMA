@@ -47,7 +47,7 @@ dataArray = textscan(fid, formatSpec, 'Delimiter', delimiter, 'TextType', 'strin
 fclose(fid);
 
 % Create output variable
-pinkyskbinf = table(dataArray{1:end-1}, 'VariableNames', varNames);
+pinkyskbinf = table(dataArray{1:end-1}, 'VariableNames',varNames(1:6));
 
 % Clear temporary variables
 clearvars inffolder inffilename inffile delimiter startRow formatSpec fid dataArray varNames;
@@ -92,7 +92,7 @@ for i = 1 :  length(validskbs)
         'VariableNames', {'filenames', 'returntime'});
     
     % append return/return time to normal or mild condition
-    if strcmp(parsePDCondtion_Pinky(dateofexp), 'normal')
+    if strcmp(parsePDCondition_Pinky(dateofexp), 'normal')
         % ---- normal condition
         
         % reach time to normal state
@@ -110,7 +110,7 @@ for i = 1 :  length(validskbs)
         end
         
     else
-        if strcmp(parsePDCondtion_Pinky(dateofexp), 'mild')
+        if strcmp(parsePDCondition_Pinky(dateofexp), 'mild')
             % --- mild condition
             
             % append reach time to mild state
@@ -137,9 +137,53 @@ end
 
 
 %% statistical analysis
+stdi = 2; 
+
+% +-2std, 95% normalreachtime
+normalreachtime = tbl_normalreachtime{:,2};
+
+valmin = mean(normalreachtime)-stdi* std(normalreachtime);
+valmax = mean(normalreachtime)+stdi* std(normalreachtime);
+idx = find(normalreachtime>=valmin & normalreachtime <=valmax);
+
+tbl_normalreachtime = tbl_normalreachtime(idx,:);
+clear valmin valmax idx normalreachtime;
+
+
+% +-2std, 95% mildreachtime
+mildreachtime = tbl_mildreachtime{:,2};
+
+valmin = mean(mildreachtime)-stdi* std(mildreachtime);
+valmax = mean(mildreachtime)+stdi* std(mildreachtime);
+idx = find(mildreachtime>=valmin & mildreachtime <=valmax);
+
+tbl_mildreachtime = tbl_mildreachtime(idx,:);
+clear valmin valmax idx mildreachtime;
 
 % reach time statistical analysis
 [~,p_reachtime, ~, ~] = ttest2(tbl_normalreachtime{:,2}, tbl_mildreachtime{:,2});
+
+
+% +-2std, 95% normalreturntime
+normalreturntime = tbl_normalreturntime{:,2};
+
+valmin = mean(normalreturntime)-stdi* std(normalreturntime);
+valmax = mean(normalreturntime)+stdi* std(normalreturntime);
+idx = find(normalreturntime>=valmin & normalreturntime <=valmax);
+
+tbl_normalreturntime = tbl_normalreturntime(idx,:);
+clear valmin valmax idx normalreturntime;
+
+
+% +-2std, 95% mildreturntime
+mildreturntime = tbl_mildreturntime{:,2};
+
+valmin = mean(mildreturntime)-stdi* std(mildreturntime);
+valmax = mean(mildreturntime)+stdi* std(mildreturntime);
+idx = find(mildreturntime>=valmin & mildreturntime <=valmax);
+
+tbl_mildreturntime = tbl_mildreturntime(idx,:);
+clear valmin valmax idx mildreturntime;
 
 % return time statistical analysis
 [~,p_returntime, ~, ~] = ttest2(tbl_normalreturntime{:,2}, tbl_mildreturntime{:,2});

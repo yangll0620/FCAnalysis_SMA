@@ -6,11 +6,14 @@ function STKtrialextract()
 % /Projects/FCAnalysis/metainf/pinky_skbinf.csv and only extract the
 % dateset marked 'Yes' in column YingUsed
 
-% 2.  down sample files with sample rate 3.0518e+3 to 1.073e+3
+% 2. Inputs:
+%       preprocessed MA data in root2:\Animals2\Pinky\Recording\Processed\DataDatabase
+
+% 3.  down sample files with sample rate 3.0518e+3 to 1.073e+3
 %
-% 3. extract 1-96 utah array, 101-132 gray matter and 1-14 dbs channels
+% 4. extract 1-96 utah array, 101-132 gray matter and 1-14 dbs channels
 %
-% 4. STK(stk) is short for Single Target Kluver
+% 5. STK(stk) is short for Single Target Kluver
 %
 % saveto: 
 %      ['\NMRC_umn\Projects\FunctionalConnectivityAnalysis\data\' animal]

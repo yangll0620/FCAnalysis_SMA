@@ -1,4 +1,4 @@
-function condition = parsePDCondtion_Pinky(dateofexp)
+function condition = parsePDCondition_Pinky(dateofexp)
 % parsePDCondtion_Pinky parse the PD condition
 %   parsePDCondtion_Pinky() return the PD condition (string) of one
 %   particular experimental date

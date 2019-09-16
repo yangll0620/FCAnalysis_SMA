@@ -8,7 +8,7 @@ function [lfptrial_cortical, lfptrial_dbs, fs ,idxeventtbl, chantbl_dbs] = extra
 %  good reach and return are returned
 %    
 %  Example usage: 
-%   onedaypath = 'Y:\Animals2\Pinky\Recording\Processed\DataDatabase\Pinky_013017'
+%   onedaypath = 'root2\Animals2\Pinky\Recording\Processed\DataDatabase\Pinky_013017'
 %   block = 1
 %   [lfptrial_cortical, lfptrial_dbs, idxtbl_event,chantbl_cortical, chantbl_dbs] = extractlfptrial(onedaypath, block)      
 %
