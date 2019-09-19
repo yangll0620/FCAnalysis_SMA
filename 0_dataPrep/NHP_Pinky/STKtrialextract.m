@@ -11,7 +11,8 @@ function STKtrialextract()
 
 % 3.  down sample files with sample rate 3.0518e+3 to 1.073e+3
 %
-% 4. extract 1-96 utah array, 101-132 gray matter and 1-14 dbs channels
+% 4. extract 1-96 utah array from LFP\Block-1\*_LFPchn1-chn96.nex and 101-132 gray matter LFP\Block-1\*_LFPchn101-chn132.nex and 1-14 dbs
+% channels from DBSLFP\Block-1\*_DBSLFP.nex
 %
 % 5. STK(stk) is short for Single Target Kluver
 %
