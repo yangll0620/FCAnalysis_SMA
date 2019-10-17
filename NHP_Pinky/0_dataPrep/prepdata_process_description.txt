@@ -1,7 +1,7 @@
 % describe the process of preparing data
 
 % (1) STKtrialextract('Pinky'):
-%       store extracted epochs in \Projects\FCAnalysis\data\Pinky\epochs
+%       store extracted epochs in \exp\pipeline\0_dataPrep\epochs
 %
 %       
 %

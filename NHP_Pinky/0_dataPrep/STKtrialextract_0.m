@@ -1,9 +1,8 @@
-function STKtrialextract()
+function STKtrialextract_0()
 % STKtrialextract extract all the single Kluver board task marked by Ying
 % for Pinky
 %  
-% 1.  read the stk information in
-% /Projects/FCAnalysis/metainf/pinky_skbinf.csv and only extract the
+% 1.  read the stk information in data/pinky_skbinf.csv and only extract the
 % dateset marked 'Yes' in column YingUsed
 
 % 2. Inputs:
@@ -13,11 +12,18 @@ function STKtrialextract()
 %
 % 4. extract 1-96 utah array from LFP\Block-1\*_LFPchn1-chn96.nex and 101-132 gray matter LFP\Block-1\*_LFPchn101-chn132.nex and 1-14 dbs
 % channels from DBSLFP\Block-1\*_DBSLFP.nex
+% 
+% 5. corrected to lfp in base line[-200 0]ms, 0 respects to target onset
 %
-% 5. STK(stk) is short for Single Target Kluver
+% 6. STK(stk) is short for Single Target Kluver
+%
+% 7. trial length = max(each trial length) + t_bef + t_aft
+%       t_bef: the time before target on (default: t_bef = 1)
+%       t_aft: the time after mouth (default: t_aft = 0.5)
+%       one trailis from 't_target - t_bef'  to 't_mouth - t_after'
 %
 % saveto: 
-%      ['\NMRC_umn\Projects\FunctionalConnectivityAnalysis\data\' animal]
+%      code file corresponding folder
 % 
 % Description:
 %     deal with the PD condition ('normal', 'mild', or 'moderate')
@@ -28,17 +34,21 @@ animal = 'Pinky';
 % channel number of M1, SMA, DBS
 nM1 = 96; nSMA = 32; nDBS = 14;
 
-%% add util path
-addpath(genpath(fullfile('..','..','util')))
+%% codecorresfolder
+% the full path and the name of code file without suffix
+codefilepath = mfilename('fullpath');
+
+codefolder = codefilepath(1: strfind(codefilepath, 'code') + length('code')-1);
+
+% add util path
+addpath(genpath(fullfile(codefolder,'util')));
 
 %% various folders extraction
 % set google drive and root2 for unix and windows separately
 if isunix
-    NMRC_umn = fullfile('/home', 'lingling', 'yang7003@umn.edu', 'NMRC_umn');
     root2 = '/home/lingling/root2';
 else
     if ispc
-        NMRC_umn = fullfile('F:', 'yang7003@umn', 'NMRC_umn');
         root2 = 'Y:';
     end
 end
@@ -46,15 +56,14 @@ end
 % folder for the processed data in root2
 folder_root2processed = fullfile(root2, 'Animals2', animal, 'Recording', 'Processed', 'DataDatabase');
 
-% folder for FCAnalysis project /NMRC_umn/Projects/FCAnalysis
-folder_FCProject = fullfile(NMRC_umn, 'Projects','FCAnalysis');
 
 %% Read stk information in /Projects/FCAnalysis/metainf/pinky_skbinf.csv
 % metainf folder for animal
-folder_metainf = fullfile(folder_FCProject, 'metainf', animal);
+[datafolder, ~, ~, ~] = exp_subfolders();
+
 % metainf file name
 inffilename = 'pinky_skbinf.csv';
-inffile = fullfile(folder_metainf, inffilename);
+inffile = fullfile(datafolder, inffilename);
 
 % open the text file
 fid = fopen(inffile, 'r');
@@ -84,11 +93,8 @@ clearvars folder_metainf inffilename inffile delimiter startRow formatSpec fid d
 
 %% extract all STK trials
 % folder for segmented epochs
-folder_epochsdata = fullfile(folder_FCProject, 'data', animal,'epochs');
-% create folder for segmented epochs if not exist
-if exist(folder_epochsdata, 'file') ~= 7
-    mkdir(folder_epochsdata)
-end
+codecorresfolder = code_corresfolder(codefilepath, true);
+folder_epochsdata = codecorresfolder;
 
 % extract the dateofexp, bkma, and bktdt of used STK trials which are marked
 % 'Yes' in the column 'YingUsed'
@@ -122,7 +128,8 @@ for i = 1 : length(validskbs)
 
     % down sample to around 250 Hz
     [lfptrial_down, fs_down] = lfp_downsample(lfptrial, fs);
-    lfptrial = lfptrial_down;
+    lfptrial = lfptrial_down; 
+    
     
     % get the event time inf and channel inf
     [idxeventtbl, chantbl] = chaninf(idxeventtbl, chantbl_dbs, nM1, nSMA, nDBS, fs, fs_down);
@@ -135,7 +142,14 @@ for i = 1 : length(validskbs)
     fs = fs_down;
     
     % get the pd conditioon for the date of experiment
-    pdcondition = parsePDCondtion_Pinky(dateofexp);
+    pdcondition = parsePDCondition_Pinky(dateofexp);
+    
+    % corrected to lfp in base line[-200 0]ms, 0 respects to target onset
+    idx_target = unique(idxeventtbl.TargetTime);
+    [~, ntemporals, ~] = size(lfptrial);
+    lfptrial_base = repmat(mean(lfptrial(:,idx_target- round(fs * 0.2):idx_target,:), 2), 1,ntemporals,1);
+    lfptrial = lfptrial - lfptrial_base;
+    
     
     % name of the saved file 
     savefile = [animal '_lfptrial_' pdcondition '_' datestr(dateofexp,'mmddyy') '_bktdt' num2str(bktdt) '.mat'];
@@ -147,6 +161,7 @@ for i = 1 : length(validskbs)
     clear dateofexp bktdt onedaypath pdcondition savefile; 
     clear lfptrial_cortical lfptrial_dbs fs idxtbl_event chantbl_dbs  chn_cortical lfptrial;
     clear lfptrial_down fs_down idxtbl_event chantbl idxevent idxevent_varNames;  
+    clear idx_target ntemporals lfptrial_base;
 end
 end
 
@@ -163,7 +178,10 @@ function [lfptrial_down, fs_down] = lfp_downsample(lfptrial, fs)
 %       fs_down: the new down sampling rate
 %       
 
-load('unifs.mat','unifs');
+load('unifs.mat','fstable');
+
+unifs = sort(unique(fstable.fs));
+
 n1 = 4;
 n12 = round(unifs(2)/unifs(1));
 
