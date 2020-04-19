@@ -1,5 +1,5 @@
 function [file_prefix, chns] = nexfilenames_infolder(nexfolder)
-%% return the the prefix of file and chns
+%% return the prefix of file and chns
 
 
 %%

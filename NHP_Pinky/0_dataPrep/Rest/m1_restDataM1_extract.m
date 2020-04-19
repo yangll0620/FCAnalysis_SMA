@@ -1,5 +1,5 @@
-function restDataextract_1()
-%% extract the rest data with same dateofexp in skb analysis
+function m1_restDataM1_extract()
+%% extract the rest data with same dateofexp in skb analysis in Area M1
 
 %% codecorresfolder
 % the full path and the name of code file without suffix
@@ -49,7 +49,6 @@ for i = 1: length(data_restinf.dateofexp)
     
     if ~isempty(lfpdata)
         
-        if fs == 
         
         savefile = fullfile(savefolder, [savefilename_prefix  pdcond '_' ...
             datestr(dateofexp, 'mmddyy') '_bktdt' num2str(bktdt)]);

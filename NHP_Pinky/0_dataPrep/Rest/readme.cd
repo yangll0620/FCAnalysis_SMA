@@ -1,0 +1,12 @@
+m1_restData_extract.m: 
+	extract the rest data with same dateofexp in skb analysis in all recorded Channel
+
+
+
+m1_restData_preprocessing.m:
+	preprocessing rest data recorded
+
+		Processing steps as follows:
+       		down sampled to 500Hz
+       		common average reference inside one area
+       		band pass filtered in frebp = [1 100];

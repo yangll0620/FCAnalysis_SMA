@@ -1,6 +1,5 @@
-function STKtrialextract_0()
-% STKtrialextract extract all the single Kluver board task marked by Ying
-% for Pinky
+function m0_STKtrialextract()
+% STKtrialextract extract all the single Kluver board task marked by Ying for Pinky
 %  
 % 1.  read the stk information in data/pinky_skbinf.csv and only extract the
 % dateset marked 'Yes' in column YingUsed
@@ -62,7 +61,7 @@ folder_root2processed = fullfile(root2, 'Animals2', animal, 'Recording', 'Proces
 [datafolder, ~, ~, ~] = exp_subfolders();
 
 % metainf file name
-inffilename = 'pinky_skbinf.csv';
+inffilename = 'Pinky_STK_markedbyYing.csv';
 inffile = fullfile(datafolder, inffilename);
 
 % open the text file
@@ -72,7 +71,7 @@ fid = fopen(inffile, 'r');
 varNames = split(fgetl(fid), ',');
 
 % Format for each line of text:
-%   column1: test (%s)
+%   column1: string (%s)
 %	column2: int8 (%d8)
 %   column3: int8 (%d8)
 %	column4: categorical (%C)

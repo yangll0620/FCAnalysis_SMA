@@ -1,5 +1,12 @@
 function [lfpdata, fs] = lfpdataextract_fromnexfileofallchns(nexfolder, file_prefix, chns)
-
+%% extract lfp data from nex files
+%   Inputs:
+%          nexfolder: the folder storing all the nex files 
+%               (e.g /home/lingling/root2/Animals2/Pinky/Recording/Processed/DataDatabase/Pinky_011918/LFP/Block-2)
+%          file_prefix the prefix of the nex files 
+%               (e.g Pinky_GrayMatter_eyetracking_DT1_011918_Block-2_LFPch)
+%          chns: all the channel numbers to be extracted
+ 
 for i = 1: length(chns)
     
     filename = [file_prefix num2str(chns(i)) '.nex'];

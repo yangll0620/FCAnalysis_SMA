@@ -1,6 +1,6 @@
-function codecorresfolder = code_corresfolder(codefilepath, makefolder, makesubfolder)
+function [codecorresfolder, codecorresParentfolder] = code_corresfolder(codefilepath, makefolder, makesubfolder)
 %% code_corresfolder 
-%           return the corresponding folder for codefilepath
+%           return the corresponding folder and the parent folder of the corresponding folder for codefilepath
 %       and create the corresponding folder if not exist (makefolder = True)
 %		and create the subfolders 'out' and 'store' subfolders
 %
@@ -37,6 +37,9 @@ end
 
 % return the corresponding folder in pipeline folder
 codecorresfolder = fullfile(pipelinefolder, subfolder, codefilename);
+
+% return the parent folder of the corresponding folder in pipeline folder
+codecorresParentfolder = fullfile(pipelinefolder, subfolder);
 
 % make folder if needed
 if makefolder == true && ~exist(codecorresfolder, 'dir')

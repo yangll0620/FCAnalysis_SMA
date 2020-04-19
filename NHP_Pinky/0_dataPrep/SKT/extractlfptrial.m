@@ -27,7 +27,7 @@ function [lfptrial_cortical, lfptrial_dbs, fs ,idxeventtbl, chantbl_dbs] = extra
 %                      [chn_cortical * n_temporal * n_trial]
 %
 %        lfptrial_dbs: lfp trials of dbs channels
-%                      [chn_dbs * n_temporal * n_trial]
+%                      [chn_dbs * n_temporal * n_trial], 1-8: STN, 9-16:GP
 %        fs: sample rate
 %
 %
@@ -194,6 +194,12 @@ end
 % disp play the max trial time
 disp(['max trial time is ' num2str(maxlen/fs_lfpcortical)]);
 
+if maxlen/fs_lfpcortical > 5
+    disp('Abandon the file with max trial time > 5s')
+    lfptrial_cortical = []; lfptrial_dbs = []; fs =[]; idxeventtbl = []; chantbl_dbs = [];
+    return
+end
+
 %% DBSLFP data
 % read DBSLFP in nex file
 dbslfpfolder = fullfile(onedaypath, 'DBSLFP', ['Block-' num2str(block)]); % 'Y:\Animals2\Pinky\Recording\Processed\DataDatabase\Pinky_071417\DBSLFP\Block-1'
@@ -223,10 +229,9 @@ end
 % extract all the values of field 'name' in nexlfp_dbs.convars
 convars = cell2mat(nexlfp_dbs.contvars);
 name_list = extractfield(cell2mat(nexlfp_dbs.contvars),'name');
-% extract the indices representing STN and GP data in nexlfp_dbs.contvars (33�1 struct array)
-idx_stn = find(contains(name_list, 'RAW_DBS_STNch')); %
-idx_gp = find(contains(name_list, 'RAW_DBS_GPch'));
-idx_dbs = [idx_stn idx_gp];
+% extract the indices representing STN and GP data in nexlfp_dbs.contvars (33*1 struct array)
+idx_dbs = find(contains(name_list, 'RAW_DBSch'));
+
 
 % check the dbs channel frequencies
 if range(cell2mat({convars(idx_dbs).ADFrequency})) ~= 0
@@ -259,8 +264,8 @@ end
 elecchn = extractfield(convars(idx_dbs),'name');
 elecchn = elecchn';
 area = cell(nchn_dbs, 1);
-area(1:length(idx_stn)) = {'STN'};
-area(length(idx_stn)+1: end) = {'GP'};
+area(1:8) = {'STN'};
+area(9: 16) = {'GP'};
 chantbl_dbs =[table(area) table(elecchn)];
 clear varName
 
