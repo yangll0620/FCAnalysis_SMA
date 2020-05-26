@@ -4,7 +4,7 @@ function m1_SKTData_preprocessing()
 %   Processing steps as follows:
 %       down sampled to 500Hz
 %   
-%       common average reference inside one area (excep DBS)
+%       common average reference inside one area (except DBS) deleted
 %       
 %       band pass filtered in frebp = [2 100];
 
@@ -21,10 +21,9 @@ clear idx
 % add util path
 addpath(genpath(fullfile(codefolder,'util')));
 
-% pipelinefolder
-[~, ~, pipelinefolder, ~] = exp_subfolders();
+
 % the corresponding pipeline folder for this code
-correspipelinefolder = code_corresfolder(codefilepath, true, false);
+[codecorresfolder, codecorresParentfolder] = code_corresfolder(codefilepath, true, false);
 
 %% global variables
 % animal
@@ -37,12 +36,12 @@ animal = tmp(length('/NHP_')+1:end-1);
 frebp = [2 100];
 % downsampled to fs_new Hz
 fs_down = 500;
-% input folder: extracted raw rest data with grayMatter 
-inputfolder = fullfile(pipelinefolder, ['NHP_' animal], '0_dataPrep', 'm0_STKData_extract');
+% input folder: extracted raw rest data 
+inputfolder = fullfile(codecorresParentfolder, 'm0_SKTData_extract');
 
 
 %% save setup
-savefolder = correspipelinefolder;
+savefolder = codecorresfolder;
 savefilename_addstr = 'preprod';
 
 
@@ -51,7 +50,7 @@ files = dir(fullfile(inputfolder, '*.mat'));
 nfiles = length(files);
 close all;
 f = waitbar(0, ['Preprocessing lfp data...']);
-for i = 2 : nfiles
+for i = 1 : nfiles
     % wait bar
     waitbar(i/nfiles,f,['Preprocessing lfp data in file ' num2str(i) '/' num2str(nfiles)]);
     
@@ -80,10 +79,10 @@ for i = 2 : nfiles
         
         % preprocess lfp
         [tmp] = downsample_lfp(lfp, fs, fs_down);
-        if ~(strcmp(area, 'STN') || strcmp(area, 'GP'))
-            % do CARRef for the areas not DBS leads
-            tmp = CARRef_lfp(tmp);
-        end
+%         if ~(strcmp(area, 'STN') || strcmp(area, 'GP'))
+%             % do CARRef for the areas not DBS leads
+%             tmp = CARRef_lfp(tmp);
+%         end
         tmp = filtered_lfp(tmp, frebp, fs_down);
         
         if j == 1
