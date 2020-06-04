@@ -2,6 +2,8 @@ function m0_SKTData_extract()
 %% extract the STK data  marked by Ying for Pinky
 % 
 %   1. abandon the file with max trial time > 5s
+%
+%   2. trial length = max(each trial length) + t_bef + t_aft
 
 
 %% extract the corresponding pipeline folder for this code
@@ -24,7 +26,7 @@ correspipelinefolder = code_corresfolder(codefilepath, true, false);
 animal = 'Pinky';
 
 % Input dir:  preprocessed folder in root2
-processedfolder_inroot2 = fullfile('home','lingling','root2','Animals2','Pinky', 'Recording', 'Processed', 'DataDatabase');
+processedfolder_inroot2 = fullfile('/home','lingling','root2','Animals2','Pinky', 'Recording', 'Processed', 'DataDatabase');
 
 % file data/SKB Beta Analyzed.xlsx for stk information
 file_stkInf = fullfile(datafolder, 'SKB Beta Analyzed.xlsx');
@@ -64,7 +66,7 @@ for i = 1 : n
     waitbar(i/n,f,['Extracting trials in file ' num2str(i) '/' num2str(n)]);
     
     % date of exp, bktdt
-    dateofexp = tbl_stkInf(i,:).Date;
+    dateofexp = datenum(tbl_stkInf(i,:).Date);
     tdtbk = str2num(char(tbl_stkInf(i,:).TDTBlock));
     
     % one day path
@@ -93,7 +95,7 @@ for i = 1 : n
     
     
     % save
-    savefilename = [savefilename_prefix  pdcondition '_' datestr(dateofexp, 'mmddyy') '_bktdt' num2str(bktdt)];
+    savefilename = [savefilename_prefix  pdcondition '_' datestr(dateofexp, 'mmddyy') '_bktdt' num2str(tdtbk)];
     save(fullfile(savefolder, savefilename), 'lfpdata','fs', 'T_chnsarea', 'T_idxevent');
     
     clear dateofexp tdtbk onedaypath

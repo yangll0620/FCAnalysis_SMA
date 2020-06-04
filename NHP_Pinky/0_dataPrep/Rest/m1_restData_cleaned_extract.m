@@ -94,6 +94,12 @@ for i = 1: length(uniqDateBlocks)
     % extract the date_num, blocki, and cond
     [date_num, blocki, cond]= extrac_date_blockn_pd(dateblockstr);
     
+    disp(cond);
+    
+    if strcmp(cond, 'normal') || strcmp(cond, 'mild')
+        continue;
+    end
+    
     filefolder = fullfile(folder_inroot2, ['Pinky_' datestr(date_num,'mmddyy')], ['Block-' num2str(blocki)]);
     allsyncfile = fullfile(filefolder,['pinky_' dateblockstr '_all_sync.mat']);
     
@@ -103,7 +109,7 @@ for i = 1: length(uniqDateBlocks)
         continue;
     end
     
-    disp(['dealing ' [str(i) 'th: ''pinky_' dateblockstr '_all_sync.mat']])
+    disp(['dealing ' [num2str(i) 'th: ''pinky_' dateblockstr '_all_sync.mat']])
     
     % load data
     load(allsyncfile, 'data');

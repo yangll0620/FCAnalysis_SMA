@@ -2,11 +2,13 @@ function m1_SKTData_preprocessing()
 %% preprocessing skt data 
 %
 %   Processing steps as follows:
-%       down sampled to 500Hz
 %   
-%       common average reference inside one area (except DBS) deleted
-%       
-%       band pass filtered in frebp = [2 100];
+%       only keep the good channels in m1 that are same as thosed used in rest(chans_m1.mat)
+%
+%       remove the channels not used in Gray Matter
+%
+%       bipolar for STN and GP channels
+
 
 
 %% folders generate
@@ -25,6 +27,7 @@ addpath(genpath(fullfile(codefolder,'util')));
 % the corresponding pipeline folder for this code
 [codecorresfolder, codecorresParentfolder] = code_corresfolder(codefilepath, true, false);
 
+
 %% global variables
 % animal
 tmp = char(regexp(codefilepath, '/NHP_\w*/', 'match'));
@@ -32,11 +35,11 @@ animal = tmp(length('/NHP_')+1:end-1);
 
 
 %%  input setup
-% band pass frequency
-frebp = [2 100];
-% downsampled to fs_new Hz
-fs_down = 500;
-% input folder: extracted raw rest data 
+% load chans_m1.mat for channels that are used in m1
+load('chans_m1.mat')
+
+
+% input folder: extracted raw STK data 
 inputfolder = fullfile(codecorresParentfolder, 'm0_SKTData_extract');
 
 
@@ -44,8 +47,7 @@ inputfolder = fullfile(codecorresParentfolder, 'm0_SKTData_extract');
 savefolder = codecorresfolder;
 savefilename_addstr = 'preprod';
 
-
-%% Start:  preprocess the lfp data of all the files
+%% start here
 files = dir(fullfile(inputfolder, '*.mat'));
 nfiles = length(files);
 close all;
@@ -57,47 +59,51 @@ for i = 1 : nfiles
     % load lfpdata: nchns * ntemp * ntrials
     filename = files(i).name;
     load(fullfile(inputfolder, filename), 'lfpdata', 'fs', 'T_chnsarea', 'T_idxevent');
+    disp(filename)
     
-    % get all the areas
-    areas = {};
-    for j = 1 : height(T_chnsarea)
-        area = T_chnsarea.brainarea{j};
-        if sum(cellfun(@(x) strcmp(x,  area), areas)) == 0
-            areas = [areas, area];
-        end
-        clear area
+
+
+    % nchannels for m1, GM, STN and GP
+    nM1 = length(find(T_chnsarea.brainarea == "M1"));
+    nSTN = length(find(T_chnsarea.brainarea == "STN"));
+    nGP = length(find(T_chnsarea.brainarea == "GP"));
+    nGM = height(T_chnsarea) - nM1 - nSTN - nGP;
+
+
+    % only remain data of channels in chans_m1
+    lfpm1 = lfpdata(chans_m1, :, :);
+    T_chnsarea_m1 = T_chnsarea(chans_m1, :);
+
+    % remove data of band channels in GrayMatter
+    T_chnsarea_GM = T_chnsarea(nM1 + 1: nM1 + nGM, :);
+    lfpGM = lfpdata(nM1 + 1: nM1 + nGM, :,:);
+    lfpGM = lfpGM(T_chnsarea_GM.brainarea ~= "",:,:);
+    T_chnsarea_GM = T_chnsarea_GM(T_chnsarea_GM.brainarea ~= "",:);
+
+    % bipolar STN and GP
+    lfpSTN = lfpdata(nM1 + nGM + 1: nM1 + nGM + nSTN,:,:);
+    lfpSTN = diff(lfpSTN, [],1);
+    T_chnsarea_STN = T_chnsarea(nM1 + nGM + 1: nM1 + nGM + nSTN -1, :);
+    for chi = 1: height(T_chnsarea_STN)
+        T_chnsarea_STN(chi,:).notes{1} = ['chn' num2str(chi + 1) ' - chn' num2str(chi)];
     end
-    
-    
-    % preprocessing lfp data in each area
-    for j = 1: length(areas)
-        area = areas{j};
-        chns_area = T_chnsarea.chni(cellfun(@(x) strcmp(x, area),  T_chnsarea.brainarea));
-        
-        % lfp: nchns * ntemp * ntrials
-        lfp = lfpdata(chns_area, :, :);
-        
-        % preprocess lfp
-        [tmp] = downsample_lfp(lfp, fs, fs_down);
-%         if ~(strcmp(area, 'STN') || strcmp(area, 'GP'))
-%             % do CARRef for the areas not DBS leads
-%             tmp = CARRef_lfp(tmp);
-%         end
-        tmp = filtered_lfp(tmp, frebp, fs_down);
-        
-        if j == 1
-            [nchns, ~, ntrials] = size(lfpdata);
-            preproc_lfp = zeros(nchns, size(tmp,2), ntrials);
-        end
-        preproc_lfp(chns_area, :, :) = tmp;
-         
-        clear area chns_area tmp
+
+    lfpGP = lfpdata(nM1 + nGM + nSTN + 1: end,:,:);
+    lfpGP = diff(lfpGP, [],1);
+    T_chnsarea_GP = T_chnsarea(nM1 + nGM + nSTN + 1: end-1, :);
+    for chi = 1: height(T_chnsarea_GP)
+        T_chnsarea_GP(chi,:).notes{1} = ['GP chn' num2str(chi + 1) ' - chn' num2str(chi)];
     end
+
+    % combine m1, GM and dbs channels
+    lfpdata = cat(1, lfpm1, lfpGM, lfpSTN, lfpGP);
+    T_chnsarea = cat(1, T_chnsarea_m1, T_chnsarea_GM, T_chnsarea_STN, T_chnsarea_GP);
+    % change the chni 
+    T_chnsarea.chni = [1:height(T_chnsarea)]';
+    
+    
     
     % save
-    lfpdata = preproc_lfp;
-    T_idxevent = adjust_Idxevent(T_idxevent, fs, fs_down);
-    fs = fs_down;    
     idx = strfind(filename, [animal '_']);
     tmpn = length([animal '_']);
     savefilename = [filename(idx:idx+tmpn-1) savefilename_addstr ... 
@@ -106,86 +112,9 @@ for i = 1 : nfiles
     
     
     clear lfpdata fs T_chnsarea T_idxevent 
-    clear idx tmpn savefilename preproc_lfp T_idxevent_adjust
-    clear areas filename
-end
-close(f)
-
-
-function [donwsampled_lfp] = downsample_lfp(lfp, fs, fs_down)
-%% downsample lfp data 
-% 
-%   Input
-%       lfp: lfp data [nchns ntemp ntrials]
-%       fs: sample rate of the lfp data
-%       fs_down: new sample rate that is downsampled to
-%       T_idxevent: idxevent table, will be changed once downsampled
-%       
-%   Return
-%       donwsampled_lfp: downsampled lfp data [nchns ntemp_new ntrials]
-%       T_idxevent: the adjusted T_idxevent accroding to the down sample
-
-[nchns, ~, ntrials] = size(lfp);
-
-for triali = 1: ntrials
-    tmp = squeeze(lfp(:, :,triali)); % tmp: nchns * ntemps
-    
-    % down sample, treats each column as a separate sequence.
-    tmp = tmp'; % tmp: ntemps * nchns
-    downsampled_tmp = resample(tmp,round(fs_down),round(fs)); % downsampled_tmp :  ntemps * nchns
-    downsampled_tmp = downsampled_tmp'; % downsampled_tmp :   nchns * ntemps
-    
-    
-    % assignment
-    if triali == 1
-        donwsampled_lfp = zeros(nchns, size(downsampled_tmp,2), ntrials);
-    end
-    donwsampled_lfp(:, :,triali) = downsampled_tmp;
-    
+    clear idx tmpn savefilename  
+    clear filename
+    clear nM1 nSTN nGP nGM
+    clear lfpm1 T_chnsarea_m1 lfpGM T_chnsarea_GM lfpSTN T_chnsarea_STN lfpGP T_chnsarea_GP
 end
 
-function T_idxevent_adjust = adjust_Idxevent(T_idxevent, fs, fs_down)
-% adjust the T_idxevent
-varNames = T_idxevent.Properties.VariableNames;
-T_idxevent_adjust = array2table(round(T_idxevent{:,:} / fs * fs_down), 'VariableNames', varNames);
-
-
-
-function refed_lfp = CARRef_lfp(lfp)
-%% common average reference lfp data 
-%
-%   Input
-%       lfp: lfp data [nchns ntemp ntrials]
-%       
-%   Return
-%       refed_lfp: common average referenced lfp data [nchns ntemp ntrials]
-
-
-% common average reference in one area
-refed_lfp = lfp - repmat(mean(lfp, 1), size(lfp,1),1,1);
-
-
-function filterd_lfp = filtered_lfp(lfp, frebp, fs)
-%% band pass filter lfp data 
-% 
-%   Input
-%       lfp: lfp data [nchns ntemp ntrials]
-%       frebp: the band pass frequency
-%       fs: sample rate of the lfp data
-%       
-%   Return
-%      filterd_lfp: filetered lfp data [nchns ntemp ntrials]
-
-
-[nchns, ntemp, ntrials] = size(lfp);
-filterd_lfp = zeros(nchns, ntemp, ntrials);
-
-% band pass filter
-for chni = 1 : nchns
-    for triali = 1: ntrials
-        tmp = squeeze(lfp(chni, :, triali));
-        filterd_lfp(chni, :, triali) = filter_bpbutter(tmp,frebp,fs);
-        clear tmp
-    end
-end
-    
