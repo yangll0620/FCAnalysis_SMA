@@ -1,5 +1,8 @@
 function m2_restData_selectSeg_M1Power()
+%   Manually marked the good and bad segments
+% 
 % 1. add variable segsRemain, for marking each segment with 1 (good) or 0 (not good)
+%
 % 2. add variable GMChnAreas from GMChnsarea file
 %
 %
@@ -47,7 +50,7 @@ savefolder = codecorresfolder;
 GMChnAreas = GMChnArea_extract(file_GMChnsarea);
 
 % segment check
-files = dir(fullfile(inputfolder, ['*.mat']));
+files = dir(fullfile(inputfolder, ['*moderate*.mat']));
 nfiles = length(files);
 for fi = 1 : nfiles
     file = fullfile(files(fi).folder, files(fi).name);

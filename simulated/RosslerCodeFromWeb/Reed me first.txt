@@ -1,0 +1,20 @@
+Instruction:
+Note-1: Don't run the file Rossler.m, EULER.m, RK4.m, RK5.m and FixedPoint.m. These are the function file used in other.
+Note-2: There is no subplot command used in code. But I have merged some figure together to attach in the report comfortably.
+
+1) To generate Rossler attractor run the m-file attractor.m with input a = 0.2, b = 0.2, c = 5.7, and x0 = [1;1;0]
+   to change the method for solving the system change the order in m-file Rossler.m as instructed there. Use can also change 
+   the parameter value specified in the figure.
+
+2) To see how sensitive is attractor to the initial condition run the m-file sensitivity.m once.
+
+3) To see the projection of attractor in xy-plane run the m-file Projection.m. User can give the input as
+   c = 1, 2.5, 3.5, 4, 4.15, 4.2, 5, 5.3, 5.7, 5.9, 5.99, 6 
+
+4) Bifurcation diagram
+   (i)   To see the bifurcation diagram for a run the m-file Bifurcation_of_a.m
+   (ii)  for b run the m-file Bifurcation_of_b.m
+   (iii) for c run the m-file Bifurcation_of_c.m
+
+5) To see the poincare map one can run the m-file Poincare.m for different value of c as
+   c = 1, 2.5, 3.5, 4, 4.15, 4.2, 5, 5.3, 5.7, 5.9, 5.99, 6

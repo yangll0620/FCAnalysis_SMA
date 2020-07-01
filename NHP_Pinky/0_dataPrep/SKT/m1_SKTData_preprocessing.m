@@ -28,6 +28,9 @@ addpath(genpath(fullfile(codefolder,'util')));
 [codecorresfolder, codecorresParentfolder] = code_corresfolder(codefilepath, true, false);
 
 
+[datafolder, ~, ~, ~] = exp_subfolders();
+
+
 %% global variables
 % animal
 tmp = char(regexp(codefilepath, '/NHP_\w*/', 'match'));
@@ -35,8 +38,14 @@ animal = tmp(length('/NHP_')+1:end-1);
 
 
 %%  input setup
+
 % load chans_m1.mat for channels that are used in m1
 load('chans_m1.mat')
+
+
+% GrayMatter chn-area information file
+filename_GMChnsarea = ['Pinky_GMChnAreaInf.csv'];
+file_GMChnsarea =  fullfile(datafolder, filename_GMChnsarea);
 
 
 % input folder: extracted raw STK data 
@@ -48,6 +57,10 @@ savefolder = codecorresfolder;
 savefilename_addstr = 'preprod';
 
 %% start here
+
+% GM chn Areas 
+GMChnAreas = GMChnArea_extract(file_GMChnsarea);
+
 files = dir(fullfile(inputfolder, '*.mat'));
 nfiles = length(files);
 close all;
@@ -97,6 +110,8 @@ for i = 1 : nfiles
 
     % combine m1, GM and dbs channels
     lfpdata = cat(1, lfpm1, lfpGM, lfpSTN, lfpGP);
+    
+
     T_chnsarea = cat(1, T_chnsarea_m1, T_chnsarea_GM, T_chnsarea_STN, T_chnsarea_GP);
     % change the chni 
     T_chnsarea.chni = [1:height(T_chnsarea)]';
@@ -108,7 +123,7 @@ for i = 1 : nfiles
     tmpn = length([animal '_']);
     savefilename = [filename(idx:idx+tmpn-1) savefilename_addstr ... 
         upper(filename(idx+tmpn)) filename(idx+tmpn+1:end)];
-    save(fullfile(savefolder, savefilename), 'lfpdata','fs', 'T_chnsarea', 'T_idxevent');
+    save(fullfile(savefolder, savefilename), 'lfpdata','fs', 'T_chnsarea', 'T_idxevent', 'chans_m1', 'GMChnAreas');
     
     
     clear lfpdata fs T_chnsarea T_idxevent 
