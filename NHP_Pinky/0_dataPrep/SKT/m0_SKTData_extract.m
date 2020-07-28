@@ -1,6 +1,12 @@
 function m0_SKTData_extract()
 %% extract the STK data  marked by Ying for Pinky
 % 
+%	Inputs:
+%		
+%		datafolder/SKB Beta Analyzed.xlsx:  for stk file information
+%		
+%		
+% 
 %   1. abandon the file with max trial time > 5s
 %
 %   2. trial length = max(each trial length) + t_bef + t_aft

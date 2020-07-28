@@ -1,9 +1,22 @@
 function m0_SKTData_extract(animal)
 %% extract the STK data  marked by Ying for Pinky
 % 
-%   1. abandon the file with max trial time > 5s
+%   1. Only extract the trials marked with good for both reach and return
+%	
+%	2. abandon the file with max trial time > 5s
 %
-%   2. trial length = max(each trial length) + t_bef + t_aft
+%   3. trial length = max(each trial length) + t_bef + t_aft
+%
+%	Output Variables:
+%			fs: sample rate (about 3.0518e+03)
+%	
+%			lfpdata: nchns * ntemp * ntrials
+%
+%			T_idxevent (table): ntrials * 5 (TargetTime, ReachTimeix, TouchTimeix, ReturnTimeix, MouthTimeix)
+%
+%			T_chnsarea (table): nchns * 5 (chni, brainarea,  recordingchn, electype, notes)
+%								nchns: all the channels of the .nex files (=112 channels)
+%								brainarea: 'SMA', 'M1', 'VA' et al.; electype: 'Gray Matter' or 'DBS'
 
 
 

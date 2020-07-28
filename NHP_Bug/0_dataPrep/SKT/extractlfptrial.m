@@ -5,7 +5,7 @@ function [lfptrial_cortical, lfptrial_dbs, fs ,idxeventtbl, chantbl_dbs] = extra
 %  extractlfptrial(onedaypath, block) return extracted LFP trials of 
 %  cortical/subcortical data, dbs data, cortical/subcortical channel
 %  information and dbs channel information tables, only trials with both
-%  good reach and return are returned
+%  only good reach and return are returned
 %    
 %  Example usage: 
 %   onedaypath = '/home/lingling/root2/Animals2/Bug/Recording/Processed/DataDatabase/Bug_062118'
