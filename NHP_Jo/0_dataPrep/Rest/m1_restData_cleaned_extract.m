@@ -10,7 +10,7 @@ function m1_restData_cleaned_extract()
 %   Inputs:
 %       configFile: datafolder/ config_m1lf_fromYing.mat
 %
-%       filesYingUsed:  m0_restData_uniqdatesYingUsed_extract/uniqFileYingUsed_Pinky.mat
+%       filesUsed:  m0_restData_uniqdatesYingUsed_extract/uniqFileYingUsed_Pinky.mat
 %
 %
 
@@ -32,33 +32,34 @@ addpath(genpath(fullfile(codefolder,'util')));
 
 
 % the corresponding pipeline folder for this code
-[codecorresfolder, codecorresParentfolder] = code_corresfolder(codefilepath, true, false);
+[codecorresfolder, ~] = code_corresfolder(codefilepath, true, false);
 
 % datafolder
 [datafolder, ~, ~, ~] = exp_subfolders();
 
+%% global parameter
+animal = 'Jo';
+
+% to be removed channels in m1, from Ying
+m1array_to_remove = [10 7; 10 8; 10 9; 10 10];
 
 %% input setup
 
 % input folder: root2 in server
-folder_inroot2 = ['/home/lingling/root2/Animals2/Pinky/Recording/Processed/DataDatabase'];
+folder_inroot2 = fullfile('/home/lingling/root2/Animals', animal, 'Recording/Processed/DataDatabase');
 
 % threshold used by Ying to extract cleaned resting data
 configFile = fullfile(datafolder, 'config_m1lf_fromYing.mat');
 
-% dates used by STK
-filesWithSameDatesAsSTKUsed = fullfile(codecorresParentfolder, 'm0_restData_dateBlocks_sameDateAsSTK', 'Pinky_restDateBlocks_sameDatesAsSTK.mat');
+% dateBlock File
+dateBlocksFile = fullfile(datafolder, animal, 'JoDataUsed.xlsx'); 
 
 
 %% save setup
 savefolder = codecorresfolder;
-savefilename_prefix = 'Pinky_cleanedRestData_';
+savefilename_prefix = [animal '_cleanedRestData_'];
 
 %% global variables
-% to be removed channels in m1, from Ying
-m1array_to_remove = [1 1;1 2;1 3;1 5;1 7;1 9;2 5;2 7;3 1;3 3;3 2;3 4;3 6;4 3;4 4;4 5;4 6; 4 7;4 8;4 9;4 10; ...
-    5 1;5 4;5 5;5 6;5 7;5 8;5 9;6 1;6 2;6 5;6 7;7 2;7 9;8 1;8 4;8 9;9 8;9 7;9 6;9 3;9 1;9 10;10 6; ...
-    10 7; 10 8; 10 9; 10 10];
 
 % start time point, data before t0 are removed
 t0 = 3;
@@ -74,43 +75,35 @@ thr_eye_open = 0.5000;
 
 % load
 load(configFile, 'config_m1lf');
-load(filesWithSameDatesAsSTKUsed, 'restDateBlocks_sameDatesAsSTK');
-dateBlocks = restDateBlocks_sameDatesAsSTK;
+tbl_master = readtable(dateBlocksFile);
 
-% extract the remaining channel numbers for m1
-chns_remove = [];
-for chi = 1: size(m1array_to_remove,1)
-    chn_remove = (m1array_to_remove(chi, 1) -1) * 10 + m1array_to_remove(chi, 2);
-    chns_remove = [chns_remove;chn_remove];
-    clear chn_remove
-end
-chans_m1 = [1:100];
-chans_m1(chns_remove)=[];
-clear chns_remove chni
 
-nfiles = length(dateBlocks);
-for i = 15: nfiles
-    
-    dateblockstr = convertStringsToChars(dateBlocks(i));
-    
-    % extract the date_num, blocki, and cond
-    [date_num, tdtblocki, cond]= extrac_date_blockn_pd(dateblockstr);
-    
+nfiles = height(tbl_master);
+for i = 1: nfiles
+    dateblockstr = tbl_master(i, :).dateBlock_rest{1};
+    cond = tbl_master(i, :).cond{1};
+
+    % extract the date_num, and blocki
+    tmp = split(dateblockstr, '_');
+    datestr_yymmdd = tmp{1};
+    date_num = datenum(datestr_yymmdd, 'mmddyy');
+    tdtblocki = str2num(tmp{2});
+
     
     if ~(strcmp(cond, 'normal') || strcmp(cond, 'mild'))
         continue;
     end
     
     
-    filefolder = fullfile(folder_inroot2, ['Pinky_' datestr(date_num,'mmddyy')], ['Block-' num2str(tdtblocki)]);
-    allsyncfilePattern = fullfile(filefolder,['pinky_' datestr(date_num,'yyyymmdd') '_*_all_sync.mat']);
+    filefolder = fullfile(folder_inroot2, [animal '_' datestr(date_num,'mmddyy')], ['Block-' num2str(tdtblocki)]);
+    allsyncfilePattern = fullfile(filefolder,[animal '*' datestr(date_num,'yyyymmdd') '_*_all_sync.mat']);
     
     
     allsyncfiles = dir(allsyncfilePattern);
     
     % file not exist
     if(length(allsyncfiles) ~= 1)
-        disp([allsyncfilePattern ' has ' num2str(length(allsyncfiles)) ' files, not 1 file'])
+        disp([ num2str(i) '/'  num2str(nfiles) ':' allsyncfilePattern ' has ' num2str(length(allsyncfiles)) ' files, not 1 file'])
         continue;
     end
     
@@ -128,9 +121,9 @@ for i = 15: nfiles
     
     % get the thr_power1
     if strcmp(data.condition, 'PD')
-        thr_power1 = config_m1lf.max_pinky_pd;
+        eval(['thr_power1 = config_m1lf.max_' lower(animal) '_pd;'])
     else
-        thr_power1 = config_m1lf.max_pinky_normal;
+        eval(['thr_power1 = config_m1lf.max_' lower(animal) '_normal;'])
     end
     
     [data_segments, segsIndex] = cleanedRestData(data, m1array_to_remove, thr_power1, thr_eye_open, t0, min_comp_time, config_m1lf.freq_band);
@@ -140,32 +133,16 @@ for i = 15: nfiles
     end
     
     
-    savefile = fullfile(savefolder, [savefilename_prefix  cond '_'  datestr(date_num,'yyyymmdd') '_tdt'  num2str(tdtblocki) '.mat']);
-    save(savefile, 'data_segments', 'segsIndex', 'chans_m1', 'fs')
+    savefile = fullfile(savefolder, [savefilename_prefix  cond '_'  datestr(date_num,'mmddyy') '_tdt'  num2str(tdtblocki) '.mat']);
+    save(savefile, 'data_segments', 'segsIndex',  'fs')
     
     clear allsyncfile dateblockstr thr_power1
     clear tmp cond 
 end
+
+    disp('Done!')
 end
 
-
-function [date_num, blocki, cond]= extrac_date_blockn_pd(dateblockstr)
-%% 
-% args:
-%       dateblockstr: '20170918_5'
-
-    % get the condition of the file
-    tmp = split(dateblockstr,'_');
-    
-    % date_num
-    date_num = datenum(tmp{1}, 'yyyymmdd');
-    
-    %
-    blocki = str2num(tmp{2});
-    
-    % cond
-    cond = parsePDCondition(date_num, 'Pinky');
-end
 
 
 function [data_segments, segsIndex] = cleanedRestData(data, m1array_to_remove, thr_power1, thr_eye_open, t0, min_comp_time, freq_band)
@@ -189,10 +166,6 @@ for chi =1:length(data.lfp_gp)
     lfp_gp(:,chi) = data.lfp_gp{chi};
 end
 
-lfp_GM = zeros(length(data.GMdata{1}),length(data.GMdata));
-for chi =1:length(data.GMdata)
-    lfp_GM(:,chi) = data.GMdata{chi};
-end
 
 %%  get states for each time point of lfp, 1: remain this time point, 0: remove
 m1power_state_mintime = extract_m1power_state_mintime(mean(lfp_m1, 2), thr_power1, min_samples, fs,freq_band);
@@ -213,14 +186,13 @@ states = awake_state_mintime & (~to_remove_ma);
 
 
 %% filter lfp_m1, lfp_stn, lfp_gp, and lfp_GM and truncate at n0
-[lfp_m1, lfp_stn, lfp_gp, lfp_GM]= filtered_lfp(lfp_m1, lfp_stn, lfp_gp, lfp_GM, fs);
+[lfp_m1, lfp_stn, lfp_gp]= filtered_lfp(lfp_m1, lfp_stn, lfp_gp, fs);
 
 
 %% truncate
 lfp_m1(1: n0-1, :) = [];
 lfp_stn(1: n0-1, :) = [];
 lfp_gp(1: n0-1,:) = [];
-lfp_GM(1: n0-1, :) = [];
 states(1:n0-1) = [];
 
 
@@ -245,9 +217,6 @@ for seg_ind = 1: size(segsIndex,1)
     data_segments(end).lfp_stn = lfp_stn(idx_segStr:idx_segEnd, :);
     data_segments(end).lfp_gp = lfp_gp(idx_segStr:idx_segEnd, :);
     
-     
-    % lfp_GM
-    data_segments(end).lfp_GM = lfp_GM(idx_segStr:idx_segEnd, :);
     
     clear idx_segStr idx_segEnd
 end
@@ -259,8 +228,8 @@ end
 
 end
 
-function [lfp_m1, lfp_stn, lfp_gp, lfp_GM]= filtered_lfp(lfp_m1, lfp_stn, lfp_gp, lfp_GM, fs)
-%% pass filter lfp_m1, lfp_stn, lfp_gp and lfp_GM 
+function [lfp_m1, lfp_stn, lfp_gp]= filtered_lfp(lfp_m1, lfp_stn, lfp_gp, fs)
+%% pass filter lfp_m1, lfp_stn, and lfp_gp 
 
 % pass filters of m1, dbs and GM data
 [bhp,ahp] = butter(2 , 2*2/fs , 'high'); % high pass
@@ -281,13 +250,6 @@ for chi =1:size(lfp_stn, 2)
 end
 
 
-% lfp_GM: high and low pass 
-for chi =1:size(lfp_GM,2)
-   
-    % filter
-    lfp_GM(:,chi) = filtfilt(bhp,ahp, lfp_GM(:,chi));
-    lfp_GM(:,chi) = filtfilt(blphf,alphf, lfp_GM(:,chi));
-end
 end
 
 

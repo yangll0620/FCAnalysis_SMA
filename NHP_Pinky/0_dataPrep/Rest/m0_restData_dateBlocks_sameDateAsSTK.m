@@ -58,7 +58,7 @@ tbl_master = readtable(masterFile);
 tbl_master.OutputFolderName = categorical(tbl_master.OutputFolderName);
 tbl_master.BriefDescription = categorical(tbl_master.BriefDescription);
 
-restDateBlocks_sameDatesAsSTK = {};
+restDateBlocks_sameDatesAsSTK = [];
 for i = 1: length(stkfiles)
     filename = getfield(stkfiles, {i}, 'name');
     
@@ -71,13 +71,14 @@ for i = 1: length(stkfiles)
     
     % combine the extract resting dateblock string into restDateBlocks_sameDatesAsSTK
     for rowi = 1 : height(tbl_date)
-        tdtblock = getfield(tbl_date, {rowi}, 'TDTBlock');
+        tdtblock = tbl_date(rowi,:).TDTBlock;
         
         % generate the dateBlockString e.g. '20170915_1'
         dateblockstring = [datestr(datenum(datestring, 'mmddyy'), 'yyyymmdd') '_' num2str(tdtblock)];
         
+
         % combine the new obtained datestr
-        restDateBlocks_sameDatesAsSTK = [restDateBlocks_sameDatesAsSTK; dateblockstring];
+        restDateBlocks_sameDatesAsSTK = cat(1, restDateBlocks_sameDatesAsSTK, string(dateblockstring));
         
         clear tdtblock dateblockstring
     end

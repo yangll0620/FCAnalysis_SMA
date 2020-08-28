@@ -40,7 +40,7 @@ savefilename_addstr = ['seged'];
 
 %% Start Here
 
-files = dir(fullfile(inputfolder, '*moderate*.mat'));
+files = dir(fullfile(inputfolder, '*.mat'));
 nfiles = length(files);
 f = waitbar(0, ['Seging Filtered Rest Data....']);
 
