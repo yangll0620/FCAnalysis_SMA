@@ -1,8 +1,13 @@
 function m2_restData_selectSeg_M1Power()
 %   Manually marked the good and bad segments
 % 
-% 1. add variable segsRemain, for marking each segment with 1 (good) or 0 (not good)
+%   Processing steps as follows:
+%       1. add variable segsRemain, for manually marking each segment with 1 (good) or 0 (not good)
+%           show the averaged lfp_m1 and each bipolar lfp_diffstn and lfp_diffgp
 %
+%       2. bipolar for STN and GP channels
+%
+%       3. Down sample trials into fs_new = 500
 
 
 %% folder generate
@@ -26,21 +31,22 @@ addpath(genpath(fullfile(codefolder,'util')));
 [datafolder, ~, ~, ~] = exp_subfolders();
 
 %% global parameters
-animal = 'Bug';
+animal = 'Jo';
 
 %% input setup
 inputfolder = fullfile(codecorresParentfolder, 'm1_restData_cleaned_extract');
 
 twin = 2;
 toverlap = twin * 0.9;
-freqs_roi = [5 40];
+freqs_roi = [0 50];
 
+fs_new = 500;
 
 %% save setup
 savefolder = codecorresfolder;
 
-%% Start Here
 
+%% Start Here
 
 % segment check
 files = dir(fullfile(inputfolder, ['*.mat']));
@@ -65,31 +71,35 @@ for fi = 1 : nfiles
         lfp_m1 = data_segments(segi).lfp_m1;
         lfp_meanm1 = mean(lfp_m1,2);
         
-        [pxx_m1, F] = pwelch(lfp_meanm1, nwin, noverlap, [freqs_roi(1):1/twin:freqs_roi(2)], fs);
-        
+        [pxx_m1, F_m1] = pwelch(lfp_meanm1, nwin, noverlap, [freqs_roi(1):1/twin:freqs_roi(2)], fs);
+
         
         % lfp_stn: ntemp * 8
         lfp_stn = data_segments(segi).lfp_stn;
         lfp_diffstn = diff(lfp_stn,[],2);
         
-        [pxx_stn, F] = pwelch(lfp_diffstn(:,6), nwin, noverlap, [freqs_roi(1):1/twin:freqs_roi(2)], fs);
+        [pxx_stn, F_stn] = pwelch(lfp_diffstn, nwin, noverlap, [freqs_roi(1):1/twin:freqs_roi(2)], fs);
         
         
-        % lfp_gp: ntemp * 8
+        % lfp_gp: ntemp * 8; lfp_diffgp: ntemp * 7
         lfp_gp = data_segments(segi).lfp_gp;
         lfp_diffgp = diff(lfp_gp,[],2);
         
-        [pxx_gp, F] = pwelch(lfp_diffgp(:,7), nwin, noverlap, [freqs_roi(1):1/twin:freqs_roi(2)], fs);
+        [pxx_gp, F_gp] = pwelch(lfp_diffgp, nwin, noverlap, [freqs_roi(1):1/twin:freqs_roi(2)], fs);
             
-        %
-        figure
-        subplot(3,1,1);plot(F, pxx_m1); legend('m1');
-        title([files(fi).name ', seg' num2str(segi)])
+        % plot pxx_m1, pxx_stn and pxx_gp
+        figure('units', 'normalized', 'outerposition', [0.1 0. 0.75 0.75])
+        subplot(4,4,1); plot(F_m1, pxx_m1); legend('m1'); xlim(freqs_roi); 
         
-        subplot(3,1,2); plot(F, pxx_stn); legend('stn');
-        subplot(3,1,3); plot(F, pxx_gp); legend('gp');
-        
-        
+        for chi = 1: size(lfp_diffstn, 2)
+            subplot(4,4,chi + 1); plot(F_stn, pxx_stn(:, chi)); legend(['stn - ' num2str(chi)]);
+            xlim(freqs_roi);
+        end
+
+        for chi = 1: size(lfp_diffstn, 2)
+            subplot(4,4,chi + 8); plot(F_gp, pxx_gp(:, chi)); legend(['gp - ' num2str(chi)]);
+            xlim(freqs_roi);
+        end
         
         
         % manualy check the good('y') and the bad (n) segment
@@ -101,9 +111,30 @@ for fi = 1 : nfiles
         if reply == 'n'
             segsRemain(segi) = 0;           
         end
+
+
+
+        %%% bipolar stn and gp %%%%
+        lfp_stn = lfp_diffstn;
+        lfp_gp = lfp_diffgp;
         
+
+        %%% down sample %%%
+        lfp_m1 = resample(lfp_m1, round(fs_new), round(fs));
+        lfp_stn = resample(lfp_stn, round(fs_new), round(fs));
+        lfp_gp = resample(lfp_gp, round(fs_new), round(fs));
+        
+       
+        data_segments(segi).lfp_m1 = lfp_m1;
+        data_segments(segi).lfp_stn = lfp_stn;
+        data_segments(segi).lfp_gp = lfp_gp;
+
+
+
         close all
-        clear lfp_m1 lfp_mean pxx reply
+        clear lfp_m1 lfp_meanm1 pxx_m1 F_m1
+        clear lfp_stn lfp_diffstn pxx_stn F_stn lfp_gp lfp_diffgp pxx_gp F_gp
+        clear reply
         
     end
     
@@ -112,7 +143,7 @@ for fi = 1 : nfiles
     save(savefile,'fs', 'data_segments',  'segsIndex','segsRemain');
     
     
-    clear file chans_m1 fs data_segments
+    clear file fs data_segments
     clear nwin noverlap segi nsegs segsRemain
 end
 

@@ -4,7 +4,9 @@ function condition = parsePDCondition(dateofexp, animal)
 %   particular experimental date
 % 
 % Input:
-%   dateofexp: the experimental date in datenum format (e.g datenum(datetime('2017-07-18')))
+%   dateofexp: the experimental date in datenum format (e.g datenum(datetime('2017-07-18')) or datenum('20000519', 'yyyymmdd'))
+%
+%	animal: 'Pinky', or 'Bug' 
 % 
 % Output:
 %   condition (string): the PD condition on the dateofexp 
@@ -12,17 +14,27 @@ function condition = parsePDCondition(dateofexp, animal)
 %
 
 
-% assign the norma, mild and moderate period
+
 animal = lower(animal);
+
+% assign the norma, mild and moderate period
 if strcmp(animal, 'pinky')
     period_normal = [datenum(datetime('2017-01-13')) datenum(datetime('2017-04-28'))];
     period_mild = [datenum(datetime('2017-9-12')) datenum(datetime('2017-11-27'))];
     period_moderate = [datenum(datetime('2018-5-18')) datenum(datetime('2018-12-05'))];
 end
+
 if strcmp(animal, 'bug')
     period_normal = [datenum(datetime('2017-07-18')) datenum(datetime('2018-12-23'))];
     period_mild = [datenum(datetime('2019-1-25')) datenum(datetime('2019-9-5'))];
     period_moderate = [datenum(datetime('2020-5-26'))];
+end
+
+
+if strcmp(animal, 'jo')
+    period_normal = [datenum(datetime('2015-09-08')) datenum(datetime('2015-10-23'))];
+    period_mild = [datenum(datetime('2015-11-02')) datenum(datetime('2015-12-11'))];
+    period_moderate = [datenum(datetime('2015-12-15'))];
 end
 
 

@@ -10,9 +10,10 @@ function m1_restData_cleaned_extract()
     %   Inputs:
     %       configFile: datafolder/ config_m1lf_fromYing.mat
     %
+    %       dateBlocksXLSFile: ../m0_restData_dateBlockYingUsed/dateBlocksYingUsed_rest.xlsx
+    %
     %       filesUsed:  m0_restData_uniqdatesYingUsed_extract/uniqFileYingUsed_Pinky.mat
-    %
-    %
+
 
     %% folder generate
     % the full path and the name of code file without suffix
@@ -41,7 +42,7 @@ function m1_restData_cleaned_extract()
     %% input setup
 
     % input folder: root2 in server
-    folder_inroot2 = fullfile('/home/lingling/root2/Animals', animal, 'Recording/Processed/DataDatabase');
+    folder_processed_root2 = fullfile('/home/lingling/root2/Animals', animal, 'Recording/Processed/DataDatabase');
 
     % threshold used by Ying to extract cleaned resting data
     configFile = fullfile(datafolder, 'config_m1lf_fromYing.mat');
@@ -86,21 +87,21 @@ function m1_restData_cleaned_extract()
             continue;
         end
 
-        filefolder = fullfile(folder_inroot2, [animal '_' datestr(date_num, 'mmddyy')], ['Block-' num2str(tdtblocki)]);
-        allsyncfilePattern = fullfile(filefolder, [animal '*' datestr(date_num, 'yyyymmdd') '_*_all_sync.mat']);
+        folder_allsync = fullfile(folder_processed_root2, [animal '_' datestr(date_num, 'mmddyy')], ['Block-' num2str(tdtblocki)]);
+        filepattern_allsync = fullfile(folder_allsync, [animal '*' datestr(date_num, 'yyyymmdd') '_*_all_sync.mat']);
 
-        allsyncfiles = dir(allsyncfilePattern);
+        files_allsync = dir(filepattern_allsync);
 
         % file not exist
-        if (length(allsyncfiles) ~= 1)
-            disp([num2str(i) '/' num2str(nfiles) ':' allsyncfilePattern ' has ' num2str(length(allsyncfiles)) ' files, not 1 file'])
+        if (length(files_allsync) ~= 1)
+            disp([num2str(i) '/' num2str(nfiles) ':' filepattern_allsync ' has ' num2str(length(files_allsync)) ' files, not 1 file'])
             continue;
         end
 
-        disp(['dealing ' num2str(i) '/' num2str(nfiles) ': ' fullfile(allsyncfiles.folder, allsyncfiles.name)])
+        disp(['dealing ' num2str(i) '/' num2str(nfiles) ': ' fullfile(files_allsync.folder, files_allsync.name)])
 
         % load data
-        load(fullfile(allsyncfiles.folder, allsyncfiles.name), 'data');
+        load(fullfile(files_allsync.folder, files_allsync.name), 'data');
 
         % fs
         fs = data.lfp_stn_fs(1);
