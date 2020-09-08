@@ -223,7 +223,7 @@ function [T_chnsarea] = chanInf_addDBStoGM(T_chnsarea_GM, nSTN, nGP)
 %   
 %   Args:
 %       T_chnarea_GM: the chn-area inf table for gray matter
-%       nstn, ngp: the number of stn and gp channels
+%       nSTN, nGP: the number of stn and gp channels
 %
 %   Output:
 %       T_chnsarea: table of Gray matter + DBS channel inf,

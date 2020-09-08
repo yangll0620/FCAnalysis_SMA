@@ -1,4 +1,4 @@
-function m0_restData_uniqdatesYingUsed_extract()
+function m0_restData_dateBlocksYingUsed()
 
     %% folder generate
 
@@ -47,13 +47,13 @@ function m0_restData_uniqdatesYingUsed_extract()
         if i == 1
             dateBlocks = dateBlock;
             predate = dateBlock;
-            cond = {condition};
+            conditions = {condition};
         else
 
             if (predate ~= dateBlock)
                 dateBlocks = cat(1, dateBlocks, dateBlock);
                 predate = dateBlock;
-                cond = [cond; condition];
+                conditions = [conditions; condition];
             end
 
         end
@@ -61,9 +61,9 @@ function m0_restData_uniqdatesYingUsed_extract()
         clear dateBlock
     end
 
-    tbl_dateblocks = table(dateBlocks, cond, 'VariableNames', {'dateBlock_rest', 'cond'});
+    tbl_dateblocks = table(dateBlocks, conditions, 'VariableNames', {'dateBlock_rest', 'condition'});
 
     writetable(tbl_dateblocks, savefile);
     disp(['Extracted dateblockstr in ' savefile])
-    clear tbl_dateblocks dateBlock_rest cond
+    clear tbl_dateblocks dateBlock_rest conditions
 end

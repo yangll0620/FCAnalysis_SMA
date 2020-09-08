@@ -3,7 +3,7 @@ function m2_restData_selectSeg_M1Power()
 % 
 %
 %   Processing steps as follows:
-%       1. add variable segsRemain, for marking each segment with 1 (good) or 0 (not good)
+%       1. add variable segsRemain, for manually marking each segment with 1 (good) or 0 (not good)
 %
 %       2. bipolar for STN and GP channels
 %
@@ -142,23 +142,6 @@ for fi = 1 : nfiles
     clear file chans_m1 fs data_segments
     clear nwin noverlap segi nsegs segsRemain
 end
-
-
-function GMChnAreas = GMChnArea_extract(file_GMChnsarea)
-T = readtable(file_GMChnsarea);
-chi_firstGM = 101;
-nareas = height(T);
-GMChnAreas = cell(nareas,1);
-for areai = 1 : nareas 
-    area = T.brainarea{areai};
-    tmpcell = split(T.channels{areai}, ',');
-    
-    for j = 1 : length(tmpcell)
-        chn = str2num(char(tmpcell{j}));
-        GMChnAreas(chn-chi_firstGM+1,1) = {area};
-    end
-end
-
 
 
 
