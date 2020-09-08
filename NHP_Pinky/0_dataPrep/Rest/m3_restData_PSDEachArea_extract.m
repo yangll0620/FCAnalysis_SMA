@@ -109,8 +109,13 @@ function [pxxs_allfiles, F_pxx] = pxx_eacharea_allfiles(files, twin_pwelch)
 
         [pxxs_1file, F_pxx_1file] = pxx_eacharea_onefile(file, twin_pwelch);
 
+        if (isempty(pxxs_1file))
+            continue;
+        end
+        
         brainareas = fieldnames(pxxs_1file);
 
+        
         % combined pxxs from all the files
         if (~exist('pxxs_allfiles', 'var'))
             pxxs_allfiles = pxxs_1file;
@@ -173,9 +178,12 @@ function [pxxs, F_pxx] = pxx_eacharea_onefile(file, twin_pwelch)
     if (isempty(data_segments))% data_segments is empty
         F_pxx = [];
         pxxs = [];
+        return;
     end
 
-    uniqBrainAreas = unique(T_chnsarea.brainarea);
+    % extract uniqBrainAreas
+    mask_emptyarea = cellfun(@(x) isempty(x), T_chnsarea.brainarea);
+    uniqBrainAreas = unique(T_chnsarea.brainarea(~mask_emptyarea));
 
     % psd pwelch paramers
     nwins = round(twin_pwelch * fs);
@@ -241,6 +249,7 @@ function [pxxs, F_pxx] = pxx_eacharea_onefile(file, twin_pwelch)
     end
 
 end
+
 
 function plotPSD_comp_1chn(psd_normal, psd_mild, F_all, plotF_AOI, savefolder, brainarea)
     %%  plot the psd comparison of normal and mild
@@ -311,7 +320,7 @@ function plotPSD_comp_1chn(psd_normal, psd_mild, F_all, plotF_AOI, savefolder, b
     legend([h1, h2], {'normal', 'mild'})
 
     % title
-    title(['PSD in ' upper(brainarea) ', high freq = ' num2str(F_maxPSD)])
+    title(['PSD in ' brainarea ', high freq = ' num2str(F_maxPSD)])
 
     % save figure
     savename = fullfile(savefolder, ['psd_' brainarea]);
@@ -401,7 +410,7 @@ function plotPSD_comp_multichns(psd_normal, psd_mild, F_all, plotF_AOI, savefold
         legend([h1, h2], {'normal', 'mild'})
 
         % title
-        title(['PSD in ' upper(brainarea) ', chi = ' num2str(chni) ', high freq = ' num2str(F_maxPSD)])
+        title(['PSD in ' brainarea ', chi = ' num2str(chni) ', high freq = ' num2str(F_maxPSD)])
 
         % save figure
         savename = fullfile(savefolder, ['psd_' brainarea '_ch' num2str(chni)]);

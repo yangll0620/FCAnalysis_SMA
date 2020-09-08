@@ -92,7 +92,7 @@ function m2_restData_selectSeg_Power()
                 xlim(freqs_roi);
             end
 
-            for chi = 1:size(lfp_diffstn, 2)
+            for chi = 1:size(lfp_diffgp, 2)
                 subplot(4, 4, chi + 8); plot(F_gp, pxx_gp(:, chi)); legend(['gp - ' num2str(chi)]);
                 xlim(freqs_roi);
             end

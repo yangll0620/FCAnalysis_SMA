@@ -1,8 +1,4 @@
 function m0_restData_dateBlockYingUsed()
-    %   Manually marked the good and bad segments
-    %
-    % 1. add variable segsRemain, for marking each segment with 1 (good) or 0 (not good)
-    %
 
     %% folder generate
     % the full path and the name of code file without suffix
@@ -25,7 +21,7 @@ function m0_restData_dateBlockYingUsed()
     animal = 'Jo';
 
     %% save setup
-    savefilename = 'dateBlocksYingUsed_rest.xlsx';
+    savefilename = [animal 'dateBlocksYingUsed_rest.xlsx'];
     savefolder = codecorresfolder;
     savefile = fullfile(savefolder, savefilename);
 
