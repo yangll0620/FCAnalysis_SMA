@@ -35,8 +35,10 @@ function m2_restData_selectSeg_Power()
     freqs_roi = [5 40];
     fs_new = 500;
 
+    animal = 'Pinky';
+
     % GrayMatter chn-area information file
-    filename_GMChnsarea = ['Pinky_GMChnAreaInf.csv'];
+    filename_GMChnsarea = [animal '_GMChnAreaInf.csv'];
     file_GMChnsarea = fullfile(datafolder, 'Pinky', filename_GMChnsarea);
 
     %% save setup

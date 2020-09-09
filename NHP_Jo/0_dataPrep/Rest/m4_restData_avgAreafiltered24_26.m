@@ -5,7 +5,7 @@ function m4_restData_avgAreafiltered24_26()
     %
     %   2. narrowed filltered.
     %
-    %   2. seg into intervals with same time length
+    %   3. seg into intervals with same time length
     %
     %
     %
@@ -15,15 +15,15 @@ function m4_restData_avgAreafiltered24_26()
     %
     %       'data_segments', 'fs', 'T_chnarea'
     %
+    %
     %   Output variables:
     %
     %
-    %        lfpsegs_m1, lfpsegs_stn lfpsegs_gp : lfp segments in m1, stn, and gp
+    %        lfpsegs: lfp segments in all areas
     %
-    %          fs: resampled samping rate (default 500Hz)
+    %        fs: resampled samping rate (default 500Hz)
     %
-    %          segsRemain, segsIndex: forgot, need to be added
-    %
+    %        chnAreas: chnAreas cell for used in python
 
     %% folders generate
     % the full path and the name of code file without suffix

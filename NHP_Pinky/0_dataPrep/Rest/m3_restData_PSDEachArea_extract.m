@@ -37,27 +37,28 @@ function m3_restData_PSDEachArea_extract()
 
     %% Code Start Here
 
-    file_psdall = fullfile(savefolder, [savefilename_prefix '_allsegs_normalmild.mat']);
+    file_psdall = fullfile(savefolder, [savefilename_prefix '_allsegs_normalmildmoderate.mat']);
 
     %%%  calculate/load dbs psd for mild and normal %%%
     if ~exist(file_psdall, 'file')% not exist
 
         [pxxs_allfiles_normal, F_pxx_normal] = pxx_eacharea_allfiles(dir(fullfile(inputfolder, '*_normal_*.mat')), twin_pwelch);
         [pxxs_allfiles_mild, F_pxx_mild] = pxx_eacharea_allfiles(dir(fullfile(inputfolder, '*_mild_*.mat')), twin_pwelch);
+        [pxxs_allfiles_moderate, F_pxx_moderate] = pxx_eacharea_allfiles(dir(fullfile(inputfolder, '*_moderate_*.mat')), twin_pwelch);
 
-        if ~isequal(F_pxx_normal, F_pxx_mild)
-            disp('F_pxx_normal not equal F_pxx_mild');
+        if ~isequal(F_pxx_normal, F_pxx_mild, F_pxx_moderate)
+            disp('F_pxx_normal, F_pxx_mild and F_pxx_moderate not equal');
 
             return;
         else
             F_pxx = F_pxx_normal;
 
-            save(file_psdall, 'pxxs_allfiles_normal', 'pxxs_allfiles_mild', 'F_pxx');
+            save(file_psdall, 'pxxs_allfiles_normal', 'pxxs_allfiles_mild', 'pxxs_allfiles_moderate','F_pxx');
             clear F_pxx_normal F_pxx_mild
         end
 
     else
-        load(file_psdall, 'pxxs_allfiles_normal', 'pxxs_allfiles_mild', 'F_pxx');
+        load(file_psdall, 'pxxs_allfiles_normal', 'pxxs_allfiles_mild', 'pxxs_allfiles_moderate','F_pxx');
     end
 
     %%%  plot  %%%
@@ -69,14 +70,15 @@ function m3_restData_PSDEachArea_extract()
         % load normal and mild data
         eval(['psd_normal = pxxs_allfiles_normal.' brainarea ';'])
         eval(['psd_mild = pxxs_allfiles_mild.' brainarea ';'])
+        eval(['psd_moderate = pxxs_allfiles_moderate.' brainarea ';'])
 
         if ~strcmp(brainarea, 'STN') &&~strcmp(brainarea, 'GP')
             % if not DBS case, psd_normal, psd_mild: nfs * nsegs
-            plotPSD_comp_1chn(psd_normal, psd_mild, F_pxx, plotF_AOI, savefolder, brainarea)
+            plotPSD_comp_1chn(psd_normal, psd_mild, psd_moderate, F_pxx, plotF_AOI, savefolder, brainarea)
 
         else
             % if DBS case, pxxs_allfiles.GP, pxxs.GP: nfs * nchns * nsegs
-            plotPSD_comp_multichns(psd_normal, psd_mild, F_pxx, plotF_AOI, savefolder, brainarea)
+            plotPSD_comp_multichns(psd_normal, psd_mild, psd_moderate, F_pxx, plotF_AOI, savefolder, brainarea)
         end
 
     end
@@ -251,11 +253,11 @@ function [pxxs, F_pxx] = pxx_eacharea_onefile(file, twin_pwelch)
 end
 
 
-function plotPSD_comp_1chn(psd_normal, psd_mild, F_all, plotF_AOI, savefolder, brainarea)
+function plotPSD_comp_1chn(psd_normal, psd_mild, psd_moderate, F_all, plotF_AOI, savefolder, brainarea)
     %%  plot the psd comparison of normal and mild
     %
     %   Inputs:
-    %       psd_normal, psd_mild: psd of all segments in normal or mild, nfs * nsegs
+    %       psd_normal, psd_mild, psd_moderate: psd of all segments in normal, mild and moderate, nfs * nsegs
     %
     %       F_all: the vector of frequencies (in hertz) at which the PSD is estimated (nfs * 1)
     %
@@ -271,6 +273,11 @@ function plotPSD_comp_1chn(psd_normal, psd_mild, F_all, plotF_AOI, savefolder, b
     color_normal_mean = [0, 0, 255] / 255;
     color_mild_range = [255, 228, 225] / 255;
     color_mild_mean = [255, 00, 0] / 255;
+    color_moderate_range = [238, 238, 238] / 255;
+    color_moderate_mean = [0, 0, 0] / 255;
+
+    % plot setup
+    linewidth = 1.5;
 
     % F_AOI
     F_AOI = F_all(idx_AOI);
@@ -280,6 +287,7 @@ function plotPSD_comp_1chn(psd_normal, psd_mild, F_all, plotF_AOI, savefolder, b
     % extract the  psd of AOI
     psd_normal_FAOI = psd_normal(idx_AOI, :);
     psd_mild_FAOI = psd_mild(idx_AOI, :);
+    psd_moderate_FAOI = psd_moderate(idx_AOI, :);
 
     psd_normal_high = max(psd_normal_FAOI, [], 2);
     psd_normal_low = min(psd_normal_FAOI, [], 2);
@@ -288,6 +296,11 @@ function plotPSD_comp_1chn(psd_normal, psd_mild, F_all, plotF_AOI, savefolder, b
     psd_mild_high = max(psd_mild_FAOI, [], 2);
     psd_mild_low = min(psd_mild_FAOI, [], 2);
     psd_mild_mean = mean(psd_mild_FAOI, 2);
+
+
+    psd_moderate_high = max(psd_moderate_FAOI, [], 2);
+    psd_moderate_low = min(psd_moderate_FAOI, [], 2);
+    psd_moderate_mean = mean(psd_moderate_FAOI, 2);
 
     % reshape, psd_*_high/low/mean into 1 * nfs
 
@@ -299,15 +312,22 @@ function plotPSD_comp_1chn(psd_normal, psd_mild, F_all, plotF_AOI, savefolder, b
     [m, n] = size(psd_mild_low); psd_mild_low = reshape(psd_mild_low, 1, m * n); clear m n
     [m, n] = size(psd_mild_mean); psd_mild_mean = reshape(psd_mild_mean, 1, m * n); clear m n
 
+
+    [m, n] = size(psd_moderate_high); psd_moderate_high = reshape(psd_moderate_high, 1, m * n); clear m n
+    [m, n] = size(psd_moderate_low); psd_moderate_low = reshape(psd_moderate_low, 1, m * n); clear m n
+    [m, n] = size(psd_moderate_mean); psd_moderate_mean = reshape(psd_moderate_mean, 1, m * n); clear m n
+
     % plot range
     figure
     fill([F_AOI flip(F_AOI)], [psd_normal_high flip(psd_normal_low)], color_normal_range, 'LineStyle', 'none')
     hold all
     fill([F_AOI flip(F_AOI)], [psd_mild_high flip(psd_mild_low)], color_mild_range, 'LineStyle', 'none')
+    fill([F_AOI flip(F_AOI)], [psd_moderate_high flip(psd_moderate_low)], color_moderate_range, 'LineStyle', 'none')
 
     % plot mean
-    h1 = plot(F_AOI, psd_normal_mean, 'Color', color_normal_mean);
-    h2 = plot(F_AOI, psd_mild_mean, 'Color', color_mild_mean);
+    h1 = plot(F_AOI, psd_normal_mean, 'Color', color_normal_mean, 'LineWidth', linewidth);
+    h2 = plot(F_AOI, psd_mild_mean, 'Color', color_mild_mean, 'LineWidth', linewidth);
+    h3 = plot(F_AOI, psd_moderate_mean, 'Color', color_moderate_mean, 'LineWidth', linewidth);
 
     % find the frequency with maximum density
     [maxPSD, idx_max] = max(psd_mild_mean);
@@ -317,7 +337,7 @@ function plotPSD_comp_1chn(psd_normal, psd_mild, F_all, plotF_AOI, savefolder, b
     xlim([min(F_AOI) max(F_AOI)])
 
     % legend
-    legend([h1, h2], {'normal', 'mild'})
+    legend([h1, h2, h3], {'normal', 'mild', 'moderate'})
 
     % title
     title(['PSD in ' brainarea ', high freq = ' num2str(F_maxPSD)])
@@ -326,19 +346,19 @@ function plotPSD_comp_1chn(psd_normal, psd_mild, F_all, plotF_AOI, savefolder, b
     savename = fullfile(savefolder, ['psd_' brainarea]);
     saveas(gcf, savename, 'png')
 
-    clear psd_allsegs_normal psd_allsegs_mild
-    clear psd_normal_FAOI psd_mild_FAOI
-    clear psd_normal_high psd_normal_low psd_normal_mean psd_mild_high psd_mild_low psd_mild_mean
-    clear h1 h2 maxPSD F_maxPSD idx_max
+    clear psd_allsegs_normal psd_allsegs_mild psd_allsegs_moderate
+    clear psd_normal_FAOI psd_mild_FAOI psd_moderate_FAOI
+    clear psd_normal_high psd_normal_low psd_normal_mean psd_mild_high psd_mild_low psd_mild_mean psd_moderate_high psd_moderate_low psd_moderate_mean
+    clear h1 h2 h3 maxPSD F_maxPSD idx_max
     clear savename
+
 end
 
-function plotPSD_comp_multichns(psd_normal, psd_mild, F_all, plotF_AOI, savefolder, brainarea)
+function plotPSD_comp_multichns(psd_normal, psd_mild, psd_moderate, F_all, plotF_AOI, savefolder, brainarea)
     %%  plot the psd comparison of normal and mild
     %
     %   Inputs:
-    %       psd_normal, psd_mild: psd of all segments in normal
-    %       or mild, nfs * nchns * nsegs
+    %       psd_normal, psd_mild, psd_moderate: psd of all segments in normal, mild and moderate, nfs * nchns * nsegs
     %
     %       F_all: the vector of frequencies (in hertz) at which the PSD is estimated (nfs * 1)
     %
@@ -354,6 +374,11 @@ function plotPSD_comp_multichns(psd_normal, psd_mild, F_all, plotF_AOI, savefold
     color_normal_mean = [0, 0, 255] / 255;
     color_mild_range = [255, 228, 225] / 255;
     color_mild_mean = [255, 00, 0] / 255;
+    color_moderate_range = [238, 238, 238] / 255;
+    color_moderate_mean = [0, 0, 0] / 255;
+
+    % plot setup
+    linewidth = 1.5;
 
     % F_AOI
     F_AOI = F_all(idx_AOI);
@@ -366,10 +391,12 @@ function plotPSD_comp_multichns(psd_normal, psd_mild, F_all, plotF_AOI, savefold
 
         psd_allsegs_normal = squeeze(psd_normal(:, chni, :));
         psd_allsegs_mild = squeeze(psd_mild(:, chni, :));
+        psd_allsegs_moderate = squeeze(psd_moderate(:, chni, :));
 
         % extract the  psd of AOI
         psd_normal_FAOI = psd_allsegs_normal(idx_AOI, :);
         psd_mild_FAOI = psd_allsegs_mild(idx_AOI, :);
+        psd_moderate_FAOI = psd_allsegs_moderate(idx_AOI, :);
 
         psd_normal_high = max(psd_normal_FAOI, [], 2);
         psd_normal_low = min(psd_normal_FAOI, [], 2);
@@ -378,6 +405,10 @@ function plotPSD_comp_multichns(psd_normal, psd_mild, F_all, plotF_AOI, savefold
         psd_mild_high = max(psd_mild_FAOI, [], 2);
         psd_mild_low = min(psd_mild_FAOI, [], 2);
         psd_mild_mean = mean(psd_mild_FAOI, 2);
+
+        psd_moderate_high = max(psd_moderate_FAOI, [], 2);
+        psd_moderate_low = min(psd_moderate_FAOI, [], 2);
+        psd_moderate_mean = mean(psd_moderate_FAOI, 2);
 
         % reshape, psd_*_high/low/mean into 1 * nfs
 
@@ -389,15 +420,22 @@ function plotPSD_comp_multichns(psd_normal, psd_mild, F_all, plotF_AOI, savefold
         [m, n] = size(psd_mild_low); psd_mild_low = reshape(psd_mild_low, 1, m * n); clear m n
         [m, n] = size(psd_mild_mean); psd_mild_mean = reshape(psd_mild_mean, 1, m * n); clear m n
 
+        [m, n] = size(psd_moderate_high); psd_moderate_high = reshape(psd_moderate_high, 1, m * n); clear m n
+        [m, n] = size(psd_moderate_low); psd_moderate_low = reshape(psd_moderate_low, 1, m * n); clear m n
+        [m, n] = size(psd_moderate_mean); psd_moderate_mean = reshape(psd_moderate_mean, 1, m * n); clear m n
+
+
         % plot range
         figure
         fill([F_AOI flip(F_AOI)], [psd_normal_high flip(psd_normal_low)], color_normal_range, 'LineStyle', 'none')
         hold all
         fill([F_AOI flip(F_AOI)], [psd_mild_high flip(psd_mild_low)], color_mild_range, 'LineStyle', 'none')
+        fill([F_AOI flip(F_AOI)], [psd_moderate_high flip(psd_moderate_low)], color_moderate_range, 'LineStyle', 'none')
 
         % plot mean
-        h1 = plot(F_AOI, psd_normal_mean, 'Color', color_normal_mean);
-        h2 = plot(F_AOI, psd_mild_mean, 'Color', color_mild_mean);
+        h1 = plot(F_AOI, psd_normal_mean, 'Color', color_normal_mean, 'LineWidth', linewidth);
+        h2 = plot(F_AOI, psd_mild_mean, 'Color', color_mild_mean, 'LineWidth', linewidth);
+        h3 = plot(F_AOI, psd_moderate_mean, 'Color', color_moderate_mean, 'LineWidth', linewidth);
 
         % find the frequency with maximum density
         [maxPSD, idx_max] = max(psd_mild_mean);
@@ -407,7 +445,7 @@ function plotPSD_comp_multichns(psd_normal, psd_mild, F_all, plotF_AOI, savefold
         xlim([min(F_AOI) max(F_AOI)])
 
         % legend
-        legend([h1, h2], {'normal', 'mild'})
+        legend([h1, h2, h3], {'normal', 'mild', 'moderate'})
 
         % title
         title(['PSD in ' brainarea ', chi = ' num2str(chni) ', high freq = ' num2str(F_maxPSD)])
@@ -416,10 +454,10 @@ function plotPSD_comp_multichns(psd_normal, psd_mild, F_all, plotF_AOI, savefold
         savename = fullfile(savefolder, ['psd_' brainarea '_ch' num2str(chni)]);
         saveas(gcf, savename, 'png')
 
-        clear psd_allsegs_normal psd_allsegs_mild
-        clear psd_normal_FAOI psd_mild_FAOI
-        clear psd_normal_high psd_normal_low psd_normal_mean psd_mild_high psd_mild_low psd_mild_mean
-        clear h1 h2 maxPSD F_maxPSD idx_max
+        clear psd_allsegs_normal psd_allsegs_mild psd_allsegs_moderate 
+        clear psd_normal_FAOI psd_mild_FAOI psd_moderate_FAOI
+        clear psd_normal_high psd_normal_low psd_normal_mean psd_mild_high psd_mild_low psd_mild_mean psd_moderate_high psd_moderate_low psd_moderate_mean
+        clear h1 h2 h3  maxPSD F_maxPSD idx_max
         clear savename
     end
 
