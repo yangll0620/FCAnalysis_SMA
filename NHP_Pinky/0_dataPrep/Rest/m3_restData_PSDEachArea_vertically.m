@@ -1,4 +1,4 @@
-function m3_restData_PSDEachArea_extract()
+function m3_restData_PSDEachArea_vertically()
     %%   PSD estimates for mild and normal individually
     %
     %       psd for each brain area, as well as each DBS contact
@@ -35,11 +35,6 @@ function m3_restData_PSDEachArea_extract()
     savefolder = codecorresfolder;
     savefilename_prefix = 'psd_';
 
-    % copy current code to the savefolder for future reference
-    tmp = split(codefilepath, '/');
-    currfilename = [tmp{end} '.m']; % current file name without path
-    copyfile([codefilepath '.m'], fullfile(savefolder, currfilename), 'f')
-
     %% Code Start Here
 
     file_psdall = fullfile(savefolder, [savefilename_prefix '_allsegs_normalmildmoderate.mat']);
@@ -58,12 +53,12 @@ function m3_restData_PSDEachArea_extract()
         else
             F_pxx = F_pxx_normal;
 
-            save(file_psdall, 'pxxs_allfiles_normal', 'pxxs_allfiles_mild', 'pxxs_allfiles_moderate', 'F_pxx');
+            save(file_psdall, 'pxxs_allfiles_normal', 'pxxs_allfiles_mild', 'pxxs_allfiles_moderate','F_pxx');
             clear F_pxx_normal F_pxx_mild
         end
 
     else
-        load(file_psdall, 'pxxs_allfiles_normal', 'pxxs_allfiles_mild', 'pxxs_allfiles_moderate', 'F_pxx');
+        load(file_psdall, 'pxxs_allfiles_normal', 'pxxs_allfiles_mild', 'pxxs_allfiles_moderate','F_pxx');
     end
 
     %%%  plot  %%%
@@ -102,9 +97,9 @@ function [pxxs_allfiles, F_pxx] = pxx_eacharea_allfiles(files, twin_pwelch)
     %       pxxs_allfiles: the PSD estimate of all the segments from the files
     %           e.g. pxxs =
     %                   struct with fields:
-    %                      M1: [nfs �� nsegs double]
-    %                     STN: [nfs �� nSTNchns �� nsegs double]
-    %                      GP: [nfs �� nGPchns �� nsegs double]
+    %                      M1: [nfs ¡Á nsegs double]
+    %                     STN: [nfs ¡Á nSTNchns ¡Á nsegs double]
+    %                      GP: [nfs ¡Á nGPchns ¡Á nsegs double]
     %
     %       F_pxx: the vector of frequencies (in hertz) at which the PSD is estimated (nfs * 1)
 
@@ -119,9 +114,10 @@ function [pxxs_allfiles, F_pxx] = pxx_eacharea_allfiles(files, twin_pwelch)
         if (isempty(pxxs_1file))
             continue;
         end
-
+        
         brainareas = fieldnames(pxxs_1file);
 
+        
         % combined pxxs from all the files
         if (~exist('pxxs_allfiles', 'var'))
             pxxs_allfiles = pxxs_1file;
@@ -165,16 +161,16 @@ function [pxxs_allfiles, F_pxx] = pxx_eacharea_allfiles(files, twin_pwelch)
 end
 
 function [pxxs, F_pxx] = pxx_eacharea_onefile(file, twin_pwelch)
-    %% extract psd of all the segments from the file, each psd for each dbs contact and one psd for one area (except dbs)
+    %% extract psd of all the segments from the files, each psd for each dbs contact and one psd for one area (except dbs)
     %
     % Outputs:
     %
     %       pxxs: the PSD estimate of all the segments from the files
     %           e.g. pxxs =
     %                   struct with fields:
-    %                      M1: [nfs * nsegs double]
-    %                     STN: [nfs * nSTNchns * nsegs double]
-    %                      GP: [nfs * nGPchns * nsegs double]
+    %                      M1: [nfs ¡Á nsegs double]
+    %                     STN: [nfs ¡Á nSTNchns ¡Á nsegs double]
+    %                      GP: [nfs ¡Á nGPchns ¡Á nsegs double]
     %
     %       F_pxx: the vector of frequencies (in hertz) at which the PSD is estimated (nfs * 1)
 
@@ -188,7 +184,6 @@ function [pxxs, F_pxx] = pxx_eacharea_onefile(file, twin_pwelch)
     end
 
     % extract uniqBrainAreas
-    T_chnsarea.brainarea = cellfun(@(x) strrep(x, ' ', ''), T_chnsarea.brainarea, 'UniformOutput', false); % Sensory Motor -> SensoryMotor
     mask_emptyarea = cellfun(@(x) isempty(x), T_chnsarea.brainarea);
     uniqBrainAreas = unique(T_chnsarea.brainarea(~mask_emptyarea));
 
@@ -257,6 +252,7 @@ function [pxxs, F_pxx] = pxx_eacharea_onefile(file, twin_pwelch)
 
 end
 
+
 function plotPSD_comp_1chn(psd_normal, psd_mild, psd_moderate, F_all, plotF_AOI, savefolder, brainarea)
     %%  plot the psd comparison of normal and mild
     %
@@ -301,6 +297,7 @@ function plotPSD_comp_1chn(psd_normal, psd_mild, psd_moderate, F_all, plotF_AOI,
     psd_mild_low = min(psd_mild_FAOI, [], 2);
     psd_mild_mean = mean(psd_mild_FAOI, 2);
 
+
     psd_moderate_high = max(psd_moderate_FAOI, [], 2);
     psd_moderate_low = min(psd_moderate_FAOI, [], 2);
     psd_moderate_mean = mean(psd_moderate_FAOI, 2);
@@ -314,6 +311,7 @@ function plotPSD_comp_1chn(psd_normal, psd_mild, psd_moderate, F_all, plotF_AOI,
     [m, n] = size(psd_mild_high); psd_mild_high = reshape(psd_mild_high, 1, m * n); clear m n
     [m, n] = size(psd_mild_low); psd_mild_low = reshape(psd_mild_low, 1, m * n); clear m n
     [m, n] = size(psd_mild_mean); psd_mild_mean = reshape(psd_mild_mean, 1, m * n); clear m n
+
 
     [m, n] = size(psd_moderate_high); psd_moderate_high = reshape(psd_moderate_high, 1, m * n); clear m n
     [m, n] = size(psd_moderate_low); psd_moderate_low = reshape(psd_moderate_low, 1, m * n); clear m n
@@ -426,8 +424,9 @@ function plotPSD_comp_multichns(psd_normal, psd_mild, psd_moderate, F_all, plotF
         [m, n] = size(psd_moderate_low); psd_moderate_low = reshape(psd_moderate_low, 1, m * n); clear m n
         [m, n] = size(psd_moderate_mean); psd_moderate_mean = reshape(psd_moderate_mean, 1, m * n); clear m n
 
+
         % plot range
-        figure
+        subplot(nchns, 1, chni);
         fill([F_AOI flip(F_AOI)], [psd_normal_high flip(psd_normal_low)], color_normal_range, 'LineStyle', 'none')
         hold all
         fill([F_AOI flip(F_AOI)], [psd_mild_high flip(psd_mild_low)], color_mild_range, 'LineStyle', 'none')
@@ -449,16 +448,16 @@ function plotPSD_comp_multichns(psd_normal, psd_mild, psd_moderate, F_all, plotF
         legend([h1, h2, h3], {'normal', 'mild', 'moderate'})
 
         % title
-        title(['PSD in ' brainarea ', chi = ' num2str(chni) ', high freq = ' num2str(F_maxPSD)])
+        title(['PSD in ' brainarea num2str(chni-1) '-' num2str(chni) ', high freq = ' num2str(F_maxPSD)])
 
         % save figure
         savename = fullfile(savefolder, ['psd_' brainarea '_ch' num2str(chni)]);
         saveas(gcf, savename, 'png')
 
-        clear psd_allsegs_normal psd_allsegs_mild psd_allsegs_moderate
+        clear psd_allsegs_normal psd_allsegs_mild psd_allsegs_moderate 
         clear psd_normal_FAOI psd_mild_FAOI psd_moderate_FAOI
         clear psd_normal_high psd_normal_low psd_normal_mean psd_mild_high psd_mild_low psd_mild_mean psd_moderate_high psd_moderate_low psd_moderate_mean
-        clear h1 h2 h3 maxPSD F_maxPSD idx_max
+        clear h1 h2 h3  maxPSD F_maxPSD idx_max
         clear savename
     end
 

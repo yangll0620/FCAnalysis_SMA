@@ -7,6 +7,7 @@ function m4_restData_avgAreafiltered26_28()
     %
     %   3. seg into intervals with same time length
     %
+    %   4. ignore files with no segment
     %
     %
     %   Input:
@@ -71,6 +72,10 @@ function m4_restData_avgAreafiltered26_28()
 
         % extract filtered lfp with same length from 1 file
         [lfpsegs, T_chnsarea, fs] = avgAreafilter_seg_1file(fullfile(inputfolder, filename), frebp, segt);
+
+        if isempty(lfpsegs)
+            continue;
+        end
 
         % extract chnAreas cell for used in python
         chnAreas = T_chnsarea.brainarea;

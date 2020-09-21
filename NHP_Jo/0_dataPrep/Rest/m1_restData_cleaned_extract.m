@@ -48,7 +48,7 @@ function m1_restData_cleaned_extract()
     configFile = fullfile(datafolder, 'config_m1lf_fromYing.mat');
 
     % dateBlock File
-    dateBlocksXLSFile = fullfile(codecorresParentfolder, 'm0_restData_dateBlockYingUsed', 'dateBlocksYingUsed_rest.xlsx');
+    dateBlocksXLSFile = fullfile(codecorresParentfolder, 'm0_restData_dateBlockYingUsed', [animal 'dateBlocksYingUsed_rest.xlsx']);
 
     %% save setup
     savefolder = codecorresfolder;
@@ -76,16 +76,13 @@ function m1_restData_cleaned_extract()
 
     for i = 1:nfiles
         dateblockstr = tbl_dateBlocks(i, :).dateBlock_rest{1}; % dateblockstr = "20151002_1"
-        cond = tbl_dateBlocks(i, :).cond{1};
+        condition = tbl_dateBlocks(i, :).condition{1};
 
         % extract the date_num, and blocki
         tmp = split(dateblockstr, '_');
         date_num = datenum(tmp{1}, 'yyyymmdd');
         tdtblocki = str2num(tmp{2});
 
-        if ~(strcmp(cond, 'normal') || strcmp(cond, 'mild'))
-            continue;
-        end
 
         folder_allsync = fullfile(folder_processed_root2, [animal '_' datestr(date_num, 'mmddyy')], ['Block-' num2str(tdtblocki)]);
         filepattern_allsync = fullfile(folder_allsync, [animal '*' datestr(date_num, 'yyyymmdd') '_*_all_sync.mat']);
@@ -124,11 +121,11 @@ function m1_restData_cleaned_extract()
             continue;
         end
 
-        savefile = fullfile(savefolder, [savefilename_prefix cond '_' datestr(date_num, savename_datestr_format) '_tdt' num2str(tdtblocki) '.mat']);
+        savefile = fullfile(savefolder, [savefilename_prefix condition '_' datestr(date_num, savename_datestr_format) '_tdt' num2str(tdtblocki) '.mat']);
         save(savefile, 'data_segments', 'segsIndex', 'fs')
 
         clear allsyncfile dateblockstr thr_power1
-        clear tmp cond
+        clear tmp condition
     end
 
     disp('Done!')
@@ -290,3 +287,139 @@ function eye_state_mintime = extract_eye_state_mintime(eye_area_ds, thr_eye_open
     [eye_state_mintime] = get_state_mintime(eye_state, min_samples);
 
 end
+
+
+function [ lfp ] = get_lfp_removeBadChns( lfp_array,  m1array_to_remove)
+    % get_lfp_removeBadChns Get LFP from a 10 by 10 array of lfp_array
+    % modified from Ying's code: get_lfp_mean(lfp_array, m1array_to_remove)  
+    %
+    %   Args:
+    %       lfp_array: 1 * 10 cell, lfp_array{rowi}{colj} (ntemp * 1) is time series lfp data of
+    %                  one channel 
+    %
+    %       m1Array_to_remove: nchns_removed * 2 (1: rowi,  2: colj)
+    % 
+    %   Return:
+    %       lfp: ntemp * nchns, nchns = 100 - length(m1_array_to_remove)
+    
+       
+    lfp = [];
+    for row=1:10
+        for col=1:10
+            if isempty (strmatch([row col], m1array_to_remove))
+                lfp = cat(2,lfp, lfp_array{row}{col});
+            end
+        end
+    end
+end    
+
+function [state_vec] = get_state_mintime( state_in, min_samples )
+    %GET_STATE_MINTIME 
+    %       get min state vector based on state_in and min_samples.
+    %       state_vec is set to be 1/0 if state_in is 1 and the state 1/0 last longer than min_samples, others -1
+    %                  
+    %       for example: state_in = [1 1 1 1 0 0 0 1 1], min_samples = 3
+    %                    =>   state_vec = [1 1 1 1 0 0 0 -1 -1]
+    %
+    %       Args:
+    %           state_in: 1 * ntemp vector
+    %           
+    %           min_samples: an integer scalar
+    %
+    %       Return:
+    %           state_vec: 1 * ntemp vector
+    
+    
+    %%
+    state_vec = -1*ones(size(state_in));
+    idx_start = 1; % start index of one state segment
+    for k = 2:length(state_in)
+        
+        % state change to a different state (change point) or the last state 
+        if ( state_in(k) ~=  state_in(k-1) || k==length(state_in) )
+            
+            % end index of the last state segment
+            idx_end = k-1;
+            
+            % the last state segement longer than min_elapsed_samples
+            if idx_end-idx_start +1 >= min_samples
+                
+                % previous state is 1, state_vec for this state is assigned 1
+                if state_in(idx_start) ==1
+                    state_vec(idx_start:k-1) = ones(1, k - idx_start )  ;
+                end
+                
+                % previous state is 0, state_vec for this state is assigned 0
+                if state_in(idx_start) ==0
+                    state_vec(idx_start:k-1) = zeros(1, k - idx_start );
+                end
+            end
+            
+            idx_start = k;
+        end
+    end
+end
+
+function [ vec_segsIndex ] = get_segIndex( states,  min_samples )
+    % get_segIndex 
+    %       get segment indices based on state and min_samples. Only get the
+    %       segment with state == 1 and duration is longer or equall to
+    %       min_samples
+    %                  
+    %       for example: state_in = [1 1 1 1 0 0 0 1 1], min_samples = 2
+    %                    =>   vec_segsIndex = [1 4; 8 9]
+    %
+    %       Args:
+    %           states: 1 * ntemp vector
+    %           
+    %           min_samples: an integer scalar
+    %
+    %       Return:
+    %           vec_segsIndex: nSegs * 2 (idx_start, idx_end)
+    
+    
+    
+    %%
+    
+    
+    % find the first index at where state == 1
+    i = 1;
+    while(i <=length(states) &&states(i) == 0 )
+        i =i+1;
+    end
+    idx_state1Start = i;
+    
+    % extract all the seg start and end indices where state ==1 and duration >= min_samples
+    vec_segsIndex = [];
+    for i= idx_state1Start + 1: length(states)
+        
+        % transition from state 1 to state 0
+        if states(i) == 0 && states(i-1) ==1
+            idx_state1End = i -1;
+            
+            % the state 1 segment duration > min_samples
+            if idx_state1End - idx_state1Start >= min_samples
+                vec_segsIndex = cat(1, vec_segsIndex, [idx_state1Start, idx_state1End]);
+            end
+        end
+        
+        % transition from state 0 to state 1
+        if states(i) == 1 && states(i-1) == 0
+            idx_state1Start = i;
+        end
+        
+        % the last state an its state is 1
+        if i == length(states) && states(i) == 1
+            idx_state1End = i;
+            
+            % the state 1 segment duration > min_samples
+            if idx_state1End - idx_state1Start >= min_samples
+                vec_segsIndex = cat(1, vec_segsIndex, [idx_state1Start, idx_state1End]);
+            end
+        end
+    end
+end
+    
+    
+   
+    

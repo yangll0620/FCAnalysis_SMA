@@ -71,13 +71,13 @@ function m0_restData_dateBlockYingUsed()
         if i == 1
             dateBlocks = dateBlock;
             predate = dateBlock;
-            cond = {condition};
+            conditions = {condition};
         else
 
             if (~strcmp(predate, dateBlock))
                 dateBlocks = cat(1, dateBlocks, dateBlock);
                 predate = dateBlock;
-                cond = [cond; condition];
+                conditions = [conditions; condition];
             end
 
         end
@@ -86,7 +86,7 @@ function m0_restData_dateBlockYingUsed()
     end
 
 
-    tbl_dateblocks = table(dateBlocks, cond, 'VariableNames', {'dateBlock_rest', 'cond'});
+    tbl_dateblocks = table(dateBlocks, conditions, 'VariableNames', {'dateBlock_rest', 'condition'});
 
     writetable(tbl_dateblocks, savefile);
     disp(['Extracted dateblockstr in ' savefile])

@@ -1,5 +1,5 @@
 function m0_SKTData_extract(animal)
-%% extract the STK data  marked by Ying for Pinky
+%% extract the STK data  marked by Ying for Bug
 % 
 %   1. Only extract the trials marked with good for both reach and return
 %	

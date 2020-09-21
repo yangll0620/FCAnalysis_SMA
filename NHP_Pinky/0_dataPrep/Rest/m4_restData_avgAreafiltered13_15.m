@@ -1,5 +1,5 @@
-function m4_restData_avgAreafiltered24_26()
-    %% narrow filtered rest data recorded with grayMatter in frequency [26 28]Hz
+function m4_restData_avgAreafiltered13_15()
+    %% narrow filtered rest data recorded with grayMatter in frequency [13 15]Hz
     %
     %   1. averaged the lfp in one area (except the DBS)
     %
@@ -7,6 +7,7 @@ function m4_restData_avgAreafiltered24_26()
     %
     %   3. seg into intervals with same time length
     %
+    %   4. ignore files with no segment
     %
     %
     %   Input:
@@ -24,6 +25,7 @@ function m4_restData_avgAreafiltered24_26()
     %        fs: resampled samping rate (default 500Hz)
     %
     %        chnAreas: chnAreas cell for used in python
+    %
 
     %% folders generate
     % the full path and the name of code file without suffix
@@ -49,7 +51,7 @@ function m4_restData_avgAreafiltered24_26()
 
     %%  input setup
     % band pass frequency
-    frebp = [24 26];
+    frebp = [13 15];
     % input folder: extracted raw rest data with grayMatter
     inputfolder = fullfile(codecorresParentfolder, 'm2_restData_selectSeg_Power');
 
@@ -58,7 +60,7 @@ function m4_restData_avgAreafiltered24_26()
     savefilename_addstr = ['filtered' num2str(frebp(1)) '_' num2str(frebp(2)) '_seg_avgArea'];
 
     %% starting: narrow filter the lfp data of all the files
-    files = dir(fullfile(inputfolder, '*moderate*.mat'));
+    files = dir(fullfile(inputfolder, '*.mat'));
     nfiles = length(files);
     f = waitbar(0, ['Narrow Filtering....']);
 
@@ -71,14 +73,20 @@ function m4_restData_avgAreafiltered24_26()
         % extract filtered lfp with same length from 1 file
         [lfpsegs, T_chnsarea, fs] = avgAreafilter_seg_1file(fullfile(inputfolder, filename), frebp, segt);
 
+        if isempty(lfpsegs)
+            continue;
+        end
+
         % extract chnAreas cell for used in python
         chnAreas = T_chnsarea.brainarea;
 
+        % change STN into stn0-1, stn1-2 et.al
         idx_STN = find(strcmp(T_chnsarea.brainarea, 'STN'));
         for i = 1:length(idx_STN)
             chnAreas{idx_STN(i)} = ['stn' num2str(i - 1) '-' num2str(i)];
         end
 
+        % change GP into gp0-1, gp1-2 et.al
         idx_GP = find(strcmp(T_chnsarea.brainarea, 'GP'));
         for i = 1:length(idx_GP)
             chnAreas{idx_GP(i)} = ['gp' num2str(i - 1) '-' num2str(i)];
@@ -115,7 +123,9 @@ function [filted_lfp_segs, T_chnsarea_new, fs] = avgAreafilter_seg_1file(file, f
 
     load(file, 'data_segments', 'fs', 'T_chnsarea')
 
-    uniqBrainAreas = unique(T_chnsarea.brainarea);
+    % extract uniqBrainAreas
+    mask_emptyarea = cellfun(@(x) isempty(x), T_chnsarea.brainarea);
+    uniqBrainAreas = unique(T_chnsarea.brainarea(~mask_emptyarea));
 
     ntemp_same = ceil(fs * segt);
     filted_lfp_segs = []; % filted_lfp_segs: ntemp * nchns * nsegs

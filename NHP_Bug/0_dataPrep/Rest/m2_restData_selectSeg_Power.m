@@ -48,7 +48,7 @@ function m2_restData_selectSeg_Power()
     %% Start Here
 
     % segment check
-    files = dir(fullfile(inputfolder, '*.mat'));
+    files = dir(fullfile(inputfolder, '*moderate*.mat'));
     nfiles = length(files);
 
     for fi = 1:nfiles
@@ -134,12 +134,14 @@ function m2_restData_selectSeg_Power()
 
                 if contains(files(fi).name, '_normal_')
                     pdcondition = 'normal';
-                else
+                end
 
-                    if contains(files(fi).name, '_mild_')
-                        pdcondition = 'mild';
-                    end
+                if contains(files(fi).name, '_mild_')
+                    pdcondition = 'mild';
+                end
 
+                if contains(files(fi).name, '_moderate_')
+                    pdcondition = 'moderate';
                 end
 
                 T_chnsarea_GM = chanInf_GM(file_GMChnsarea, nGM, pdcondition);
@@ -210,6 +212,10 @@ function T_chnsarea = chanInf_GM(file_GMChnsarea, nGM, pdcondition)
         T.channels = T.channels_mild;
     end
 
+    if strcmp(pdcondition, 'moderate')
+        T.channels = T.channels_moderate;
+    end
+
     for i = 1:length(T.brainarea)
         area = T.brainarea{i};
         tmpcell = split(T.channels{i}, ',');
@@ -233,6 +239,11 @@ function T_chnsarea = chanInf_GM(file_GMChnsarea, nGM, pdcondition)
     T_chnsarea.recordingchn = recordingchn;
     T_chnsarea.electype = electype;
     T_chnsarea.notes = notes;
+    
+    
+    % remove the brainarea: VA/Vlo/STN, Gpe/i
+    mask_remove = cellfun(@(x) contains(x, '/'), T_chnsarea.brainarea);
+    T_chnsarea{mask_remove, 'brainarea'} = {''};
 
 end
 

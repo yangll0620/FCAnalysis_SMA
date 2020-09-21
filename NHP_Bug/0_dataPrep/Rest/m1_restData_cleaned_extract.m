@@ -45,7 +45,7 @@ folder_processed_root2 = fullfile('/home/lingling/root2/Animals2', animal, 'Reco
 
 
 % file_sycChecked by Ying
-file_sycChecked = fullfile('/home/lingling/root2/Ying Yu/Bug data',  'SycAllFileChecked.mat');
+file_sycChecked = fullfile(datafolder, animal, 'SycAllFileChecked.mat');
 
 % threshold used by Ying to extract cleaned resting data
 configFile = fullfile(datafolder, 'config_m1lf_fromYing.mat');
@@ -94,7 +94,7 @@ t_master.OutputFolderName = string(t_master.OutputFolderName);
 t_master.BriefDescription = string(t_master.BriefDescription);
 
 
-nfiles = length(dates_used);
+nfiles = length(dates_used)
 for i = 1: nfiles
     
     idx = find(t_master.OutputFolderName == dates_used{i} & t_master.BriefDescription == 'Resting');
@@ -127,15 +127,16 @@ for i = 1: nfiles
     %%%  extract the segments %%%
     % get the thr_power
     date_num = datenum(strrep(dates_used{i}, [animal '_'], ''), 'mmddyy');
-    cond = parsePDCondition(date_num, animal);
+    condition = parsePDCondition(date_num, animal);
+
     
-    if strcmp(cond, 'mild')
+    if strcmp(condition, 'mild') || strcmp(condition, 'moderate')
         eval(['thr_power = config_m1lf.max_' lower(animal) '_pd;'])
     else
-        if strcmp(cond, 'normal')
+        if strcmp(condition, 'normal')
             eval(['thr_power = config_m1lf.max_' lower(animal) '_normal;'])
         else
-            disp([dates_used{i} ', Ignore cond = ' cond])
+            disp([dates_used{i} ', Ignore condition = ' condition])
             
             continue;
         end
@@ -152,15 +153,15 @@ for i = 1: nfiles
     end
     
     str_therapy = '';
-    if strcmp(cond, 'mild') && ~strcmp(therapy, 'off')
+    if (strcmp(condition, 'mild') || strcmp(condition, 'moderate')) && ~strcmp(therapy, 'off')
             str_therapy = therapy;
     end
     
-    savefile = fullfile(savefolder, [savefilename_prefix  cond str_therapy '_'  datestr(date_num,'yyyymmdd') '_tdt'  num2str(tdtblock) '.mat']);
+    savefile = fullfile(savefolder, [savefilename_prefix  condition str_therapy '_'  datestr(date_num,'yyyymmdd') '_tdt'  num2str(tdtblock) '.mat']);
     save(savefile, 'data_segments', 'segsIndex', 'fs')
     
     clear allsyncfile dateblockstr thr_power1
-    clear tmp cond 
+    clear tmp condition 
 end
 end
 
