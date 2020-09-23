@@ -42,7 +42,7 @@ function m1_restData_cleaned_extract()
     % threshold used by Ying to extract cleaned resting data
     configFile = fullfile(datafolder, 'config_m1lf_fromYing.mat');
 
-    % dates used by STK
+    % 
     dateBlocksXLSFile = fullfile(codecorresParentfolder, 'm0_restData_dateBlocksYingUsed', [animal 'dateBlocksYingUsed_rest.xlsx']);
 
     %% save setup
