@@ -1,5 +1,5 @@
 clear 
-inputfolder = '';
+inputfolder = '/home/lingling/Desktop/Insync/yang7003@umn.edu/NMRC_umn/Projects/FCAnalysis/exp/pipeline/NHP_Jo/0_dataPrep/SKT/m0_SKTData_extract';
 
 tmin_trial = 1.25;
 tmin_reach = 0.5;
@@ -8,8 +8,9 @@ t_trial = [0 tmin_trial];
 freqs = [6 50];
 
 
+
 %% mild
-files = dir(fullfile('', '*mild*.mat'));
+files = dir(fullfile(inputfolder, '*mild*.mat'));
 nfiles = length(files);
 
 lfp_trials = [];
@@ -46,6 +47,7 @@ for filei = 1 : nfiles
 end
 lfp_trials_mild = lfp_trials;
 clear lfp_trials
+
 
 %% normal extraction
 files = dir(fullfile('', '*normal*.mat'));

@@ -168,9 +168,9 @@ function [pxxs, F_pxx] = pxx_eacharea_onefile(file, twin_pwelch)
     %       pxxs: the PSD estimate of all the segments from the files
     %           e.g. pxxs =
     %                   struct with fields:
-    %                      M1: [nfs ¡Á nsegs double]
-    %                     STN: [nfs ¡Á nSTNchns ¡Á nsegs double]
-    %                      GP: [nfs ¡Á nGPchns ¡Á nsegs double]
+    %                      M1: [nfs * nsegs double]
+    %                     STN: [nfs * nSTNchns * nsegs double]
+    %                      GP: [nfs * nGPchns * nsegs double]
     %
     %       F_pxx: the vector of frequencies (in hertz) at which the PSD is estimated (nfs * 1)
 
