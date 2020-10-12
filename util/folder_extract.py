@@ -2,7 +2,7 @@
 # 
 # * exp_subfolders(): return datafolder, codefolder, pipelinefolder, outputfolder
 # 
-# * code_corresfolder(): return the corresponding folder for codefolder/codefile,  create the corresponding folder and/or the'out' and 'store' subfolders
+# * code_corresfolder(): return the corresponding folder for codefolder/codefilepath,  create the corresponding folder and/or the'out' and 'store' subfolders
 
 
 import os
@@ -51,60 +51,32 @@ def exp_subfolders():
 
 
 
-def code_corresfolder(codefolder, codefile, makefolder = True, makesubfolder = False):
+def code_corresfolder(codefilepath, makefolder = True):
     """
         code_corresfolder 
-            return the corresponding folder for codefolder/codefile
-            
+            return the corresponding folder for codefilepath
             create the corresponding folder if not exist (makefolder = True)
-                   ,and the out and store subfolders of the corresponding folder (makesubfolder = True) 
             
         args:
-        
-            codefolder: the folder for the codefile
             
-            codefile: code file name without suffix (i.e codefile = examplecode for examplecode.ipynb)
+            codefilepath: code file path without suffix (i.e path/to/code/examplecode.py)  
+            makefolder: tag for creating the corresponding codefolder (default True)
             
-            makefolder: tag for creating codefolder (default True)
-            
-            makesubfolder: tag for creating the 'out' and 'store' subfolders of codefolder (default False)
-            
-        
+                 
         return:
-            codecorresfolder: the corresponding folder for codefolder/codefile
-            
-            codecorresparentfolder: the corresponding parent folder for codefolder/codefile
+            code_corres_folder: the corresponding folder for codefilepath
+            codecorresparentfolder: the corresponding parent folder
     """
     
 
-    # extract the substring of codefolder after 'code'
-    subfolder = codefolder[codefolder.find('code') + len('code'):]
-    
-    # delete the first character if the first one is '/'
-    if subfolder[0] == '/':
-        subfolder = subfolder[1:]
 
-        
-    _, _, pipelinefolder, _ = exp_subfolders()
-    
-    # return the corresponding folder in pipeline folder
-    codecorresfolder = os.path.join(pipelinefolder, subfolder, codefile)
-    codecorresparentfolder = os.path.join(pipelinefolder, subfolder)
+    path_no_suffix = codefilepath.replace('.py', '')
+    code_corres_folder = path_no_suffix.replace('code', 'pipeline')
+    code_corresparent_folder = os.path.split(code_corres_folder)[0]
     
     # make folder if needed
-    if makefolder == True and os.path.isdir(codecorresfolder) == False:
-        os.makedirs(codecorresfolder)
+    if makefolder == True and os.path.isdir(code_corres_folder) == False:
+        os.makedirs(code_corres_folder)
         
-    # make folder if needed
-    if makesubfolder == True: 
         
-        storefolder = os.path.join(codecorresfolder, 'store') 
-        if os.path.isdir(storefolder) == False:
-            os.makedirs(storefolder)
-
-            
-        outfolder = os.path.join(codecorresfolder, 'out') 
-        if os.path.isdir(outfolder) == False:
-            os.makedirs(outfolder)
-        
-    return codecorresfolder, codecorresparentfolder
+    return code_corres_folder, code_corresparent_folder

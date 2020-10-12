@@ -3,7 +3,7 @@ function m0_SKTData_extract()
 %
 %	Inputs:
 %
-%		xlsxfile_master
+%		xlsxfile_master, Bug_channelDepth_mild.csv
 %
 %   Steps:
 %       1. extract trials from processed folder in server (call function _extractlfptrial
@@ -46,8 +46,8 @@ animal = correspipelinefolder(i + length('NHPs/'):j);
 
 %% input setup
 
-% channel number of grayMatter
-nGM = 96;
+% channel number of grayMatter, DBS
+nSTN = 8; nGP = 8; nGM = 96;
 
 % Input dir:  preprocessed folder in root2
 processedfolder_inroot2 = fullfile('/home','lingling','root2','Animals2',animal, 'Recording', 'Processed', 'DataDatabase');
@@ -58,10 +58,19 @@ xlsxfile_master = fullfile(datafolder, animal, [animal 'MasterDatabase.xlsx']);
 strformat_date_master = 'mmddyy'; % the format of date string in master sheet, e.g '012317'
 
 
+% different SKB labels in the master sheet
+tasks_SKB = {'SKB', 'Single'};
+
+
+
 % gray matter chn-area information file
 filename_GMChnsarea = [animal '_GMChnAreaInf.csv'];
-file_GMChnsarea =  fullfile(datafolder, filename_GMChnsarea);
-
+file_GMChnsarea =  fullfile(datafolder, animal, filename_GMChnsarea);
+% depth file folder
+folder_depthFile = fullfile(datafolder, animal);
+file_chnDepth_normal = fullfile(folder_depthFile, [animal '_channelDepth_normal.csv']);
+file_chnDepth_mild = fullfile(folder_depthFile, [animal '_channelDepth_mild.csv']);
+file_chnDepth_moderate = fullfile(folder_depthFile, [animal '_channelDepth_moderate.csv']);
 
 
 
@@ -82,16 +91,30 @@ strformat_date_save = 'yyyymmdd'; % the format of date string in saved filename,
 
 %% Starting
 
+% ---  extract the same T_chnsarea_GM_noDepth and T_chnsarea_DBS for each day ----%
+
+% T_chnsarea_GM: nGM * 5
+[T_GMchnsarea_normal, T_GMchnsarea_mild, T_GMchnsarea_moderate] = chanInf_GM(file_GMChnsarea, nGM);
+
+
+% T_chnsarea_DBS for bipolar DBS
+T_DBSchnsarea= chanInf_DBS(nSTN - 1, nGP -1); 
+
+
+
+
 % ---- extract t_SKT containing the records for STK ---- %
 % extract master table
 t_master = readtable(xlsxfile_master);
 
 
-% find the row indices for task_SKB, idx_rows: 0 for not task_SKB, 1 for task_SKB
-idx_rows = cellfun(@(x) ~isempty(find(strcmp(x, tasks_SKB))), t_master.BriefDescription);
+% row indices for task_SKB, idx_rows:  1 for task_SKB without dbs, 0 otherwise
+idxrows_STK = cellfun(@(x) ~isempty(find(strcmp(x, tasks_SKB))), t_master.BriefDescription);
+idxrows_noDBS = cellfun(@(x) isempty(x), t_master.DBS_Target);
+idxrows = (idxrows_STK & idxrows_noDBS);
 
 % table for rows marked SKB labels with only OutputFolderName and TDTBlock columns
-t_SKT = t_master(idx_rows, {'OutputFolderName', 'TDTBlock'});
+t_SKT = t_master(idxrows, {'OutputFolderName', 'TDTBlock'});
 
 % convert Table Variables from Cell Arrays of Character Vectors to string/double Arrays
 t_SKT.OutputFolderName = string(t_SKT.OutputFolderName);
@@ -106,7 +129,7 @@ f = waitbar(0, ['Extracting all STK trials']);
 nrecords = height(t_SKT);
 for i = 1 : nrecords
     % waitbar
-    waitbar(i/n,f,['i = ' num2str(i) ', Extracting trials in file ' num2str(i) '/' num2str(n)]);
+    waitbar(i/nrecords,f,['i = ' num2str(i) ', Extracting trials in file ' num2str(i) '/' num2str(nrecords)]);
     
     
     %%% meta data for current record %%%%
@@ -120,47 +143,113 @@ for i = 1 : nrecords
     % get the pd conditioon for the date of experiment
     pdcondition = parsePDCondition(dateofexp, animal);
     
-    
+
     if ~any(strcmp(pdcondition, conds_cell)) % avoid tomild, tomoderate
         continue;
     end
+    
+    
+    
+    %%% extract oneday+tdtbk data %%%
     
     % one day path
     onedaypath = fullfile(processedfolder_inroot2, [animal '_' datestr(dateofexp, 'mmddyy')]);
     
     disp(['extracting ' onedaypath '-tdtbk' num2str(tdtbk)])
    
-    % extract trials of lfp data for particular date and tdt block number
-    [lfptrial_cortical, lfptrial_dbs,fs,T_idxevent, T_dbsChn] = extractlfptrial_(onedaypath, tdtbk);
+    % extract trials of lfp data for particular date and tdt block number, lfptrial_*: nchns * ntemp * ntrials
+    [lfptrial_GM, lfptrial_dbs,fs,T_idxevent, T_dbsChn] = extractlfptrial_(onedaypath, tdtbk);
     
     % skip this day if any is empty 
-    if isempty(lfptrial_cortical) || isempty(lfptrial_dbs) || isempty(fs) || isempty(T_idxevent) ||isempty(T_dbsChn)
+    if isempty(lfptrial_GM) || isempty(lfptrial_dbs) || isempty(fs) || isempty(T_idxevent) ||isempty(T_dbsChn)
         continue;
     end
     
     
     
-    %%% extract the lfptrial_m1 marked with good channels %%%
+    %%% extract the lfptrial_GM used for brain areas %%%
+    lfptrial_GM = lfptrial_GM([1:nGM], :,:);
     
     
     
     %%% bipolar dbs %%%%
+    lfptrial_stn = diff(lfptrial_dbs(1:nSTN, :, :), [], 1);
+    lfptrial_gp = diff(lfptrial_dbs(nSTN+1:end, :, :), [], 1);
+    lfptrial_dbs = cat(1, lfptrial_stn, lfptrial_gp);
+
     
     
     %%% down sample %%%
     
+    % lfptrial_GM down sample
+    nchns = size(lfptrial_GM, 1);
+    for chi = 1: nchns
+        tmp = squeeze(lfptrial_GM(chi, :, :));
+        tmp = resample(tmp, round(fs_new), round(fs));
+        
+        if chi == 1
+            [ntemp, ntrials] = size(tmp);
+            lfpdown_GM = zeros(nchns, ntemp, ntrials);
+            
+            clear ntemp ntrials
+        end
+        lfpdown_GM(chi, :, :) = tmp;
+        
+        clear tmp
+    end
+    
+    % lfptrial_dbs down sample
+    nchns = size(lfptrial_dbs, 1);
+    for chi = 1: nchns
+        tmp = squeeze(lfptrial_dbs(chi, :, :));
+        tmp = resample(tmp, round(fs_new), round(fs));
+        
+        if chi == 1
+            [ntemp, ntrials] = size(tmp);
+            lfpdown_dbs = zeros(nchns, ntemp, ntrials);
+            
+            clear ntemp ntrials
+        end
+        lfpdown_dbs(chi, :, :) = tmp;
+        
+        clear tmp
+    end
+    
+    % T_idxevent
+    T_idxevent{:, :} =  round(T_idxevent{:, :} * fs_new / fs);
+    fs = fs_new;
     
     
+       
     
-
-    % concatenate the nGM GM chns and the dbs chns into lfptrial
-    lfpdata = cat(1,lfptrial_cortical([1:nGM], :,:),lfptrial_dbs);    
     
-    % get the channel inf
-    [T_chnsarea] = chanInf(T_dbsChn, nGM, file_GMChnsarea, pdcondition);
-
+        
     
-   
+    %%% add depth Inf to T_chnsarea_GM %%%%
+    switch pdcondition
+        case 'normal'
+            file_chnDepth = file_chnDepth_normal;
+            T_GMchnsarea_noDepth = T_GMchnsarea_normal;
+        case 'mild'
+            file_chnDepth = file_chnDepth_mild;
+            T_GMchnsarea_noDepth = T_GMchnsarea_mild;
+        case 'moderate'
+            file_chnDepth = file_chnDepth_moderate;
+            T_GMchnsarea_noDepth = T_GMchnsarea_moderate;
+    end
+    T_GMchnsarea_Depth = add_daily_GMDepth(T_GMchnsarea_noDepth, file_chnDepth, dateofexp);
+    
+    
+    %%% delete the rows with brainarea is empty
+    nonempty_mask = cellfun(@(x) ~isempty(x), T_GMchnsarea_Depth.brainarea);
+    T_GMchnsarea_Depth = T_GMchnsarea_Depth(nonempty_mask, :);
+    lfpdown_GM = lfpdown_GM(nonempty_mask, :, :);
+    
+    
+    %%% concatenate the utah chns, and the dbs chns  %%%
+    T_chnsarea = combine_GMDBSChns(T_GMchnsarea_Depth, T_DBSchnsarea);
+    lfpdata = cat(1, lfpdown_GM, lfpdown_dbs);
+    
     
     
     %%%  save  %%%
@@ -169,9 +258,11 @@ for i = 1 : nrecords
     
     
     
-    clear dateofexp tdtbk onedaypath
-    clear lfptrial_cortical lfptrial_dbs fs T_idxevent T_dbsChn chn_cortical
-    clear lfpdata T_chnsarea pdcondition savefilename
+    clear outputfoldername dateofexp tdtbk pdcondition 
+    clear onedaypath lfptrial_GM lfptrial_dbs fs T_idxevent T_dbsChn
+    clear lfptrial_stn lfptrial_gp lfptrial_dbs T_chnsarea_GM
+    clear lfpdata T_chnsarea savefilename
+   
 end
 
 % close the waitbar
@@ -488,7 +579,167 @@ clear convars filename idx_stn idx_gp
 end
 
 
+function [T_chnsarea_normal, T_chnsarea_mild, T_chnsarea_moderate] = chanInf_GM(file_GMChnsarea, nGM)
+    % extract gray matter channel inf table (recording M1, thalamus, SMA et al. areas)
+    %
+    %   Args:
+    %       file_GMCchnsarea: the file storing the gray matter chn-area inf
+    %       nGM: the total number of gray matter channels
+    %
+    %   Output:
+    %       T_chnsarea (nchns * 5): table of Gray matter channel inf, 
+    %                   (T_chnsarea.Properties.VariableNames:
+    %                   {'chni'}  {'brainarea'}    {'recordingchn'}    {'electype'}    {'notes'})
+
+    T = readtable(file_GMChnsarea);
+    chi_firstGM = 1;
+    
+    
+    % assign cortical area with channels
+    idx_empty = cellfun(@isempty, T.channels_mild);
+    T.channels_mild(idx_empty) = T.channels_normal(idx_empty);
+    idx_empty = cellfun(@isempty, T.channels_moderate);
+    T.channels_moderate(idx_empty) = T.channels_normal(idx_empty);
+    
+    function T_chnsarea = subf_chanInf_GM()
+        nareas = height(T);
+        GMChnAreas = cell(nGM, 1);    
+        for areai = 1:nareas
+            area = T.brainarea{areai};
+            tmpcell = split(T.channels{areai}, ',');
+
+            for j = 1:length(tmpcell)
+                chn = str2num(char(tmpcell{j}));
+                GMChnAreas(chn - chi_firstGM + 1, 1) = {area};
+            end
+
+        end
+
+        T_chnsarea = table;
+        T_chnsarea.chni = uint8([1:nGM]');
+        T_chnsarea.brainarea = GMChnAreas;
+        T_chnsarea.recordingchn = uint8([1:nGM]') + chi_firstGM -1;
+        T_chnsarea.electype = cell(nGM, 1);
+        T_chnsarea.electype(:) = {'Gray Matter'};
+        T_chnsarea.notes = cell(nGM, 1);
+        
+        
+    end
+
+    T.channels = T.channels_normal;
+    T_chnsarea_normal = subf_chanInf_GM();
+    
+    T.channels = T.channels_mild;
+    T_chnsarea_mild = subf_chanInf_GM();
+    
+    T.channels = T.channels_moderate;
+    T_chnsarea_moderate = subf_chanInf_GM();
+   
+end
 
 
+function T_chnsarea_GM_Depth = add_daily_GMDepth(T_chnsarea_GM, file_chnDepth, dateofexp)
+    %%
+    %   Args:
+    %       T_chnsarea_GM: table for GM channels area without depth variable
+    %       file_chnDepth: daily depth file (e.g. Bug_channelDepth_mild.csv)
+    %       dateofexp: a particular exp date in datenum format (e.g datenum('04022019', 'mmddyyyy'))
+    %
+    %   return:
+    %       T_chnsarea_GM_Depth: table for GM channels area with depth variable
+
+
+
+    %% code Start here
+    tbl = readtable(file_chnDepth, 'ReadVariableNames', true);
+
+    % separate into t_depth and t_depthArea
+    t_depth = tbl(2:end, :);
+    t_depthArea = tbl(1, :);
+
+
+
+    %%% replace date with a datenum variable and sort t_depth based on datenum %%%
+    datenums = cell2mat(cellfun(@(x) datenum(x, 'mm/dd/yy'), t_depth.date,'UniformOutput', false));
+    t_depth = addvars(t_depth, datenums, 'After', 'date', 'NewVariableNames', 'datenum');
+    t_depth = removevars(t_depth, 'date');
+    t_depth = sortrows(t_depth, {'datenum'});
+
+
+
+    %%% add and extract new variable depth for T_chnsarea_GM  %%%
+
+    % find the idx_dateDepth for dateofexp
+    idx_dateDepth = find(t_depth.datenum == dateofexp);
+    if length(idx_dateDepth) == 0 % if no equal, find the date before
+        idx_earlies = find(t_depth.datenum < dateofexp);
+        idx_dateDepth = idx_earlies(end);
+        disp('use earlier date')
+    end
+
+    if length(idx_dateDepth) > 1
+        disp(['length of dateDepth = ' num2str(length(idx_dateDepth))]);
+    end
+
+
+    % assign each  channel with its depth on dateofexp if has
+    T_chnsarea_GM_Depth = addvars(T_chnsarea_GM, NaN(height(T_chnsarea_GM), 1), 'NewVariableNames', 'depth', 'After', 'recordingchn');
+    for vari = 2 : width( t_depth)
+
+        varName = t_depth.Properties.VariableNames{vari};
+        chn = t_depthArea{1, vari};
+
+        idx = find(T_chnsarea_GM_Depth.recordingchn == chn);
+
+        T_chnsarea_GM_Depth{idx, 'depth'} = t_depth{idx_dateDepth, vari};
+
+        clear tmp area1 area2
+        clear varName chn idx
+    end
+end
+
+
+function T_chnsarea = chanInf_DBS(nSTN, nGP)
+    % extract M1 channel inf table
+    %   Args:
+    %       nSTN, nGP: the number of stn and gp channels
+    %
+    %   Output:
+    %       T_chnsarea: table of DBS channel inf,
+    %                   (T_chnsarea.Properties.VariableNames:
+    %                   {'chni'}  {'brainarea'}    {'recordingchn'}    {'electype'}    {'notes'})
+
+    % channel information table of M1
+    T_chnsarea = table;
+
+    T_chnsarea.chni = uint8([1:nSTN + nGP]');
+
+    T_chnsarea.brainarea = cell(nSTN + nGP, 1);
+    T_chnsarea.brainarea(1:nSTN) = {'STN'}; T_chnsarea.brainarea(nSTN + 1:nSTN + nGP) = {'GP'};
+
+    T_chnsarea.recordingchn = [uint8([1:nSTN]'); uint8([1:nGP]')];
+
+    T_chnsarea.electype = cell(nSTN + nGP, 1);
+    T_chnsarea.electype(:) = {'DBS'};
+
+    T_chnsarea.notes = cell(nSTN + nGP, 1);
+
+end
+
+
+function T_chnsarea = combine_GMDBSChns(T_chnsarea_GM_Depth, T_chnsarea_DBS)
+
+    if ~any(strcmp('depth', T_chnsarea_DBS.Properties.VariableNames))
+        % add depth variable if T_chnsarea_DBS doesn't have
+        
+        T_chnsarea_DBS = addvars(T_chnsarea_DBS, NaN(height(T_chnsarea_DBS), 1), 'NewVariableNames', 'depth', 'After', 'recordingchn');
+    end
+    
+    T_chnsarea = vertcat(T_chnsarea_GM_Depth,T_chnsarea_DBS);
+    
+    % adjust chi
+    T_chnsarea.chni = [1:height(T_chnsarea)]';
+    
+end
 
 
