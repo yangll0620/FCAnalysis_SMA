@@ -1,8 +1,8 @@
 function m3_STKData_narrowfiltered19_21()
 %% narrow filtered STK data recorded  in frequency [29 31]Hz
 %
-%   based on spectrogram and psd analysis in
-%   pipeline/../m2_SKTData_usefulChannel
+% input:
+%   m1_SKTData_avgArea
 
 
 %% folders generate
@@ -31,7 +31,7 @@ animal = tmp(length('/NHP_')+1:end-1);
 % band pass frequency
 frebp = [19 21];
 % input folder: extracted raw rest data with grayMatter 
-inputfolder = fullfile(codecorresParentfolder, 'm2_SKTData_usefulChannel');
+inputfolder = fullfile(codecorresParentfolder, 'm1_SKTData_avgArea');
 
 %% save setup
 savefolder = codecorresfolder;
@@ -63,9 +63,20 @@ for filei = 1 : nfiles
         end
     end
          
-    % convert T_chnsarea, T_idxevent into Cell/Matrix
-    [chnsarea_Cell, chnsarea_vNames]= conv_tbl2Cell(T_chnsarea);
-    [idxevent_Matrix, idxevent_vNames]= conv_tbl2matrix(T_idxevent);
+    % extract chnAreas cell for used in python
+    chnAreas =T_chnsarea.brainarea;
+    idx_STN = find(strcmp(T_chnsarea.brainarea, 'STN'));
+    for i = 1: length(idx_STN)
+        chnAreas{idx_STN(i)} = ['stn' num2str(i-1) '-' num2str(i)];
+    end
+    idx_GP = find(strcmp(T_chnsarea.brainarea, 'GP'));
+    for i = 1: length(idx_GP)
+        chnAreas{idx_GP(i)} = ['gp' num2str(i-1) '-' num2str(i)];
+    end
+
+    % extract idxevent Matrix for used in python
+    idxevent = T_idxevent{:,:};
+
     
     % save
     lfpdata = filterdlfp;
@@ -73,7 +84,7 @@ for filei = 1 : nfiles
     tmpn = length([animal '_']);
     savefilename = [filename(idx:idx+tmpn-1) savefilename_addstr ... 
         upper(filename(idx+tmpn)) filename(idx+tmpn+1:end)];
-    save(fullfile(savefolder, savefilename), 'lfpdata','fs', 'chnsarea_Cell', 'chnsarea_vNames', 'idxevent_Matrix', 'idxevent_vNames');
+    save(fullfile(savefolder, savefilename), 'lfpdata','fs', 'chnAreas', 'T_chnsarea', 'T_idxevent');
     
     
     clear lfpdata fs T_chnsarea

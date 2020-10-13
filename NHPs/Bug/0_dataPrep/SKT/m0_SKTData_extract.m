@@ -18,6 +18,7 @@ function m0_SKTData_extract()
 %       3. Down sample trials into fs_new = 500
 %
 %       4. add variable T_chnsarea
+%           For Bug: depth of channels in M1 and PMC are included
 
 
 
@@ -127,7 +128,7 @@ t_SKT.TDTBlock = double(t_SKT.TDTBlock);
 close all
 f = waitbar(0, ['Extracting all STK trials']);
 nrecords = height(t_SKT);
-for i = 1 : nrecords
+for i = 200 : nrecords
     % waitbar
     waitbar(i/nrecords,f,['i = ' num2str(i) ', Extracting trials in file ' num2str(i) '/' num2str(nrecords)]);
     
@@ -728,6 +729,9 @@ end
 
 
 function T_chnsarea = combine_GMDBSChns(T_chnsarea_GM_Depth, T_chnsarea_DBS)
+% 	combine T_chnsarea_GM_Depth and T_chnsarea_DBS (have depth or no depth variable)
+%	
+%
 
     if ~any(strcmp('depth', T_chnsarea_DBS.Properties.VariableNames))
         % add depth variable if T_chnsarea_DBS doesn't have

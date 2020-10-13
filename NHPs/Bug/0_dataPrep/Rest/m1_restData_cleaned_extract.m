@@ -94,7 +94,7 @@ t_master.OutputFolderName = string(t_master.OutputFolderName);
 t_master.BriefDescription = string(t_master.BriefDescription);
 
 
-nfiles = length(dates_used)
+nfiles = length(dates_used);
 for i = 1: nfiles
     
     idx = find(t_master.OutputFolderName == dates_used{i} & t_master.BriefDescription == 'Resting');
