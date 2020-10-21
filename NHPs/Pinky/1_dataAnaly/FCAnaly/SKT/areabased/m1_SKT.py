@@ -14,14 +14,12 @@ sys.path.append(codefolder)
 from util.folder_extract import exp_subfolders, code_corresfolder
 
 from lfpextract import lfp_align2_reachonset, lfp_align2_returnonset, lfp_align2_targetonset
-from testfunc import assign_coord2chnArea, calcciCOH_from_lfptrials, fc4drawing
+from testfunc import assign_coord2chnArea, calcciCOH_from_lfptrials, fc4drawing, dyfc4drawing
 from visualFC import ciCOH_visual_save
 from simulated.python.threshold_ciCOH import threshold_ciCOH_sin, corr_threshold_ciCOH_sin_BH
 
 _, _, pipelinefolder, _= exp_subfolders()
 corresfolder, correparentfolder = code_corresfolder(__file__)
-
-
 
 
 def phaseFC_extract(phase):
@@ -44,7 +42,7 @@ def phaseFC_extract(phase):
             lfptrials_normal, chnAreas, fs = lfp_align2_returnonset(files_normal, tdur_trial = tdur_trial, tmin_return = 0.5, tmax_return = 1)
             lfptrials_mild, _, _ = lfp_align2_returnonset(files_mild, tdur_trial = tdur_trial, tmin_return = 0.5, tmax_return = 1)
 
-
+        
         if phase == 'base':
             tdur_trial = [-0.5, 0]
 
@@ -58,6 +56,44 @@ def phaseFC_extract(phase):
 
     else:
         fc = pickle.load(open(fcfile, 'rb'))
+
+    return fc
+
+
+def dyphaseFC_extract(phase):
+
+    dyfcfile = os.path.join(savefolder, dyfcfile_prefix + phase + '.pickle')
+    if not os.path.exists(dyfcfile):
+
+        files_normal = glob.glob(os.path.join(inputfolder, '*_normal_*'))
+        files_mild = glob.glob(os.path.join(inputfolder, '*_mild_*'))
+
+        if phase == 'reach':
+            tdur_trial = [0, 0.5]
+
+            lfptrials_normal, chnAreas, fs = lfp_align2_reachonset(files_normal, tdur_trial = tdur_trial, tmin_reach = 0.5, tmax_reach = 1)
+            lfptrials_mild, _, _ = lfp_align2_reachonset(files_mild, tdur_trial = tdur_trial, tmin_reach = 0.5, tmax_reach = 1)
+
+        if phase == 'return':
+            tdur_trial = [0, 0.5]
+
+            lfptrials_normal, chnAreas, fs = lfp_align2_returnonset(files_normal, tdur_trial = tdur_trial, tmin_return = 0.5, tmax_return = 1)
+            lfptrials_mild, _, _ = lfp_align2_returnonset(files_mild, tdur_trial = tdur_trial, tmin_return = 0.5, tmax_return = 1)
+
+        
+        if phase == 'base':
+            tdur_trial = [-0.5, 0]
+
+            lfptrials_normal, chnAreas, fs = lfp_align2_targetonset(files_normal, tdur_trial = tdur_trial, tmin_return = 0.5, tmax_return = 1)
+            lfptrials_mild, _, _ = lfp_align2_targetonset(files_mild, tdur_trial = tdur_trial, tmin_return = 0.5, tmax_return = 1)
+            
+        fc =  dyfc4drawing(chnAreas, fs, chnInf_file, lfptrials_normal = lfptrials_normal, lfptrials_mild = lfptrials_mild)
+
+        with open(dyfcfile, 'wb') as fp:
+            pickle.dump(fc, fp, protocol=pickle.HIGHEST_PROTOCOL)
+
+    else:
+        fc = pickle.load(open(dyfcfile, 'rb'))
 
     return fc
 
@@ -129,8 +165,6 @@ def fc_visual_save(fc, savefile_prefix):
     pos_text_lefttop2 = [-80, 70, 10]
     pos_text_Down1 = [0, 500, 15]
     pos_text_Down2 = [0, 550, 15]
-    pos_text_Down3 = [0, 570, 15]
-
     texts_org = dict()
     texts_org['STN'] = [200, 120, 20]
     texts_org['GP'] = [430, 210, 20]
@@ -142,20 +176,17 @@ def fc_visual_save(fc, savefile_prefix):
     for cond in fc['ciCOH'].keys():
         ciCOH = fc['ciCOH'][cond]
         ntrials, ntemp = fc['setup']['ntrials_' + cond], fc['setup']['ntemp_' + cond]
-        t = ntemp/fc['setup']['fs']
 
         threshold, corr_threshold = threshold_fc(ciCOH = ciCOH, ntrials = ntrials, ntemp = ntemp, 
-                                    f = (freq[0] + freq[1])//2, t = t)
+                                    f = (freq[0] + freq[1])//2, t = ntemp/fc['setup']['fs'])
         
         texts = texts_org.copy()
-        lowweight = 0.14
+        lowweight = 0.15
         texts[cond] = pos_text_lefttop1
         text_thred = 'thred = ' + str(lowweight)
         texts[text_thred] = pos_text_lefttop2
         text_ntrials = 'ntrials = ' + str(ntrials)
         texts[text_ntrials] = pos_text_Down2
-        text_temp = 't = ' + str(t)
-        texts[text_temp] = pos_text_Down3
 
         saveFCGraph = os.path.join(savefolder, savefile_prefix + '_lowweight' + str(lowweight) + '_'  + cond + '.png')
 
@@ -166,6 +197,52 @@ def fc_visual_save(fc, savefile_prefix):
 
     return igplot
 
+
+def dyfc_visual_save(dyfc, savefile_prefix):
+
+    ### text setup for brain areas ###
+    pos_text_lefttop1 = [-80, 50, 30]
+    pos_text_lefttop2 = [-80, 70, 10]
+    pos_text_Down1 = [0, 500, 15]
+    pos_text_Down2 = [0, 550, 15]
+    pos_text_Down3 = [0, 570, 15]
+    texts_org = dict()
+    texts_org['STN'] = [200, 120, 20]
+    texts_org['GP'] = [430, 210, 20]
+    text_meta = animal + ": " + phase + ", [" + str(freq[0])  + " "+ str(freq[1]) + "] Hz"
+    texts_org[text_meta] = pos_text_Down1
+
+      
+
+    for cond in dyfc['ciCOH'].keys():
+
+        ntrials, ntemp = dyfc['setup']['ntrials_' + cond], dyfc['setup']['ntemp_' + cond]
+
+        # threshold, corr_threshold = threshold_fc(ciCOH = ciCOH, ntrials = ntrials, ntemp = ntemp, 
+        #                             f = (freq[0] + freq[1])//2, t = ntemp/fc['setup']['fs'])
+        
+        texts = texts_org.copy()
+        lowweight = 0.15
+        texts[cond] = pos_text_lefttop1
+        text_thred = 'thred = ' + str(lowweight)
+        texts[text_thred] = pos_text_lefttop2
+        text_ntrials = 'ntrials = ' + str(ntrials)
+        texts[text_ntrials] = pos_text_Down2
+
+        
+        dyciCOHs = dyfc['ciCOH'][cond]
+
+        for tempi in range(dyciCOHs.shape[2]):
+            ciCOH = dyciCOHs[:, :, tempi]
+            
+            saveFCGraph = os.path.join(savefolder, savefile_prefix + cond + '_'+ str(tempi) + '.png')
+
+            igplot = ciCOH_visual_save(ciCOH = ciCOH, chnInf = dyfc['chnInf'], lowweight = lowweight, 
+                                    savefile = saveFCGraph, texts = texts, threds_edge = None)
+
+        del texts
+
+    return igplot
 
 def combine_imgs():
     phases = ['base', 'reach', 'return']
@@ -188,7 +265,7 @@ def combine_imgs():
 
         for ci, cond in enumerate(conds):
             for pi, phase in enumerate(phases):
-                files = glob.glob(os.path.join(savefolder, '*' + freqstr + '*_' + phase + '_*_' + cond + '.png'))
+                files = glob.glob(os.path.join(savefolder, '*_' + freqstr + '*_' + phase + '_*_' + cond + '.png'))
                 file_fc = files[0]
                 img = cv2.imread(file_fc)
 
@@ -210,35 +287,37 @@ def combine_imgs():
         cv2.imwrite(os.path.join(savefolder, 'combined_' + freqstr +  '.png'), imgs)
         del imgs
 
+
+
+
 animal =  re.search('NHPs/[a-zA-Z]*/', __file__).group()[len('NHPs/'):-1]
 chnInf_folder = correparentfolder
 chnInf_file = os.path.join(chnInf_folder, 'chn_brainArea_simCoord_BrainArea.csv')
 savefolder = corresfolder
 savefile_threshold = os.path.join(savefolder, 'threshold.pickle')
 
-
-freq_opts = [[11, 13]]
+freq_opts = [[13, 15], [26, 28]]
 for freq in freq_opts:
     inputfolder = os.path.join(pipelinefolder, 'NHPs', animal, '0_dataPrep', 'SKT', 'm3_STKData_narrowfiltered' + str(freq[0]) + '_' + str(freq[1]))
-    saveFCfilename_prefix = 'ciCOH_SKT_freq' + str(freq[0]) + '_' + str(freq[1])
-    savefile_fcgraph_prefix = 'ciCOH_SKT_freq' + str(freq[0]) + '_' + str(freq[1])
+    dyfcfile_prefix = 'dyfc_SKT_freq' + str(freq[0]) + '_' + str(freq[1])
+    savefile_fcgraph_prefix = 'dyfc_SKT_freq' + str(freq[0]) + '_' + str(freq[1])
+
 
     phase = 'base'
-    fc = phaseFC_extract(phase)
-    fc_visual_save(fc = fc, savefile_prefix = savefile_fcgraph_prefix + '_' + phase)
+    dyfc = dyphaseFC_extract(phase)
+    print(dyfc['ciCOH']['normal'].shape)
+    dyfc_visual_save(dyfc = dyfc, savefile_prefix = savefile_fcgraph_prefix + '_' + phase)
 
 
-    phase = 'reach'
-    fc = phaseFC_extract(phase)
-    fc_visual_save(fc = fc, savefile_prefix = savefile_fcgraph_prefix + '_' + phase)
+    # phase = 'reach'
+    # fc = phaseFC_extract(phase)
+    # fc_visual_save(fc = fc, savefile_prefix = savefile_fcgraph_prefix + '_' + phase)
 
-    phase = 'return'
-    fc = phaseFC_extract(phase)
-    fc_visual_save(fc = fc, savefile_prefix = savefile_fcgraph_prefix + '_' + phase)
-
-combine_imgs()
-
-
+    # phase = 'return'
+    # fc = phaseFC_extract(phase)
+    # fc_visual_save(fc = fc, savefile_prefix = savefile_fcgraph_prefix + '_' + phase)
+    
+#combine_imgs()
 
 
 

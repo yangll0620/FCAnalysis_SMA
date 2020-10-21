@@ -1,6 +1,11 @@
-function m3_STKData_narrowfiltered26_28()
-%% narrow filtered STK data recorded  in frequency [26 28]Hz
+function m3_STKData_narrowfiltered24_26()
+%% 
 %
+% input:
+%   m1_SKTData_avgArea
+%
+% output:
+%   skip the file with only one trial
 
 
 %% folders generate
@@ -21,15 +26,15 @@ addpath(genpath(fullfile(codefolder,'util')));
 
 %% global variables
 % animal
-tmp = char(regexp(codefilepath, '/NHP_\w*/', 'match'));
-animal = tmp(length('/NHP_')+1:end-1);
+[fi, j] = regexp(codecorresfolder, 'NHPs/[A-Za-z]*');
+animal = codecorresfolder(fi + length('NHPs/'):j);
 
 
 %%  input setup
 % band pass frequency
-frebp = [26 28];
+frebp = [24 26];
 % input folder: extracted raw rest data with grayMatter 
-inputfolder = fullfile(codecorresParentfolder, 'm2_STKData_Downsample');
+inputfolder = fullfile(codecorresParentfolder, 'm1_SKTData_avgArea');
 
 %% save setup
 savefolder = codecorresfolder;
@@ -39,27 +44,48 @@ savefilename_addstr = ['narrowFiltered' num2str(frebp(1)) '_' num2str(frebp(2)) 
 files = dir(fullfile(inputfolder, '*.mat'));
 nfiles = length(files);
 f = waitbar(0, ['Narrow Filtering....']);
+tic;
 for filei = 1 : nfiles
+    elapsedTime = toc;
+    
     % wait bar
-    waitbar(filei/nfiles,f,['Narrow Filtering [' num2str(frebp(1)) ' ' num2str(frebp(2)) ']Hz lfp data in file ' num2str(filei) '/' num2str(nfiles)]);
+    waitbar(filei/nfiles,f,[animal '[' num2str(frebp(1)) ' ' num2str(frebp(2)) ']Hz  file ' num2str(filei) '/' num2str(nfiles) ...
+         ', eTime ' num2str(elapsedTime)]);
     
     % load data, lfpdata: [nchns, ntemps, ntrials]
     filename = files(filei).name;
-    load(fullfile(inputfolder, filename), 'lfpdata', 'fs', 'T_chnsarea', 'T_idxevent', 'chans_m1', 'GMChnAreas');
+    load(fullfile(inputfolder, filename), 'lfpdata', 'fs', 'T_chnsarea', 'T_idxevent');
+    
+    if(height(T_idxevent) == 1)
+        disp([filename ' has only 1 trial, skip!']);
+        continue;
+    end
     
     
     % band pass filter
     [nchns, ntemps, ntrials] = size(lfpdata);
     filterdlfp = zeros(nchns, ntemps, ntrials);
+    
     for chni = 1 : nchns
         for triali = 1: ntrials
             filterdlfp(chni,:, triali) = filter_bpbutter(lfpdata(chni,:,triali),frebp,fs);
         end
     end
          
-    % convert T_chnsarea, T_idxevent into Cell/Matrix
-    [chnsarea_Cell, chnsarea_vNames]= conv_tbl2Cell(T_chnsarea);
-    [idxevent_Matrix, idxevent_vNames]= conv_tbl2matrix(T_idxevent);
+    % extract chnAreas cell for used in python
+    chnAreas =T_chnsarea.brainarea;
+    idx_STN = find(strcmp(T_chnsarea.brainarea, 'STN'));
+    for i = 1: length(idx_STN)
+        chnAreas{idx_STN(i)} = ['stn' num2str(i-1) '-' num2str(i)];
+    end
+    idx_GP = find(strcmp(T_chnsarea.brainarea, 'GP'));
+    for i = 1: length(idx_GP)
+        chnAreas{idx_GP(i)} = ['gp' num2str(i-1) '-' num2str(i)];
+    end
+
+    % extract idxevent Matrix for used in python
+    idxevent = T_idxevent{:,:};
+
     
     % save
     lfpdata = filterdlfp;
@@ -67,7 +93,7 @@ for filei = 1 : nfiles
     tmpn = length([animal '_']);
     savefilename = [filename(idx:idx+tmpn-1) savefilename_addstr ... 
         upper(filename(idx+tmpn)) filename(idx+tmpn+1:end)];
-    save(fullfile(savefolder, savefilename), 'lfpdata','fs', 'chnsarea_Cell', 'chnsarea_vNames', 'idxevent_Matrix', 'idxevent_vNames', 'chans_m1', 'GMChnAreas');
+    save(fullfile(savefolder, savefilename), 'lfpdata','fs', 'chnAreas', 'idxevent', 'T_chnsarea', 'T_idxevent');
     
     
     clear lfpdata fs T_chnsarea

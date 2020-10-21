@@ -38,6 +38,7 @@ savefolder = codecorresfolder;
 %% starting: narrow filter the lfp data of all the files
 files_normal = dir(fullfile(inputfolder, '*_normal_*.mat'));
 files_mild = dir(fullfile(inputfolder, '*_mild_*.mat'));
+files_moderate = dir(fullfile(inputfolder, '*_moderate_*.mat'));
 
 
 tmin_reach_normal = 0.4;
@@ -50,11 +51,16 @@ plot_spectrogram_allfiles(lfptrials_normal, T_chnsarea, fs, savefolder, animal, 
 
 tmin_reach_mild = 0.5;
 tmax_reach_mild = 1;
-tdur_trial_mild = [-0.8 1];
+tdur_trial_mild = [-0.8 1.5];
 [lfptrials_mild, fs, T_chnsarea] = lfp_align2_reachonset(files_mild, tdur_trial_mild, tmin_reach_mild, tmax_reach_mild);
 plot_spectrogram_allfiles(lfptrials_mild, T_chnsarea, fs, savefolder, animal, 'mild')
 
 
+tmin_reach_moderate = 0.5;
+tmax_reach_moderate = 1.2;
+tdur_trial_moderate = [-0.8 1.5];
+[lfptrials_moderate, fs, T_chnsarea] = lfp_align2_reachonset(files_moderate, tdur_trial_moderate, tmin_reach_moderate, tmax_reach_moderate);
+plot_spectrogram_allfiles(lfptrials_moderate, T_chnsarea, fs, savefolder, animal, 'moderate')
 
 
 

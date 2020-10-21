@@ -59,7 +59,7 @@ def code_corresfolder(codefilepath, makefolder = True):
             
         args:
             
-            codefilepath: code file path without suffix (i.e path/to/code/examplecode.py)  
+            codefilepath: code file path with suffix (i.e path/to/code/examplecode.py)  
             makefolder: tag for creating the corresponding codefolder (default True)
             
                  

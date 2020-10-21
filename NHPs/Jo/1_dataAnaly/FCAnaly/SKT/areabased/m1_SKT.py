@@ -22,8 +22,6 @@ _, _, pipelinefolder, _= exp_subfolders()
 corresfolder, correparentfolder = code_corresfolder(__file__)
 
 
-
-
 def phaseFC_extract(phase):
 
     fcfile = os.path.join(savefolder, saveFCfilename_prefix + phase + '.pickle')
@@ -31,18 +29,21 @@ def phaseFC_extract(phase):
 
         files_normal = glob.glob(os.path.join(inputfolder, '*_normal_*'))
         files_mild = glob.glob(os.path.join(inputfolder, '*_mild_*'))
+        files_moderate = glob.glob(os.path.join(inputfolder, '*_moderate_*'))
 
         if phase == 'reach':
-            tdur_trial = [0, 0.5]
+            tdur_trial_normal, tdur_trial_mild, tdur_trial_moderate = [0, 0.5], [0, 0.7], [0, 0.7]
 
-            lfptrials_normal, chnAreas, fs = lfp_align2_reachonset(files_normal, tdur_trial = tdur_trial, tmin_reach = 0.5, tmax_reach = 1)
-            lfptrials_mild, _, _ = lfp_align2_reachonset(files_mild, tdur_trial = tdur_trial, tmin_reach = 0.5, tmax_reach = 1)
+            lfptrials_normal, chnAreas, fs = lfp_align2_reachonset(files_normal, tdur_trial = tdur_trial_normal, tmin_reach = 0.5, tmax_reach = 1.5)
+            lfptrials_mild, _, _ = lfp_align2_reachonset(files_mild, tdur_trial = tdur_trial_mild, tmin_reach = 0.5, tmax_reach = 1.5)
+            lfptrials_moderate, _, _ = lfp_align2_reachonset(files_moderate, tdur_trial = tdur_trial_moderate, tmin_reach = 0.5, tmax_reach = 1.5)
 
         if phase == 'return':
-            tdur_trial = [0, 0.5]
+            tdur_trial_normal, tdur_trial_mild, tdur_trial_moderate = [0, 0.5], [0, 0.9], [0, 1]
 
-            lfptrials_normal, chnAreas, fs = lfp_align2_returnonset(files_normal, tdur_trial = tdur_trial, tmin_return = 0.5, tmax_return = 1)
-            lfptrials_mild, _, _ = lfp_align2_returnonset(files_mild, tdur_trial = tdur_trial, tmin_return = 0.5, tmax_return = 1)
+            lfptrials_normal, chnAreas, fs = lfp_align2_returnonset(files_normal, tdur_trial = tdur_trial_normal, tmin_return = 0.5, tmax_return = 1.5)
+            lfptrials_mild, _, _ = lfp_align2_returnonset(files_mild, tdur_trial = tdur_trial_mild, tmin_return = 0.5, tmax_return = 1.5)
+            lfptrials_moderate, _, _ = lfp_align2_returnonset(files_moderate, tdur_trial = tdur_trial_moderate, tmin_return = 0.5, tmax_return = 1.5)
 
 
         if phase == 'base':
@@ -50,8 +51,9 @@ def phaseFC_extract(phase):
 
             lfptrials_normal, chnAreas, fs = lfp_align2_targetonset(files_normal, tdur_trial = tdur_trial, tmin_return = 0.5, tmax_return = 1)
             lfptrials_mild, _, _ = lfp_align2_targetonset(files_mild, tdur_trial = tdur_trial, tmin_return = 0.5, tmax_return = 1)
+            lfptrials_moderate, _, _ = lfp_align2_targetonset(files_moderate, tdur_trial = tdur_trial, tmin_return = 0.5, tmax_return = 1)
             
-        fc =  fc4drawing(chnAreas, fs, chnInf_file, lfptrials_normal = lfptrials_normal, lfptrials_mild = lfptrials_mild)
+        fc =  fc4drawing(chnAreas, fs, chnInf_file, lfptrials_normal = lfptrials_normal, lfptrials_mild = lfptrials_mild, lfptrials_moderate = lfptrials_moderate)
 
         with open(fcfile, 'wb') as fp:
             pickle.dump(fc, fp, protocol=pickle.HIGHEST_PROTOCOL)
@@ -130,7 +132,7 @@ def fc_visual_save(fc, savefile_prefix):
     pos_text_Down1 = [0, 500, 15]
     pos_text_Down2 = [0, 550, 15]
     pos_text_Down3 = [0, 570, 15]
-
+    
     texts_org = dict()
     texts_org['STN'] = [200, 120, 20]
     texts_org['GP'] = [430, 210, 20]
@@ -148,7 +150,7 @@ def fc_visual_save(fc, savefile_prefix):
                                     f = (freq[0] + freq[1])//2, t = t)
         
         texts = texts_org.copy()
-        lowweight = 0.14
+        lowweight = threshold
         texts[cond] = pos_text_lefttop1
         text_thred = 'thred = ' + str(lowweight)
         texts[text_thred] = pos_text_lefttop2
@@ -166,10 +168,9 @@ def fc_visual_save(fc, savefile_prefix):
 
     return igplot
 
-
 def combine_imgs():
     phases = ['base', 'reach', 'return']
-    conds = ['normal', 'mild']
+    conds = ['normal', 'mild', 'moderate']
 
     # find all freqstr
     files = glob.glob(os.path.join(savefolder, 'ciCOH_*_reach_*.png'))
@@ -210,23 +211,25 @@ def combine_imgs():
         cv2.imwrite(os.path.join(savefolder, 'combined_' + freqstr +  '.png'), imgs)
         del imgs
 
+
 animal =  re.search('NHPs/[a-zA-Z]*/', __file__).group()[len('NHPs/'):-1]
 chnInf_folder = correparentfolder
 chnInf_file = os.path.join(chnInf_folder, 'chn_brainArea_simCoord_BrainArea.csv')
 savefolder = corresfolder
+
 savefile_threshold = os.path.join(savefolder, 'threshold.pickle')
 
+freq_opts = [[24, 26],[9, 11]]
 
-freq_opts = [[11, 13]]
 for freq in freq_opts:
     inputfolder = os.path.join(pipelinefolder, 'NHPs', animal, '0_dataPrep', 'SKT', 'm3_STKData_narrowfiltered' + str(freq[0]) + '_' + str(freq[1]))
+
     saveFCfilename_prefix = 'ciCOH_SKT_freq' + str(freq[0]) + '_' + str(freq[1])
     savefile_fcgraph_prefix = 'ciCOH_SKT_freq' + str(freq[0]) + '_' + str(freq[1])
 
     phase = 'base'
     fc = phaseFC_extract(phase)
     fc_visual_save(fc = fc, savefile_prefix = savefile_fcgraph_prefix + '_' + phase)
-
 
     phase = 'reach'
     fc = phaseFC_extract(phase)
@@ -236,11 +239,8 @@ for freq in freq_opts:
     fc = phaseFC_extract(phase)
     fc_visual_save(fc = fc, savefile_prefix = savefile_fcgraph_prefix + '_' + phase)
 
+
 combine_imgs()
-
-
-
-
 
 
 

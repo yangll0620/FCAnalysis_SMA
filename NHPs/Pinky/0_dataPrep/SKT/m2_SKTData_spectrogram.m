@@ -42,7 +42,7 @@ files_mild = dir(fullfile(inputfolder, '*_mild_*.mat'));
 
 tmin_reach_normal = 0.4;
 tmax_reach_normal = 1;
-tdur_trial_normal = [-0.8 0.8];
+tdur_trial_normal = [-0.6 0.8];
 [lfptrials_normal, fs, T_chnsarea] = lfp_align2_reachonset(files_normal, tdur_trial_normal, tmin_reach_normal, tmax_reach_normal);
 plot_spectrogram_allfiles(lfptrials_normal, T_chnsarea, fs, savefolder, animal, 'normal')
 
@@ -50,7 +50,7 @@ plot_spectrogram_allfiles(lfptrials_normal, T_chnsarea, fs, savefolder, animal, 
 
 tmin_reach_mild = 0.5;
 tmax_reach_mild = 1;
-tdur_trial_mild = [-0.8 1];
+tdur_trial_mild = [-0.6 1];
 [lfptrials_mild, fs, T_chnsarea] = lfp_align2_reachonset(files_mild, tdur_trial_mild, tmin_reach_mild, tmax_reach_mild);
 plot_spectrogram_allfiles(lfptrials_mild, T_chnsarea, fs, savefolder, animal, 'mild')
 
@@ -118,6 +118,7 @@ for areai = 1 : height(T_chnsarea)
     figure
     set(gcf, 'PaperUnits', 'points',  'PaperPosition', [18, 180, 300 180]);
     imagesc(t_selected, f_selected, psd_selected);
+
     colorbar
     set(gca,'YDir','normal')
     
@@ -136,7 +137,7 @@ for areai = 1 : height(T_chnsarea)
     clear brainarea chnMask psds f t idx_f *_selected 
     clear savefile
 end
-
+close all
 
 
 function [lfptrials, fs, T_chnsarea] = lfp_align2_reachonset(files, tdur_trial, tmin_reach, tmax_reach)
@@ -170,8 +171,14 @@ for filei = 1 : nfiles
         if t_reach < tmin_reach || t_reach > tmax_reach || t_dur < tdur_trial(2)
             continue
         end
+      
             
         idxdur = round(tdur_trial * fs) + T_idxevent{tri, coli_reachonset};
+       
+        if idxdur(1) < 0
+            continue;
+        end
+        
         lfp_phase_1trial = lfpdata(:, idxdur(1):idxdur(2), tri);
            
         lfptrials = cat(3, lfptrials, lfp_phase_1trial);
@@ -186,8 +193,8 @@ brainarea = 'M1';
 
 img_normal = imread(fullfile(folder,[animal '_normal_' brainarea '.tif']));
 img_mild = imread(fullfile(folder,[animal '_mild_' brainarea '.tif']));
-img_moderate = imread(fullfile(folder,[animal '_moderate_' brainarea '.tif']));
-imgs_M1 = cat(1, img_normal, img_mild, img_moderate);
+
+imgs_M1 = cat(1, img_normal, img_mild);
 imwrite(imgs_M1,  fullfile(folder, ['combined_' animal brainarea '.png']));
 clear img_normal img_mild img_moderate
 
@@ -199,8 +206,8 @@ for i = 1: 7
     
     img_normal = imread(fullfile(folder,[animal '_normal_' brainarea num2str(i-1) '-' num2str(i) '.tif']));
     img_mild = imread(fullfile(folder,[animal '_mild_' brainarea num2str(i-1) '-' num2str(i) '.tif']));
-    img_moderate = imread(fullfile(folder,[animal '_moderate_' brainarea num2str(i-1) '-' num2str(i) '.tif']));
-    imgs_3 = cat(1, img_normal, img_mild, img_moderate);
+
+    imgs_3 = cat(1, img_normal, img_mild);
     
     if mod(i, 2) == 1
         imgs = imgs_3;
@@ -227,8 +234,8 @@ for i = 1: 7
     
     img_normal = imread(fullfile(folder,[animal '_normal_' brainarea num2str(i-1) '-' num2str(i) '.tif']));
     img_mild = imread(fullfile(folder,[animal '_mild_' brainarea num2str(i-1) '-' num2str(i) '.tif']));
-    img_moderate = imread(fullfile(folder,[animal '_moderate_' brainarea num2str(i-1) '-' num2str(i) '.tif']));
-    imgs_3 = cat(1, img_normal, img_mild, img_moderate);
+
+    imgs_3 = cat(1, img_normal, img_mild);
     
     if mod(i, 2) == 1
         imgs = imgs_3;

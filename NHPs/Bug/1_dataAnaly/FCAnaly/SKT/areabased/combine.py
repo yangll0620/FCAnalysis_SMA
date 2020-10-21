@@ -4,9 +4,9 @@ import cv2
 import glob
 import re
 
-savefolder = '/home/lingling/Insync/yang7003@umn.edu/NMRC_umn/Projects/FCAnalysis/exp/pipeline/NHPs/Jo/1_dataAnaly/FCAnaly/SKT/areabased/m1_SKT'
+savefolder = '/home/lingling/Insync/yang7003@umn.edu/NMRC_umn/Projects/FCAnalysis/exp/pipeline/NHPs/Bug/1_dataAnaly/FCAnaly/SKT/areabased/m1_SKT'
 phases = ['base', 'reach', 'return']
-conds = ['normal', 'mild', 'moderate']
+conds = ['normal', 'mild']
 
 # find all freqstr
 files = glob.glob(os.path.join(savefolder, 'ciCOH_*_reach_*.png'))
@@ -20,7 +20,8 @@ for f in files:
 ufreqstr = set(freqstrs)
 
 print(ufreqstr)
-
+ 
+img_white = np.zeros((600, 2, 3)) 
 for freqstr in ufreqstr:
 
     for ci, cond in enumerate(conds):
@@ -33,7 +34,7 @@ for freqstr in ufreqstr:
                 img_1cond = img
                 
             else:
-                img_1cond = np.concatenate((img_1cond, img), axis = 1)
+                img_1cond = np.concatenate((img_1cond, img_white, img), axis = 1)
 
             del files, file_fc, img
 
@@ -41,7 +42,8 @@ for freqstr in ufreqstr:
             imgs = img_1cond
             
         else:
-            imgs = np.concatenate((imgs, img_1cond), axis = 0)
+            img_black = np.zeros((2, img_1cond.shape[1], 3))
+            imgs = np.concatenate((imgs, img_black, img_1cond), axis = 0)
 
 
     cv2.imwrite(os.path.join(savefolder, 'combined_' + freqstr +  '.png'), imgs)

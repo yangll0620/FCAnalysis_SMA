@@ -1,8 +1,11 @@
-function m3_STKData_narrowfiltered19_21()
-%% narrow filtered STK data recorded  in frequency [29 31]Hz
+function m3_STKData_narrowfiltered26_28()
+%% 
 %
 % input:
 %   m1_SKTData_avgArea
+%
+% output:
+%   skip the file with only one trial
 
 
 %% folders generate
@@ -23,13 +26,13 @@ addpath(genpath(fullfile(codefolder,'util')));
 
 %% global variables
 % animal
-tmp = char(regexp(codefilepath, '/NHP_\w*/', 'match'));
-animal = tmp(length('/NHP_')+1:end-1);
+[fi, j] = regexp(codecorresfolder, 'NHPs/[A-Za-z]*');
+animal = codecorresfolder(fi + length('NHPs/'):j);
 
 
 %%  input setup
 % band pass frequency
-frebp = [19 21];
+frebp = [26 28];
 % input folder: extracted raw rest data with grayMatter 
 inputfolder = fullfile(codecorresParentfolder, 'm1_SKTData_avgArea');
 
@@ -46,17 +49,23 @@ for filei = 1 : nfiles
     elapsedTime = toc;
     
     % wait bar
-    waitbar(filei/nfiles,f,['Narrow Filtering [' num2str(frebp(1)) ' ' num2str(frebp(2)) ']Hz lfp data in file ' num2str(filei) '/' num2str(nfiles) ...
+    waitbar(filei/nfiles,f,[' [' num2str(frebp(1)) ' ' num2str(frebp(2)) ']Hz lfp data in file ' num2str(filei) '/' num2str(nfiles) ...
          ', elapseTime ' num2str(elapsedTime)]);
     
     % load data, lfpdata: [nchns, ntemps, ntrials]
     filename = files(filei).name;
     load(fullfile(inputfolder, filename), 'lfpdata', 'fs', 'T_chnsarea', 'T_idxevent');
     
+    if(height(T_idxevent) == 1)
+        disp([filename ' has only 1 trial, skip!']);
+        continue;
+    end
+    
     
     % band pass filter
     [nchns, ntemps, ntrials] = size(lfpdata);
     filterdlfp = zeros(nchns, ntemps, ntrials);
+    
     for chni = 1 : nchns
         for triali = 1: ntrials
             filterdlfp(chni,:, triali) = filter_bpbutter(lfpdata(chni,:,triali),frebp,fs);
@@ -84,7 +93,7 @@ for filei = 1 : nfiles
     tmpn = length([animal '_']);
     savefilename = [filename(idx:idx+tmpn-1) savefilename_addstr ... 
         upper(filename(idx+tmpn)) filename(idx+tmpn+1:end)];
-    save(fullfile(savefolder, savefilename), 'lfpdata','fs', 'chnAreas', 'T_chnsarea', 'T_idxevent');
+    save(fullfile(savefolder, savefilename), 'lfpdata','fs', 'chnAreas', 'idxevent', 'T_chnsarea', 'T_idxevent');
     
     
     clear lfpdata fs T_chnsarea
