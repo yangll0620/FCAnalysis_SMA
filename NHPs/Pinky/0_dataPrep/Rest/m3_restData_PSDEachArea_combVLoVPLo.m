@@ -1,7 +1,10 @@
-function m3_restData_PSDEachArea_extract()
+function m3_restData_PSDEachArea_combVLoVPLo()
     %%   PSD estimates for mild and normal individually
     %
     %       psd for each brain area, as well as each DBS contact
+    %       
+    %       combine STN, DBS and M1SMATha individually
+    %       same scale [0 0.15]
     %
     %
     %   Input:
@@ -24,14 +27,16 @@ function m3_restData_PSDEachArea_extract()
 
     %%  input setup
     
-    tmp = char(regexp(codefilepath, '/NHP_\w*/', 'match'));
-    animal = tmp(length('/NHP_') + 1:end - 1);
+   [fi, j] = regexp(codecorresfolder, 'NHPs/[A-Za-z]*');
+   animal = codecorresfolder(fi + length('NHPs/'):j);
 
     % pwelch psd estimate variable
     twin_pwelch = 2;
 
     % variables for plotting
     plotF_AOI = [5 50];
+    global ylim_sameScale 
+    ylim_sameScale = [0 0.15];
 
     % input folder
     inputfolder = fullfile(codecorresParentfolder, 'm2_restData_selectSeg_Power');
@@ -47,9 +52,9 @@ function m3_restData_PSDEachArea_extract()
     %%%  calculate/load dbs psd for mild and normal %%%
     if ~exist(file_psdall, 'file')% not exist
 
-        [pxxs_allfiles_normal, F_pxx_normal] = pxx_eacharea_allfiles(dir(fullfile(inputfolder, '*_normal_*.mat')), twin_pwelch);
-        [pxxs_allfiles_mild, F_pxx_mild] = pxx_eacharea_allfiles(dir(fullfile(inputfolder, '*_mild_*.mat')), twin_pwelch);
-        [pxxs_allfiles_moderate, F_pxx_moderate] = pxx_eacharea_allfiles(dir(fullfile(inputfolder, '*_moderate_*.mat')), twin_pwelch);
+        [pxxs_allfiles_normal, F_pxx_normal] = pxx_eacharea_combVLoVPLo_allfiles(dir(fullfile(inputfolder, '*_normal_*.mat')), twin_pwelch);
+        [pxxs_allfiles_mild, F_pxx_mild] = pxx_eacharea_combVLoVPLo_allfiles(dir(fullfile(inputfolder, '*_mild_*.mat')), twin_pwelch);
+        [pxxs_allfiles_moderate, F_pxx_moderate] = pxx_eacharea_combVLoVPLo_allfiles(dir(fullfile(inputfolder, '*_moderate_*.mat')), twin_pwelch);
 
         if ~isequal(F_pxx_normal, F_pxx_mild, F_pxx_moderate)
             disp('F_pxx_normal, F_pxx_mild and F_pxx_moderate not equal');
@@ -91,6 +96,7 @@ function m3_restData_PSDEachArea_extract()
     
     
     %%% combine all figures into one %%%%
+    close all
     
     % empty figure
     figure
@@ -108,11 +114,11 @@ function m3_restData_PSDEachArea_extract()
     %%% combine all figures into one %%%%
     close all
     
-    %----DBS in one figure ---%
+    %----DBS ---%
     brainarea = 'STN';
     imgs_col1 = []; imgs_col2 = []; % two columns
     for i = 1: 7
-        img = imread(fullfile(savefolder,['psd_' brainarea '_ch' num2str(i) '.png']));
+        img = imread(fullfile(savefolder,['psd_' brainarea '_ch' num2str(i) '.tif']));
         
         if mod(i, 2) == 1
             imgs_col1 = cat(1, imgs_col1, img);
@@ -125,11 +131,13 @@ function m3_restData_PSDEachArea_extract()
     imgs_col2 = cat(1, imgs_col2, img_text); % the last one in column2 is empty
     imgs_STN = cat(2, imgs_col1, imgs_col2);
     clear imgs_col1 imgs_col2
+    imwrite(imgs_STN,  fullfile(savefolder, ['comb' brainarea '.png']));
+    
     
     brainarea = 'GP';
     imgs_col1 = []; imgs_col2 = []; % two columns
     for i = 1: 7
-        img = imread(fullfile(savefolder,['psd_' brainarea '_ch' num2str(i) '.png']));
+        img = imread(fullfile(savefolder,['psd_' brainarea '_ch' num2str(i) '.tif']));
         
         if mod(i, 2) == 1
             imgs_col1 = cat(1, imgs_col1, img);
@@ -141,42 +149,82 @@ function m3_restData_PSDEachArea_extract()
     end
     imgs_col2 = cat(1, imgs_col2, zeros(size(img_text)) + 255); % the last one in column2 is empty
     imgs_GP= cat(2, imgs_col1, imgs_col2);
+    imwrite(imgs_GP,  fullfile(savefolder, ['comb' brainarea '.png']));
     
     
-    imgs_DBS = cat(2, imgs_STN, imgs_GP);
-    imwrite(imgs_DBS,  fullfile(savefolder, 'combinedDBS.png'));
+    brainarea = 'GP';
+    imgs_row1 = []; imgs_row2 = []; % two rows
+    for i = 1: 7
+        img = imread(fullfile(savefolder,['psd_' brainarea '_ch' num2str(i) '.tif']));
+        
+        if i<= 4
+            imgs_row1 = cat(2, imgs_row1, img);
+        else
+            imgs_row2 = cat(2, imgs_row2, img);
+        end
+        
+        clear img
+    end
+    imgs_row2 = cat(2, imgs_row2, zeros(size(img_text)) + 255); % the last one in row2 is empty
+    imgs_GP= cat(1, imgs_row1, imgs_row2);
+    imwrite(imgs_GP,  fullfile(savefolder, ['comb' brainarea '2.png']));
+   
     
     
     %----M1, SMA and Thalams in one figure ---%
-    imgs_tha = [];
-    thalamus = {'VA', 'VLo', 'VPLo'};
+    imgs_Tha = [];
+    thalamus = {'VA', 'VLoVPLo'};
     for i = 1 : length(thalamus)
         brainarea = thalamus{i};
 
-        imgl = imread(fullfile(savefolder,['psd_l' brainarea '.png'])); 
-        imgr = imread(fullfile(savefolder,['psd_r' brainarea '.png'])); 
+        imgl = imread(fullfile(savefolder,['psd_l' brainarea '.tif'])); 
+        imgr = imread(fullfile(savefolder,['psd_r' brainarea '.tif'])); 
         
         img = cat(2, imgl, imgr);
-        imgs_tha = cat(1, imgs_tha, img);
+        imgs_Tha = cat(1, imgs_Tha, img);
         
         clear imgl imgr img brainarea
     end
+    imwrite(imgs_Tha,  fullfile(savefolder, 'combTha.png'));
     
-    img_M1 = imread(fullfile(savefolder,'psd_M1.png')); 
-    img_lSMA = imread(fullfile(savefolder,'psd_lSMA.png')); 
-    img_rSMA = imread(fullfile(savefolder,'psd_rSMA.png')); 
+    
+    imgVA = imread(fullfile(savefolder,['psd_lVA.tif'])); 
+    imgVL = imread(fullfile(savefolder,['psd_lVLoVPLo.tif'])); 
+    img = cat(1, imgVA, imgVL);
+    imwrite(img,  fullfile(savefolder, 'combLeTha.png'));
+    
+    imgVA = imread(fullfile(savefolder,['psd_rVA.tif'])); 
+    imgVL = imread(fullfile(savefolder,['psd_rVLoVPLo.tif'])); 
+    img = cat(1, imgVA, imgVL);
+    imwrite(img,  fullfile(savefolder, 'combRiTha.png'));
+    
+    
+    
+    img_M1 = imread(fullfile(savefolder,'psd_M1.tif')); 
+    img_lSMA = imread(fullfile(savefolder,'psd_lSMA.tif')); 
+    img_rSMA = imread(fullfile(savefolder,'psd_rSMA.tif')); 
     imgs_SMA = cat(2, img_lSMA, img_rSMA);
     imgs_2M1 = cat(2, img_text, img_M1);
-    imgs_M1SMA = cat(1, imgs_SMA, imgs_2M1, zeros(size(imgs_SMA)) + 255);
+    imgs_M1SMA = cat(1, imgs_SMA, imgs_2M1);
     clear img_M1 img_lSMA img_rSMA imgs_2M1 imgs_SMA
     
-    img_M1SMATha = cat(2, imgs_tha, imgs_M1SMA);
-    imwrite(img_M1SMATha,  fullfile(savefolder, 'combinedM1SMATha.png'));
+    
+    img_M1 = imread(fullfile(savefolder,'psd_M1.tif')); 
+    img_lSMA = imread(fullfile(savefolder,'psd_lSMA.tif')); 
+    img_rSMA = imread(fullfile(savefolder,'psd_rSMA.tif')); 
+    imgs_SMA = cat(2, img_lSMA, img_rSMA);
+    imgs_2M1 = cat(2, img_text, img_M1);
+    imgs_M1SMA = cat(2, imgs_SMA, imgs_2M1);
+    clear img_M1 img_lSMA img_rSMA imgs_2M1 imgs_SMA
+  
+  
+    imwrite(imgs_M1SMA,  fullfile(savefolder, 'combM1SMA2.png'));
     
 end
 
-function [pxxs_allfiles, F_pxx] = pxx_eacharea_allfiles(files, twin_pwelch)
+function [pxxs_allfiles, F_pxx] = pxx_eacharea_combVLoVPLo_allfiles(files, twin_pwelch)
     %% extract psd from all the files, each psd for each dbs contact and one psd for one area (except dbs)
+    %   combine VLo and VPLo
     %
     % Arg:
     %       files = dir(fullfile('.', '*_mild_*.mat'));
@@ -199,7 +247,7 @@ function [pxxs_allfiles, F_pxx] = pxx_eacharea_allfiles(files, twin_pwelch)
 
         file = fullfile(files(filei).folder, files(filei).name);
 
-        [pxxs_1file, F_pxx_1file] = pxx_eacharea_onefile(file, twin_pwelch);
+        [pxxs_1file, F_pxx_1file] = pxx_eacharea_combVLoVPLo_onefile(file, twin_pwelch);
 
         if (isempty(pxxs_1file))
             continue;
@@ -250,7 +298,7 @@ function [pxxs_allfiles, F_pxx] = pxx_eacharea_allfiles(files, twin_pwelch)
 
 end
 
-function [pxxs, F_pxx] = pxx_eacharea_onefile(file, twin_pwelch)
+function [pxxs, F_pxx] = pxx_eacharea_combVLoVPLo_onefile(file, twin_pwelch)
     %% extract psd of all the segments from the files, each psd for each dbs contact and one psd for one area (except dbs)
     %
     % Outputs:
@@ -272,10 +320,19 @@ function [pxxs, F_pxx] = pxx_eacharea_onefile(file, twin_pwelch)
         pxxs = [];
         return;
     end
-
+    
+    
+    % replace *VLo and *VPLo with VLoVPLo
+    mask_VLoVPLo = strcmp(T_chnsarea.brainarea, 'lVLo') | strcmp(T_chnsarea.brainarea, 'lVPLo');
+    T_chnsarea{mask_VLoVPLo, 'brainarea'} = {'lVLoVPLo'};
+    mask_VLoVPLo = strcmp(T_chnsarea.brainarea, 'rVLo') | strcmp(T_chnsarea.brainarea, 'rVPLo');
+    T_chnsarea{mask_VLoVPLo, 'brainarea'} = {'rVLoVPLo'};
+    
+    
     % extract uniqBrainAreas
     mask_emptyarea = cellfun(@(x) isempty(x), T_chnsarea.brainarea);
-    uniqBrainAreas = unique(T_chnsarea.brainarea(~mask_emptyarea));
+    mask_unwanted = strcmp(T_chnsarea.brainarea, 'lCd') | strcmp(T_chnsarea.brainarea, 'rMC');
+    uniqBrainAreas = unique(T_chnsarea.brainarea(~mask_emptyarea & ~mask_unwanted));
 
     % psd pwelch paramers
     nwins = round(twin_pwelch * fs);
@@ -426,6 +483,9 @@ function plotPSD_comp_1chn(psd_normal, psd_mild, psd_moderate, F_all, plotF_AOI,
     plot([F_maxPSD F_maxPSD], [0 maxPSD + maxPSD * 0.2], 'k--')
 
     xlim([min(F_AOI) max(F_AOI)])
+    
+    global ylim_sameScale;
+    ylim(ylim_sameScale)
 
     % legend
     legend([h1, h2, h3], {'normal', 'mild', 'moderate'})
@@ -435,7 +495,7 @@ function plotPSD_comp_1chn(psd_normal, psd_mild, psd_moderate, F_all, plotF_AOI,
 
     % save figure
     savename = fullfile(savefolder, ['psd_' brainarea]);
-    saveas(gcf, savename, 'png')
+    saveas(gcf, savename, 'tif')
 
     clear psd_allsegs_normal psd_allsegs_mild psd_allsegs_moderate
     clear psd_normal_FAOI psd_mild_FAOI psd_moderate_FAOI
@@ -535,6 +595,8 @@ function plotPSD_comp_multichns(psd_normal, psd_mild, psd_moderate, F_all, plotF
         plot([F_maxPSD F_maxPSD], [0 maxPSD + maxPSD * 0.2], 'k--')
 
         xlim([min(F_AOI) max(F_AOI)])
+        global ylim_sameScale;
+        ylim(ylim_sameScale);
 
         % legend
         legend([h1, h2, h3], {'normal', 'mild', 'moderate'})
@@ -544,7 +606,7 @@ function plotPSD_comp_multichns(psd_normal, psd_mild, psd_moderate, F_all, plotF
 
         % save figure
         savename = fullfile(savefolder, ['psd_' brainarea '_ch' num2str(chni)]);
-        saveas(gcf, savename, 'png')
+        saveas(gcf, savename, 'tif')
 
         clear psd_allsegs_normal psd_allsegs_mild psd_allsegs_moderate 
         clear psd_normal_FAOI psd_mild_FAOI psd_moderate_FAOI

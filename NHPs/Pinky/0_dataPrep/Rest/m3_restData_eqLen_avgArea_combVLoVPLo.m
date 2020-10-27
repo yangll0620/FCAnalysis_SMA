@@ -31,8 +31,8 @@ function m3_restData_eqLen_avgArea_combVLoVPLo()
 
     %% global variables
     % animal
-    tmp = char(regexp(codefilepath, '/NHP_\w*/', 'match'));
-    animal = tmp(length('/NHP_') + 1:end - 1);
+    [fi, j] = regexp(codecorresfolder, 'NHPs/[A-Za-z]*');
+    animal = codecorresfolder(fi + length('NHPs/'):j);
 
     segt = 2;
 
