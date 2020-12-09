@@ -168,7 +168,7 @@ def graph_style(graph, visual_style = None):
         
     
     # vertex size
-    visual_style['vertex_size'] = 5
+    visual_style['vertex_size'] = 10
     # outdegree = graph.outdegree()
     # if max(outdegree) > 0:
     #     visual_style['vertex_size'] = [x/max(outdegree)*10+5 for x in outdegree]
@@ -190,22 +190,22 @@ def graph_style(graph, visual_style = None):
         print("No vertex name")
     
     # vertext label size
-    visual_style["vertex_label_size"] = 10
+    visual_style["vertex_label_size"] = 15
     
     visual_style["vertex_label_angle"] = 0
     
-    visual_style["edge_width"] = 1
 
     # the outdegree for each vertex
     outdegree = graph.outdegree()
     
     
-    visual_style["margin"] = 100
+    visual_style["margin"] = [30, 30, 75, 30]
     
+    visual_style['edge_width'] = 0.35
 
     # set edge width if not exist
     if not 'edge_width' in visual_style.keys():
-        visual_style['edge_width'] = graph.es['weight']
+        visual_style['edge_width'] = graph.es['weight'] * 10
         
     
     # set edge color if not exist

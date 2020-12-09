@@ -1,16 +1,15 @@
-function m1_restData_cleaned_extract()
+function m1_restData_cleaned_extFromMaster()
 %% extract cleaned restData using files Ying used
 %
 %   1. remove data of channels in m1array_to_remove
+%   2. remove data with eye-closed and data marked with movement
 %   
-%   2. remove data with eye-closed
+
 %
-%   3. remove data marked with movement 
-%   
 %   Inputs:
 %       configFile: datafolder/ config_m1lf_fromYing.mat
 %
-%       all_sync file: e.g /Block-1/Bug_20180411_1_all_sync.mat
+%       MasterDatabase.xlsx
 
 
 
@@ -35,8 +34,9 @@ addpath(genpath(fullfile(codefolder,'util')));
 % datafolder
 [datafolder, ~, ~, ~] = exp_subfolders();
 
-%% animal name
-animal = 'Bug';
+% animal
+[fi, j] = regexp(codecorresfolder, 'NHPs/[A-Za-z]*');
+animal = codecorresfolder(fi + length('NHPs/'):j);
 
 %% input setup
 
@@ -44,14 +44,19 @@ animal = 'Bug';
 folder_processed_root2 = fullfile('/home/lingling/root2/Animals2', animal, 'Recording/Processed/DataDatabase');
 
 
-% file_sycChecked by Ying
-file_sycChecked = fullfile(datafolder, animal, 'SycAllFileChecked.mat');
 
 % threshold used by Ying to extract cleaned resting data
 configFile = fullfile(datafolder, 'config_m1lf_fromYing.mat');
 
-% master file
-file_masterxls = fullfile(datafolder, animal, 'BugMasterDatabase.xlsx'); 
+% master sheet
+xlsxfile_master = fullfile(datafolder, animal, [animal 'MasterDatabase.xlsx']);
+strformat_date_master = 'mmddyy'; % the format of date string in master sheet, e.g '012317'
+
+strformat_date_root2Folder = 'mmddyy'; % the format of date string in folder in root2, e.g '012317'
+
+
+% different Rest labels in the master sheet
+tasks_Rest = {'Resting'};
 
 
 %% save setup
@@ -59,6 +64,9 @@ savefolder = codecorresfolder;
 savefilename_prefix = [animal '_cleanedRestData_'];
 
 %% global variables
+
+% conds
+conds_cell = {'normal', 'mild', 'moderate'};
 
 % to be removed channels in array
 arraychns_to_remove = [];
@@ -80,69 +88,87 @@ thr_eye_open = 0.5000;
 load(configFile, 'config_m1lf');
 
 
-% load file SycAllFileChecked.mat
-load(file_sycChecked, 'SycAllFileChecked');
-% only use dates marked with SycAllFileChecked.checkstatus == [1, 1]
-masks = (SycAllFileChecked.checkstatus(:, 1) == 1 & SycAllFileChecked.checkstatus(:, 2) == 1);
-dates_used = unique(SycAllFileChecked.date(masks,:));
+
+% ---- extract t_Rest containing the records for rest without DBS ---- %
+% extract master table
+t_master = readtable(xlsxfile_master);
 
 
-% load master file as a table
-t_master = readtable(file_masterxls);
-% string column OutputFolderName and BriefDescription
-t_master.OutputFolderName = string(t_master.OutputFolderName);
-t_master.BriefDescription = string(t_master.BriefDescription);
+% row indices for task_SKB, idx_rows:  1 for task_SKB without dbs, 0 otherwise
+idxrows_Rest = cellfun(@(x) ~isempty(find(strcmp(x, tasks_Rest))), t_master.BriefDescription);
+idxrows_noDBS = cellfun(@(x) isempty(x), t_master.DBS_Target);
+idxrows = (idxrows_Rest & idxrows_noDBS);
 
 
-nfiles = length(dates_used);
-for i = 1: nfiles
+% table for rows marked Rest labels with only OutputFolderName and TDTBlock columns
+t_Rest = t_master(idxrows, {'OutputFolderName', 'TDTBlock'});
+
+% convert Table Variables from Cell Arrays of Character Vectors to string/double Arrays
+t_Rest.OutputFolderName = string(t_Rest.OutputFolderName);
+t_Rest.TDTBlock = double(t_Rest.TDTBlock);
+
+
+% ---- extract all STK trials ---- %
+close all
+f = waitbar(0, ['Extracting all Rest trials']);
+nrecords = height(t_Rest);
+for i = 228: nrecords
+    % waitbar
+    waitbar(i/nrecords,f,['i = ' num2str(i) ', Extracting trials in file ' num2str(i) '/' num2str(nrecords)]);
     
-    idx = find(t_master.OutputFolderName == dates_used{i} & t_master.BriefDescription == 'Resting');
     
-    if (length(idx) ~= 1) % idx = [] or idx has more than 1 value
-        
-        disp(['Date: '   dates_used{i} ' has ' num2str(length(idx)) ' file, skipped.'])
+    %%% meta data for current record %%%%
+    
+    % date of exp, bktdt
+    outputfoldername = split(t_Rest.OutputFolderName(i), '_');
+    dateofexp = datenum(outputfoldername{end}, strformat_date_master);
+    tdtbk = t_Rest.TDTBlock(i);
+    
+    
+    % get the pd conditioon for the date of experiment
+    pdcondition = parsePDCondition(dateofexp, animal);
+    
+    
+    if ~any(strcmp(pdcondition, conds_cell)) % avoid tomild, tomoderate
         continue;
     end
     
     
-    % tdt block for resting on date_used
-    tdtblock = t_master.TDTBlock(idx);
     
     % sync file pattern
-    folder_allsync = fullfile(folder_processed_root2, dates_used{i}, ['Block-' num2str(tdtblock)]);
+    folder_allsync = fullfile(folder_processed_root2, [animal '_' datestr(dateofexp, strformat_date_root2Folder)], ['Block-' num2str(tdtbk)]);
     filepattern_allsync = fullfile(folder_allsync, [animal '*_all_sync.mat']);
     files_allsync = dir(filepattern_allsync);
     
     % all sync file not exist or there are more than one sync file, skip
     if(length(files_allsync) ~= 1)
-        disp([filepattern_allsync ' has ' num2str(length(files_allsync)) ' files, not 1 file, skipped.'])
         continue;
     end
     
-    % the all sync file 
+    
+    % the all sync file
     file_allsync = fullfile(files_allsync.folder, files_allsync.name);
     
     
-    %%%  extract the segments %%%
-    % get the thr_power
-    date_num = datenum(strrep(dates_used{i}, [animal '_'], ''), 'mmddyy');
-    condition = parsePDCondition(date_num, animal);
-
     
-    if strcmp(condition, 'mild') || strcmp(condition, 'moderate')
+    %%%  extract the segments from *_all_sync.mat %%%
+    % get the thr_power
+    pdcond = parsePDCondition(dateofexp, animal);
+    
+    
+    if strcmp(pdcond, 'mild') || strcmp(pdcond, 'moderate')
         eval(['thr_power = config_m1lf.max_' lower(animal) '_pd;'])
     else
-        if strcmp(condition, 'normal')
+        if strcmp(pdcond, 'normal')
             eval(['thr_power = config_m1lf.max_' lower(animal) '_normal;'])
         else
-            disp([dates_used{i} ', Ignore condition = ' condition])
+            disp([dates_used{i} ', Ignore condition = ' pdcond])
             
             continue;
         end
     end
     
-    disp([num2str(i) '/' num2str(nfiles) ': extracting segments from ' dates_used{i} '-Block' num2str(tdtblock)])
+    disp([num2str(i) '/' num2str(nrecords) ': extracting segments from ' pdcond ' ' datestr(dateofexp) '-Block' num2str(tdtbk)])
     
     %
     [data_segments, segsIndex, therapy, fs] = segments_extract_fromAllSyncMat(file_allsync, arraychns_to_remove, thr_power, thr_eye_open, t0, min_comp_time, config_m1lf.freq_band);
@@ -153,31 +179,30 @@ for i = 1: nfiles
     end
     
     str_therapy = '';
-    if (strcmp(condition, 'mild') || strcmp(condition, 'moderate')) && ~strcmp(therapy, 'off')
-            str_therapy = therapy;
+    if (strcmp(pdcond, 'mild') || strcmp(pdcond, 'moderate')) && ~strcmp(therapy, 'off')
+        str_therapy = therapy;
     end
     
-    savefile = fullfile(savefolder, [savefilename_prefix  condition str_therapy '_'  datestr(date_num,'yyyymmdd') '_tdt'  num2str(tdtblock) '.mat']);
+    
+    %%% save %%%
+    savefile = fullfile(savefolder, [savefilename_prefix  pdcond str_therapy '_'  datestr(dateofexp,'yyyymmdd') '_tdt'  num2str(tdtbk) '.mat']);
     save(savefile, 'data_segments', 'segsIndex', 'fs')
     
     clear allsyncfile dateblockstr thr_power1
-    clear tmp condition 
+    clear tmp condition
 end
-end
-
-
-
+end % m1_restData_cleaned_extFromMaster
 
 function [data_segments, segsIndex, therapy, fs] = segments_extract_fromAllSyncMat(file_allsync, arraychns_to_remove, thr_power, thr_eye_open, t0, min_comp_time, freq_band)
 % segments_extrct_fromAllSyncMat
-%   extract the segments whose 
+%   extract the segments whose
 %
 %
 %   Args:
 %       file_allsync: the all sync mat file (fullpath, e.g. /.../../Bug_20190110_2_all_sync.mat)
 %       arraychns_to_remove: the array channels to be removed (e.g. [] or [1, 4])
 %       thr_power1
-%       thr_eye_open: 
+%       thr_eye_open:
 %       t0
 %       min_comp_time
 %       freq_band
@@ -187,7 +212,7 @@ function [data_segments, segsIndex, therapy, fs] = segments_extract_fromAllSyncM
 %       data_segments:
 %
 %       segsIndex:
-%   
+%
 
 
 
@@ -213,6 +238,13 @@ end
 n0 = round(t0 * fs);
 min_samples = round(min_comp_time * fs);
 
+if(size(data.lfp_array, 2)) ~= 96
+    disp(['size of data.lfp_array = ' num2str(size(data.lfp_array, 2))]);
+    data_segments = []; segsIndex = []; therapy = []; fs = [];
+    return;
+end
+
+
 % removing the arraychns_to_remove channels
 lfp_array = data.lfp_array;
 lfp_array(:, arraychns_to_remove) = [];
@@ -232,6 +264,7 @@ end
 
 %%  get states for each time point of lfp, 1: remain this time point, 0: remove
 chns_m1 = [56 58 79 69 65];
+
 avglfp_m1 = mean(lfp_array(:, chns_m1), 2);
 m1power_state_mintime = extract_power_state_mintime(avglfp_m1, thr_power, min_samples, fs,freq_band);
 
@@ -292,12 +325,11 @@ if ~exist('data_segments')
 end
 
 therapy = data.therapy;
-end
-
+end% segments_extract_fromAllSyncMat
 
 
 function [lfp_array, lfp_stn, lfp_gp]= filtered_lfp(lfp_array, lfp_stn, lfp_gp, fs)
-%% pass filter lfp_array, lfp_stn, lfp_gp  
+%% pass filter lfp_array, lfp_stn, lfp_gp
 
 % pass filters of array, dbs data
 [bhp,ahp] = butter(2 , 2*2/fs , 'high'); % high pass
@@ -316,7 +348,7 @@ for chi =1:size(lfp_stn, 2)
     lfp_gp(:,chi) = filtfilt(bhp,ahp, lfp_gp(:,chi));
 end
 
-end
+end %filtered_lfp 
 
 
 
@@ -329,17 +361,17 @@ for i = 1: size(idx_noMoveSegs, 1)
 end
 to_remove_ma = ~noMovData;
 
-end
+end % extract_to_remove_ma
 
 
 
 function power_state_mintime = extract_power_state_mintime(lfp, thr_power, min_samples, fs, freq_band)
-%extract_power_state_mintime 
+%extract_power_state_mintime
 %       get min power state vector by first extracting envelope, setting each
 %       power_state to be 1 (lfp_env <= thr_power) or 0 (lfp_env >
 %       thr_power1), and get the power_state_mintime based on on
 %       power_state and min_samples
-%       
+%
 %
 %       Args:
 %           lfp: the lfp vector, 1 * ntemp
@@ -368,7 +400,7 @@ power_state(lfp_env <= thr_power) =1;
 
 [power_state_mintime] = get_state_mintime( power_state, min_samples );
 
-end
+end %extract_power_state_mintime
 
 
 
@@ -391,21 +423,21 @@ eye_state(eye_area>= thr_eye_open) =1;
 
 [eye_state_mintime] = get_state_mintime( eye_state, min_samples );
 
-end
+end %extract_eye_state_mintime
 
 
 
 function [power_state_mintime] = get_state_mintime( state_in, min_samples )
-%GET_STATE_MINTIME 
+%GET_STATE_MINTIME
 %       get min state vector based on state_in and min_samples.
 %       state_vec is set to be 1/0 if state_in is 1 and the state 1/0 last longer than min_samples, others -1
-%                  
+%
 %       for example: state_in = [1 1 1 1 0 0 0 1 1], min_samples = 3
 %                    =>   state_vec = [1 1 1 1 0 0 0 -1 -1]
 %
 %       Args:
 %           state_in: 1 * ntemp vector
-%           
+%
 %           min_samples: an integer scalar
 %
 %       Return:
@@ -417,7 +449,7 @@ power_state_mintime = -1*ones(size(state_in));
 idx_start = 1; % start index of one state segment
 for k = 2:length(state_in)
     
-    % state change to a different state (change point) or the last state 
+    % state change to a different state (change point) or the last state
     if ( state_in(k) ~=  state_in(k-1) || k==length(state_in) )
         
         % end index of the last state segment
@@ -441,21 +473,21 @@ for k = 2:length(state_in)
     end
 end
 
-end
+end %get_state_mintime
 
 
 function [ vec_segsIndex ] = get_segIndex( states,  min_samples )
-% get_segIndex 
+% get_segIndex
 %       get segment indices based on state and min_samples. Only get the
 %       segment with state == 1 and duration is longer or equall to
 %       min_samples
-%                  
+%
 %       for example: state_in = [1 1 1 1 0 0 0 1 1], min_samples = 2
 %                    =>   vec_segsIndex = [1 4; 8 9]
 %
 %       Args:
 %           states: 1 * ntemp vector
-%           
+%
 %           min_samples: an integer scalar
 %
 %       Return:
@@ -502,5 +534,5 @@ for i= idx_state1Start + 1: length(states)
         end
     end
 end
-end
+end %get_state_mintime
 

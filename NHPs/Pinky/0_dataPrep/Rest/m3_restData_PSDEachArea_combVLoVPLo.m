@@ -154,7 +154,7 @@ function m3_restData_PSDEachArea_combVLoVPLo()
     
     brainarea = 'GP';
     imgs_row1 = []; imgs_row2 = []; % two rows
-    for i = 1: 7
+    for i = 2: 7
         img = imread(fullfile(savefolder,['psd_' brainarea '_ch' num2str(i) '.tif']));
         
         if i<= 4
@@ -165,9 +165,46 @@ function m3_restData_PSDEachArea_combVLoVPLo()
         
         clear img
     end
-    imgs_row2 = cat(2, imgs_row2, zeros(size(img_text)) + 255); % the last one in row2 is empty
     imgs_GP= cat(1, imgs_row1, imgs_row2);
-    imwrite(imgs_GP,  fullfile(savefolder, ['comb' brainarea '2.png']));
+    imwrite(imgs_GP,  fullfile(savefolder, ['comb' brainarea '3.png']));
+    
+    
+    % 2020/10/28
+    brainarea = 'GP';
+    imgs_col1 = []; imgs_col2 = []; % two cols
+    for i = 2: 7
+        img = imread(fullfile(savefolder,['psd_' brainarea '_ch' num2str(i) '.tif']));
+        
+        if i<= 4
+            imgs_col1 = cat(1, imgs_col1, img);
+        else
+            imgs_col2 = cat(1, imgs_col2, img);
+        end
+        
+        clear img
+    end
+    imwrite(imgs_col1,  fullfile(savefolder, ['comb' brainarea '4-1.png']));
+    imwrite(imgs_col2,  fullfile(savefolder, ['comb' brainarea '4-2.png']));
+    
+    
+        brainarea = 'GP';
+    imgs_col1 = []; imgs_col2 = []; % two cols
+    for i = 2: 7
+        img = imread(fullfile(savefolder,['psd_' brainarea '_ch' num2str(i) '.tif']));
+        
+        if i<= 4
+            imgs_col1 = cat(1, imgs_col1, img);
+        else
+            imgs_col2 = cat(1, imgs_col2, img);
+        end
+        
+        clear img
+    end
+    imgs_GP = cat(2, imgs_col1, imgs_col2);
+    imwrite(imgs_GP,  fullfile(savefolder, ['comb' brainarea '5.png']));
+    
+    imgs_GP = cat(1, imgs_col1, imgs_col2);
+    imwrite(imgs_GP,  fullfile(savefolder, ['comb' brainarea '6.png']));
    
     
     
@@ -200,13 +237,6 @@ function m3_restData_PSDEachArea_combVLoVPLo()
     
     
     
-    img_M1 = imread(fullfile(savefolder,'psd_M1.tif')); 
-    img_lSMA = imread(fullfile(savefolder,'psd_lSMA.tif')); 
-    img_rSMA = imread(fullfile(savefolder,'psd_rSMA.tif')); 
-    imgs_SMA = cat(2, img_lSMA, img_rSMA);
-    imgs_2M1 = cat(2, img_text, img_M1);
-    imgs_M1SMA = cat(1, imgs_SMA, imgs_2M1);
-    clear img_M1 img_lSMA img_rSMA imgs_2M1 imgs_SMA
     
     
     img_M1 = imread(fullfile(savefolder,'psd_M1.tif')); 
@@ -216,9 +246,18 @@ function m3_restData_PSDEachArea_combVLoVPLo()
     imgs_2M1 = cat(2, img_text, img_M1);
     imgs_M1SMA = cat(2, imgs_SMA, imgs_2M1);
     clear img_M1 img_lSMA img_rSMA imgs_2M1 imgs_SMA
-  
-  
     imwrite(imgs_M1SMA,  fullfile(savefolder, 'combM1SMA2.png'));
+    
+    
+    
+    % 2020/10/28
+    img_M1 = imread(fullfile(savefolder,'psd_M1.tif')); 
+    img_lSMA = imread(fullfile(savefolder,'psd_lSMA.tif')); 
+    img_rSMA = imread(fullfile(savefolder,'psd_rSMA.tif')); 
+    imgs_SMA = cat(1, img_lSMA, img_rSMA);
+    imgs_M1SMA = cat(1, img_M1, imgs_SMA);
+    clear img_M1 img_lSMA img_rSMA imgs_2M1 imgs_SMA
+    imwrite(imgs_M1SMA,  fullfile(savefolder, 'combM1SMA3.png'));
     
 end
 

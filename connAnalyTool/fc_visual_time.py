@@ -102,9 +102,7 @@ def pvals_fc_overtime(ciCOH, ntrials, ntemp, f, t):
             ciCOH: nchns * nchns
 
         Returns:
-            threshold:
-
-            corr_threshold:
+            pvals:
 
         Output:
             save the threshold into savefile_threshold
@@ -182,9 +180,32 @@ def ciCOH_visual_save(ciCOH, chnInf, lowweight, savefile, texts = None, threds_e
     # weight > lowweight
     weight[np.where(weight<lowweight)] = 0
 
-    lowweight = np.round(lowweight, decimals = 2)
 
-    
+    igplot = weight_visual_save(weight, chnInf, savefile, texts = None, threds_edge = None)
+
+    return igplot
+
+def weight_visual_save(weight, chnInf, savefile, texts = None, threds_edge = None):
+    """
+        
+        Args:
+            
+            weight (np.sdarray):  weight matrix (nchns, nchns)
+            
+            chnInf (dict): dictionary for channels, ('chnsAreas', coord_x, coord_y)
+            
+            
+            savefile: file to save the visualized figure
+            
+            texts:
+
+            threds_edge: threds for edges
+            
+        Output:
+            the visualizaton of weight is saved in tobesavedfile
+            
+    """
+
     # chnInf_coord
     x, y = chnInf['coord_x'].to_numpy(), chnInf['coord_y'].to_numpy()
     x, y = np.expand_dims(x, axis = 1), np.expand_dims(y, axis = 1)
@@ -194,7 +215,7 @@ def ciCOH_visual_save(ciCOH, chnInf, lowweight, savefile, texts = None, threds_e
     # chnAreas format: gp1-2, stn1-2
     vsarea = chnInf['chnAreas'].to_list()
     vsname = chnInf['chnAreas'].to_list()
-    if 'stn1-2' in vsarea:
+    if 'stn1-2' in vsarea or  'gp1-2' in vsarea:
         for i, barea in enumerate(vsarea):
 
             if re.match('stn[0-6]-[1-7]', barea):

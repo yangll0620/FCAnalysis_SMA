@@ -167,7 +167,8 @@ def gen_ciCOH_population_sin(ntimes, ntrials, ntemp, f, t, Desired_SNR_dB = 20):
         """
         
         
-        
+        print("ntrials =  " + str(ntrials) + ",  ntemp = " + str(ntemp) + ", f = " + str(f) + ", t = " + str(t))
+
         ciCOHs_popul = np.zeros((ntimes))
         for timei in range(ntimes):
 
@@ -225,7 +226,7 @@ def threshold_ciCOH_sin(ntimes, ntrials, ntemp, f, t, alpha = 0.05, ploton = Tru
             
         """
         
-        print("identifying the ciCOH threshold using sinc.....")
+        
         
         # generate the ciCOH population 
         ciCOHs = gen_ciCOH_population_sin(ntimes = ntimes, ntrials = ntrials, ntemp = ntemp, f = f, t = t, Desired_SNR_dB = 20)
@@ -233,7 +234,7 @@ def threshold_ciCOH_sin(ntimes, ntrials, ntemp, f, t, alpha = 0.05, ploton = Tru
         
         
         ### Identify the threshold
-        
+        print("identifying the ciCOH threshold using sinc.....")
         mu, std = norm.fit(ciCOHs) # Fit a normal distribution to the data
         if alpha == 0.05:
             threshold = np.around(mu + 2*std, decimals=2)
@@ -253,6 +254,7 @@ def threshold_ciCOH_sin(ntimes, ntrials, ntemp, f, t, alpha = 0.05, ploton = Tru
             
             
     
+        
         print("threshold = " + str(threshold) + ", mu = " + str(mu) + ", std = " + str(std))
             
             

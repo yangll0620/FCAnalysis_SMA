@@ -246,29 +246,32 @@ def fc_visual_save(fc, lowweight, savenamefile_prefix):
 
     ### text setup for brain areas ###
     pos_text_lefttop1 = [-80, 50, 30]
-    pos_text_righttop1 = [120, 50, 30]
+    pos_text_middletop1 = [120, 50, 30]
     pos_text_lefttop2 = [-80, 70, 10]
-    pos_text_Down1 = [0, 500, 15]
-    pos_text_Down2 = [0, 550, 15]
+    pos_text_leftDown1 = [-80, 550, 30]
+    pos_text_leftDown2 = [-80, 570, 10]
+    pos_text_leftDown3 = [-80, 580, 10]
     
     texts_org = dict()
 
+    lowweight = np.round(lowweight, decimals = 2) 
 
     # plot
     df_chninf = assign_coord2chnArea(area_coord_file, fc['chnAreas'])
-    for cond in fc['ciCOH'].keys():
+    for ci, cond in enumerate(fc['ciCOH'].keys()):
         ciCOH = fc['ciCOH'][cond]
         ntrials, ntemp = fc['setup']['ntrials_' + cond], fc['setup']['ntemp_' + cond]
 
 
         texts = texts_org.copy()
-        texts[cond] = pos_text_righttop1
+        
         text_thred = 'thred = ' + str(np.round(lowweight, decimals = 2))
-        texts[text_thred] = pos_text_lefttop2
-        texts[text_task] = pos_text_lefttop1
         text_ntrials = 'ntrials = ' + str(ntrials)
-        texts[text_ntrials] = pos_text_Down2
-        texts[text_ntrials] = pos_text_Down2
+
+        texts[cond] = pos_text_middletop1
+        texts[text_task] = pos_text_leftDown1
+        texts[text_ntrials] = pos_text_leftDown2
+        texts[text_thred] = pos_text_leftDown3
         
 
         saveFCGraph = os.path.join(savefolder, savenamefile_prefix + '_lw' + str(np.round(lowweight, decimals = 2)) + '_'  + cond + '.png')
@@ -278,6 +281,18 @@ def fc_visual_save(fc, lowweight, savenamefile_prefix):
 
         del texts[cond], texts[text_ntrials]
 
+        img = cv2.imread(saveFCGraph)
+        if ci == 0:
+            imgs = img
+        else:
+            imgs = np.concatenate((imgs, np.zeros((img.shape[0], 5, 3)),img), axis = 1)
+
+        os.remove(saveFCGraph)
+
+    # combine all conditions
+    print(imgs.shape)
+    saveFCGraph_comb = os.path.join(savefolder, 'comb_' + savenamefile_prefix + '_lw' + str(np.round(lowweight, decimals = 2))  + '.png')
+    cv2.imwrite(saveFCGraph_comb, imgs)
 
 def fc_select(fc, areas_used):
     """
@@ -296,11 +311,11 @@ def fc_select(fc, areas_used):
     ### extract idx_del ###
     if 'GP' in areas_used:
         areas_used.remove('GP')
-        areas_used = areas_used + ['gp0-1', 'gp1-2', 'gp2-3', 'gp3-4', 'gp4-5', 'gp5-6', 'gp6-7']
+        areas_used = areas_used + [area for area in chnAreas if 'gp' in area]
 
     if 'STN' in areas_used:
         areas_used.remove('STN')
-        areas_used = areas_used + ['stn0-1', 'stn1-2', 'stn2-3', 'stn3-4', 'stn4-5', 'stn5-6', 'stn6-7']
+        areas_used = areas_used + [area for area in chnAreas if 'stn' in area]
 
     idx_del = []
     for i, area in enumerate(chnAreas):
@@ -331,20 +346,36 @@ def fc_select(fc, areas_used):
 
     return fc_new
 
-
-def main():
-
-    ### fc extract ###
-    savename_fc = 'fc_rest' + '_freq' + str(freq[0]) + '_' + str(freq[1])
-    if os.path.exists(os.path.join(savefolder, savename_fc + '.pickle')):
-        print("reading the exist fc values")
-        fc = pd.read_pickle(os.path.join(savefolder, savename_fc + '.pickle'))
-    else:
-        fc = fc_extract(savename_fc)
+def comb_fc(filepatt):
+    """
+        combine all fc figures belong to same 
+    """
 
 
+    files = glob.glob(os.path.join(savefolder, filepatt))
+    print(filepatt)
+    
+    if files == []:
+        imgs = []
+        print('No files found for ' + filepatt)
+        return
 
 
+    imgs = np.empty((600, 600, 3))
+    for fi, file in enumerate(files):
+        img = cv2.imread(file)
+        
+        if fi == 0:
+            imgs = img
+        else:
+            imgs = np.concatenate((imgs, img), axis = 2)
+
+    idx = filepatt.find('freq')
+    comb_fcGraph = os.path.join(savefolder, 'comb_' + filepatt[idx: -len('.mat')])
+    cv2.imwrite(comb_fcGraph, imgs)
+    print(comb_fcGraph)
+
+def find_lowweight(fc):
     # find lowweight
     pvals_vec = []
     ciCOH_vec = []
@@ -364,50 +395,75 @@ def main():
     ciCOH_vec = np.asarray(ciCOH_vec)
     rejs, _, _, _ = multipletests(pvals_vec, alpha = 0.05, method = 'fdr_bh')
     lowweight = min(ciCOH_vec[rejs])
-    print(lowweight)
+
+    return lowweight
+
+def main():
+
+    ### fc extract ###
+    savename_fc = 'fc_rest' + '_freq' + str(freq[0]) + '_' + str(freq[1])
+    if os.path.exists(os.path.join(savefolder, savename_fc + '.pickle')):
+        print("reading the exist fc values")
+        fc = pd.read_pickle(os.path.join(savefolder, savename_fc + '.pickle'))
+    else:
+        fc = fc_extract(savename_fc)
+
+
 
 
     ### fc visual and save ##
-    fcGraph_prefix = 'vFC_rest' + '_f' + str(freq[0]) + '_' + str(freq[1])
+    fcGraph_prefix = 'vFC_rest' + '_freq' + str(freq[0]) + '_' + str(freq[1])
 
+    lowweight = find_lowweight(fc)
 
     # All
-    fc_visual_save(fc,  lowweight, fcGraph_prefix + 'ALL')
+    save_prefix = fcGraph_prefix + '_ALL'
+    fc_visual_save(fc,  lowweight, save_prefix)
+    
+
 
 
     # left thalamus and SMA/M1
+    save_prefix = fcGraph_prefix + '_leftThaCor'
     fc_new = fc_select(fc, ['lVA', 'lVLo/VPLo', 'lSMA', 'rSMA','M1'])
-    fc_visual_save(fc_new, lowweight, fcGraph_prefix + 'CorLTha')
+    lowweight = find_lowweight(fc_new)
+    fc_visual_save(fc_new, lowweight, save_prefix)
     del fc_new
 
 
     # right thalamus and SMA/M1
+    save_prefix = fcGraph_prefix + 'rightThaCor'
     fc_new = fc_select(fc, ['rVA', 'rVLo/VPLo', 'lSMA', 'rSMA','M1'])
-    fc_visual_save(fc_new, lowweight, fcGraph_prefix + 'CorRTha')
+    lowweight = find_lowweight(fc_new)
+    fc_visual_save(fc_new, lowweight, save_prefix)
     del fc_new
 
 
 
     # right thalamus and GP
+    save_prefix = fcGraph_prefix + 'gpRightTha'
     fc_new = fc_select(fc, ['rVA', 'rVLo/VPLo', 'GP'])
-    fc_visual_save(fc_new, lowweight, fcGraph_prefix + 'GPRTha')
+    lowweight = find_lowweight(fc_new)
+    fc_visual_save(fc_new, lowweight, save_prefix)
     del fc_new
 
 
     # left thalamus and GP
+    save_prefix = fcGraph_prefix + 'gpLeftTha'
     fc_new = fc_select(fc, ['lVA', 'lVLo/VPLo', 'GP'])
-    fc_visual_save(fc_new, lowweight, fcGraph_prefix + 'GPLTha')
+    lowweight = find_lowweight(fc_new)
+    fc_visual_save(fc_new, lowweight, save_prefix)
     del fc_new
 
 
 
-animal =  re.search('NHPs/[a-zA-Z]*/', __file__).group()[len('NHPs/'):-1]
+animal =  re.search('NHPs/[a-zA-Z]*/', os.getcwd()).group()[len('NHPs/'):-1]
 _, _, pipelinefolder, _= exp_subfolders()
 corresfolder, correparentfolder = code_corresfolder(__file__)
 
 
-freq = [13, 15]
-inputfolder = os.path.join(pipelinefolder, 'NHPs', animal, '0_dataPrep', 'Rest', 'm4_restData_filtered13_15')
+freq = [26, 28]
+inputfolder = os.path.join(pipelinefolder, 'NHPs', animal, '0_dataPrep', 'Rest', 'm4_restData_filtered' + str(freq[0]) + '_' + str(freq[1]) + '_eqLen')
 area_coord_file = os.path.join(correparentfolder, 'chn_brainArea_simCoord_BrainArea.csv')
 savefolder = corresfolder
 text_task = 'Rest'
