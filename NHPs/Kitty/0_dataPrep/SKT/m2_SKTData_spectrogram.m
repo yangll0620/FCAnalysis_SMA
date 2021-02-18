@@ -17,6 +17,8 @@ clear idx
 % add util path
 addpath(genpath(fullfile(codefolder,'util')));
 
+addpath(genpath(fullfile(codefolder,'NHPs')));
+
 
 % codecorresfolder, codecorresParentfolder
 [codecorresfolder, codecorresParentfolder] = code_corresfolder(codefilepath, true, false);
@@ -32,53 +34,52 @@ animal = codecorresfolder(fi + length('NHPs/'):j);
 % input folder: extracted raw rest data with grayMatter 
 inputfolder = fullfile(codecorresParentfolder, 'm1_SKTData_avgArea');
 
+conds_cell = {'normal', 'moderate'};
+
+
+t_minmax_reach_normal = [0.7, 1.5];
+t_minmax_return_normal = [0.7, 1];
+t_minmax_reach_moderate = [0.8, 1.5];
+t_minmax_return_moderate = [0.7, 1];
+
+align2 = SKTEvent.ReachOnset;
+tdur_trial_normal = [-0.6 1];
+tdur_trial_moderate = [-0.6 1];
+
 %% save setup
 savefolder = codecorresfolder;
 
 %% starting: narrow filter the lfp data of all the files
-files_normal = dir(fullfile(inputfolder, '*_normal_*.mat'));
-files_mild = dir(fullfile(inputfolder, '*_mild_*.mat'));
-files_moderate = dir(fullfile(inputfolder, '*_moderate_*.mat'));
-
-
-t_minmax_reach_normal = [0.5, 1];
-t_minmax_return_normal = [0.5, 1];
-t_minmax_reach_mild = [0.5 1];
-t_minmax_return_mild = [0.5 1];
-
-
-
-align2 = Event.ReachOnset;
-tdur_trial_normal = [-0.6 0.6];
-tdur_trial_mild = [-0.6 0.6];
-
-
-cond = 'normal';
-files = files_normal;
-tdur_trial = tdur_trial_normal;
-t_minmax_reach = t_minmax_reach_normal;
-t_minmax_return = t_minmax_return_normal;
-[lfptrials, fs, T_chnsarea] = lfp_align2(files, align2, tdur_trial, t_minmax_reach, t_minmax_return);
-plot_spectrogram_allfiles(lfptrials, T_chnsarea, fs, savefolder, animal, cond, align2, tdur_trial)
-clear cond files tdur_trial t_minmax_reach t_minmax_return
-clear lfptrials fs T_chnsarea
-
-
-
-cond = 'mild';
-files = files_mild;
-tdur_trial = tdur_trial_mild;
-t_minmax_reach = t_minmax_reach_mild;
-t_minmax_return = t_minmax_return_mild;
-[lfptrials, fs, T_chnsarea] = lfp_align2(files, align2, tdur_trial, t_minmax_reach, t_minmax_return);
-plot_spectrogram_allfiles(lfptrials, T_chnsarea, fs, savefolder, animal, cond, align2, tdur_trial)
-clear cond files tdur_trial t_minmax_reach t_minmax_return
-clear lfptrials fs T_chnsarea
+for i = 1 : length(conds_cell)
+    cond = conds_cell{i};
+    
+    files = dir(fullfile(inputfolder, ['*_' cond '_*.mat']));
+    
+    eval(['tdur_trial = tdur_trial_' cond ';']);
+    eval(['t_minmax_reach = t_minmax_reach_' cond ';']);
+    eval(['t_minmax_return = t_minmax_return_' cond ';']);
+    
+    
+    [lfptrials, fs, T_chnsarea] = lfp_align2(files, align2, tdur_trial, t_minmax_reach, t_minmax_return);
+    plot_spectrogram_allfiles(lfptrials, T_chnsarea, fs, savefolder, animal, cond, align2, tdur_trial)
+    
+    clear cond files tdur_trial t_minmax_reach t_minmax_return
+    clear lfptrials fs T_chnsarea
+    
+    close all
+    
+end
 
 
 
 
-close all
+
+
+
+
+
+
+
 
 
 function plot_spectrogram_allfiles(lfptrials, T_chnsarea, fs, savefolder, animal, pdcond, align2, tdur_trial)
@@ -136,14 +137,13 @@ for areai = 1 : height(T_chnsarea)
     psd_selected = imgaussfilt(psd_selected,'FilterSize',5);
     
     figure
-    set(gcf, 'PaperUnits', 'points',  'Position', [675, 550, 700 450], 'PaperPosition', [18, 180, 710, 460]);
+    set(gcf, 'PaperUnits', 'points',  'Position', [675, 550, 700 450]);
     
     % spectrogram subplot
     subplot('Position', [0.1 0.1 0.7 0.8])
     imagesc(t_selected, f_selected, psd_selected);
     colorbar
     set(gca,'YDir','normal')
-    ylim1 = ylim;
     
     xlabel('time/s')
     ylabel('psd')
@@ -151,12 +151,14 @@ for areai = 1 : height(T_chnsarea)
     xticklabels({-0.5, char(align2), 0.5})
     
     title([animal ' ' pdcond ': ' brainarea])
+    ylim1 = ylim;
+    
     
     % psd subplot
     idx_t = (t_selected <0);
     psd_base = mean(psd_selected(:, idx_t), 2);
     psd_phase = mean(psd_selected(:, ~idx_t), 2);
-    psd_rel = (psd_phase - psd_base) ./ abs(psd_base);
+    psd_rel = psd_phase - psd_base;
     subplot('Position', [0.85 0.1 0.1 0.8])
     plot(psd_rel, f_selected);
     ylim(ylim1)
@@ -164,7 +166,7 @@ for areai = 1 : height(T_chnsarea)
     clear idx_t psd_base psd_phase psd_rel ylim1
     
     
-    savefile = fullfile(savefolder, [animal '_' char(align2) '_' pdcond '_'   strrep(brainarea, '/', '')]);
+    savefile = fullfile(savefolder, [animal '_' char(align2) '_' pdcond '_'  brainarea]);
     saveas(gcf, savefile, 'png');
    
     
@@ -205,10 +207,10 @@ coli_align2 = uint32(align2);
 
 
 
-coli_reachonset = uint32(Event.ReachOnset);
-coli_reach = uint32(Event.Reach);
-coli_returnonset = uint32(Event.ReturnOnset);
-coli_mouth = uint32(Event.Mouth);
+coli_reachonset = uint32(SKTEvent.ReachOnset);
+coli_reach = uint32(SKTEvent.Reach);
+coli_returnonset = uint32(SKTEvent.ReturnOnset);
+coli_mouth = uint32(SKTEvent.Mouth);
 
 load(fullfile(files(1).folder, files(1).name),  'fs', 'T_chnsarea');
 

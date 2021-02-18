@@ -1,11 +1,11 @@
 function m1_SKTData_avgArea()
-%% average lfp across each GM area, skip the files with no channels in used depth for M1 or PMC
+%% average lfp across each area
 %
-%   remove unwanted chns lCd, rMC
-%   remove left side channels
-%   combine Vlo/VPLo
-%   remove unwanted stn0-1, stn1-2, stn2-3 and stn6-7
-%   remove unwanted gp0-1
+%   remove unwanted stn3-4, stn4-5, stn5-6 and stn6-7
+%
+%   averaged across M1
+%
+%  combine files from normal COT and moderate SKT  folder
 
 
 codefilepath = mfilename('fullpath');
@@ -34,9 +34,10 @@ animal = codecorresfolder(fi + length('NHPs/'):j);
 %%  input setup
 
 % input folder: extracted raw STK data 
-inputfolder = fullfile(codecorresParentfolder, 'm0_SKTData_extract');
+inputfolder1 = fullfile(codecorresParentfolder, 'm0_SKTData_extract');
+inputfolder2 = fullfile(codecorresParentfolder, 'm0_normalCOTData_extract');
 
-unwanted_DBS = {'stn0-1', 'stn1-2', 'stn2-3', 'stn6-7', 'gp0-1'};
+unwanted_DBS = {};
 
 %% save setup
 savefolder = codecorresfolder;
@@ -44,7 +45,10 @@ savefilename_addstr = 'avgArea';
 
 %% start here
 
-files = dir(fullfile(inputfolder, '*.mat'));
+files1 = dir(fullfile(inputfolder1, '*.mat'));
+files2 = dir(fullfile(inputfolder2, '*.mat'));
+files = [files1; files2];
+
 nfiles = length(files);
 close all;
 for fi = 1 : nfiles
@@ -55,12 +59,12 @@ for fi = 1 : nfiles
     
     % load lfpdata: nchns * ntemp * ntrials
     filename = files(fi).name;
-    load(fullfile(inputfolder, filename), 'lfpdata', 'fs', 'T_chnsarea', 'T_idxevent');
+    load(fullfile(files(fi).folder, filename), 'lfpdata', 'fs', 'T_chnsarea', 'T_idxevent');
     
     
     
     % average across each GM area
-    mask_notDBS = strcmp(T_chnsarea.electype, 'Gray Matter') | strcmp(T_chnsarea.electype, 'Utah Array');
+    mask_notDBS = ~strcmp(T_chnsarea.electype, 'DBS');
     mask_DBS = strcmp(T_chnsarea.electype, 'DBS');
     lfpdata_GM = lfpdata(mask_notDBS, :, :);
     lfpdata_DBS = lfpdata(mask_DBS, :, :);
@@ -73,23 +77,6 @@ for fi = 1 : nfiles
     end
     
     
-    % remove the left side channels
-    rows_leftside = cellfun(@(x) strcmp(x(1), 'l'), T_notDBSchnsarea_new.brainarea);
-    T_notDBSchnsarea_new(rows_leftside, :) = [];
-    avglfp_notDBS(rows_leftside, :, :) = [];
-    clear rows_leftside
-    
-    
-    % combine rVLo and rVPLo
-    rows_Vs = strcmp(T_notDBSchnsarea_new.brainarea, 'rVLo') | strcmp(T_notDBSchnsarea_new.brainarea, 'rVPLo');
-    avglfp_Vs = mean(avglfp_notDBS(rows_Vs, :, :),1);
-    avglfp_notDBS(rows_Vs, :, :) = [];
-    avglfp_notDBS = cat(1, avglfp_notDBS, avglfp_Vs);
-    T_Vs = T_notDBSchnsarea_new(find(rows_Vs, 1), :);
-    T_Vs(1, :).brainarea = {'rVLo/VPLo'};
-    T_notDBSchnsarea_new(rows_Vs, :) = [];
-    T_notDBSchnsarea_new = [T_notDBSchnsarea_new; T_Vs];
-    clear rows_vs avglfp_Vs T_Vs
     
     
     % change STN into stn0-1, stn1-2 et.al
@@ -111,10 +98,6 @@ for fi = 1 : nfiles
     % cat GM and DBS
     lfpdata = cat(1, avglfp_notDBS, lfpdata_DBS);
     T_chnsarea = [T_notDBSchnsarea_new; T_DBSchnsarea];
-    
-    mask_unwanted = strcmp(T_chnsarea.brainarea, 'lCd') | strcmp(T_chnsarea.brainarea, 'rMC');
-    lfpdata(mask_unwanted, :, :) = [];
-    T_chnsarea(mask_unwanted, :) = [];
     T_chnsarea.chni = [1: height(T_chnsarea)]';
     
     % save

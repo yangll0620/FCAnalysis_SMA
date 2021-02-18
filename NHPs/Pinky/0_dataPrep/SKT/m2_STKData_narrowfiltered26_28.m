@@ -1,4 +1,4 @@
-function m3_STKData_narrowfiltered9_11()
+function m2_STKData_narrowfiltered26_28()
 %% 
 %
 % input:
@@ -32,7 +32,7 @@ animal = codecorresfolder(fi + length('NHPs/'):j);
 
 %%  input setup
 % band pass frequency
-frebp = [9 11];
+frebp = [26 28];
 % input folder: extracted raw rest data with grayMatter 
 inputfolder = fullfile(codecorresParentfolder, 'm1_SKTData_avgArea');
 
@@ -45,19 +45,19 @@ files = dir(fullfile(inputfolder, '*.mat'));
 nfiles = length(files);
 f = waitbar(0, ['Narrow Filtering....']);
 tic;
-for filei = 1 : nfiles
+for filei = 3 : nfiles
     elapsedTime = toc;
     
     % wait bar
-    waitbar(filei/nfiles,f,['Narrow Filtering [' num2str(frebp(1)) ' ' num2str(frebp(2)) ']Hz lfp data in file ' num2str(filei) '/' num2str(nfiles) ...
+    waitbar(filei/nfiles,f,[' [' num2str(frebp(1)) ' ' num2str(frebp(2)) ']Hz lfp data in file ' num2str(filei) '/' num2str(nfiles) ...
          ', elapseTime ' num2str(elapsedTime)]);
     
     % load data, lfpdata: [nchns, ntemps, ntrials]
     filename = files(filei).name;
     load(fullfile(inputfolder, filename), 'lfpdata', 'fs', 'T_chnsarea', 'T_idxevent');
     
-    if(height(T_idxevent) == 1)
-        disp([filename ' has only 1 trial, skip!']);
+    if(height(T_idxevent) < 10)
+        disp([filename ' has less than 10 trials, skip!']);
         continue;
     end
     

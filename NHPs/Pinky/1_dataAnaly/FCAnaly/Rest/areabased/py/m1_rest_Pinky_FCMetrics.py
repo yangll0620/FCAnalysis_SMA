@@ -9,7 +9,7 @@ import math
 import pandas as pd
 import cv2
 from statsmodels.stats.multitest import multipletests
-
+import networkx as nx
 
 folder = '/home/lingling/Insync/yang7003@umn.edu/NMRC_umn/Projects/FCAnalysis/exp/pipeline/NHPs/Pinky/1_dataAnaly/FCAnaly/Rest/areabased/py/m1_rest_Pinky_FCVisual'
 fc = pd.read_pickle(os.path.join(folder, 'fc_rest_freq26_28.pickle'))
@@ -23,7 +23,7 @@ weight = abs(ciCOH)
 weight[np.where(weight<lowweight)] = 0 # weight > lowweight
 
 
-import networkx as nx
+
 G = nx.Graph()
 G.add_nodes_from(np.arange(1, 17))
 for i in range(0, weight.shape[0] - 1):

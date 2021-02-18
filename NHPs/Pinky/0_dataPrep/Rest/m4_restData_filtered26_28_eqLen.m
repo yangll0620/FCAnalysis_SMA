@@ -1,7 +1,7 @@
 function m4_restData_filtered26_28_eqLen()
     %% narrow filtered rest data recorded with grayMatter in frequency [26 28]Hz
     %
-    %   1. narrowed filltered.
+    %   1. narrowed filltered
     %
     %   2. seg into intervals with same time length
     %
@@ -119,7 +119,7 @@ function [filted_eqLen_lfp, T_chnsarea, fs] = filter_seg_1file(file, frebp, segt
 
     for segi = 1:length(data_segments)
 
-        %%% band pass filter, for not DBS, average first%%%
+        %%% band pass filter%%%
         filted_lfp_1seg = [];
 
         for areai = 1:length(uniqBrainAreas)

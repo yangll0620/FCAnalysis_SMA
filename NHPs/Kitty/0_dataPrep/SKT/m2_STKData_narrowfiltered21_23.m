@@ -1,4 +1,4 @@
-function m3_STKData_narrowfiltered24_26()
+function m2_STKData_narrowfiltered21_23()
 %% 
 %
 % input:
@@ -31,8 +31,15 @@ animal = codecorresfolder(fi + length('NHPs/'):j);
 
 
 %%  input setup
-% band pass frequency
-frebp = [24 26];
+% extract band pass frequency frebp from function name, i.e m2_STKData_narrowfiltered14_16
+[~, funcname, ~]= fileparts(codefilepath);
+patstr = 'narrowfiltered';
+idx = strfind(funcname, patstr);
+tmp = funcname(idx+length(patstr):end);
+freqscell = split(tmp, '_');
+frebp = [str2num(freqscell{1}) str2num(freqscell{2})];
+
+
 % input folder: extracted raw rest data with grayMatter 
 inputfolder = fullfile(codecorresParentfolder, 'm1_SKTData_avgArea');
 
@@ -46,18 +53,30 @@ nfiles = length(files);
 f = waitbar(0, ['Narrow Filtering....']);
 tic;
 for filei = 1 : nfiles
+   
+    
     elapsedTime = toc;
     
     % wait bar
-    waitbar(filei/nfiles,f,[animal '[' num2str(frebp(1)) ' ' num2str(frebp(2)) ']Hz  file ' num2str(filei) '/' num2str(nfiles) ...
-         ', eTime ' num2str(elapsedTime)]);
+    waitbar(filei/nfiles,f,[' [' num2str(frebp(1)) ' ' num2str(frebp(2)) ']Hz lfp data in file ' num2str(filei) '/' num2str(nfiles) ...
+        ', elapseTime ' num2str(elapsedTime)]);
     
     % load data, lfpdata: [nchns, ntemps, ntrials]
     filename = files(filei).name;
+    
+    idx = strfind(filename, [animal '_']);
+    tmpn = length([animal '_']);
+    savefilename = [filename(idx:idx+tmpn-1) savefilename_addstr ...
+        upper(filename(idx+tmpn)) filename(idx+tmpn+1:end)];
+    
+    if exist(fullfile(savefolder, savefilename), 'file') == 2
+        continue;
+    end
+    
     load(fullfile(inputfolder, filename), 'lfpdata', 'fs', 'T_chnsarea', 'T_idxevent');
     
-    if(height(T_idxevent) == 1)
-        disp([filename ' has only 1 trial, skip!']);
+    if(height(T_idxevent) < 10)
+        disp([filename ' has less than 10 trials, skip!']);
         continue;
     end
     
@@ -89,10 +108,6 @@ for filei = 1 : nfiles
     
     % save
     lfpdata = filterdlfp;
-    idx = strfind(filename, [animal '_']);
-    tmpn = length([animal '_']);
-    savefilename = [filename(idx:idx+tmpn-1) savefilename_addstr ... 
-        upper(filename(idx+tmpn)) filename(idx+tmpn+1:end)];
     save(fullfile(savefolder, savefilename), 'lfpdata','fs', 'chnAreas', 'idxevent', 'T_chnsarea', 'T_idxevent');
     
     

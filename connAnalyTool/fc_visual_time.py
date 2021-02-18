@@ -206,6 +206,8 @@ def weight_visual_save(weight, chnInf, savefile, texts = None, threds_edge = Non
             
     """
 
+    weight = abs(weight)
+
     # chnInf_coord
     x, y = chnInf['coord_x'].to_numpy(), chnInf['coord_y'].to_numpy()
     x, y = np.expand_dims(x, axis = 1), np.expand_dims(y, axis = 1)

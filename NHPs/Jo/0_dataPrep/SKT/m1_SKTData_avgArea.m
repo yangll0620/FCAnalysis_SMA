@@ -1,7 +1,7 @@
 function m1_SKTData_avgArea()
-%% average lfp across each GM area
+%% average lfp across each area
 %
-%   
+%   remove unwanted stn3-4, stn4-5, stn5-6 and stn6-7
 
 
 codefilepath = mfilename('fullpath');
@@ -32,7 +32,7 @@ animal = codecorresfolder(fi + length('NHPs/'):j);
 % input folder: extracted raw STK data 
 inputfolder = fullfile(codecorresParentfolder, 'm0_SKTData_extract');
 
-
+unwanted_DBS = {'stn3-4', 'stn4-5', 'stn5-6', 'stn6-7'};
 
 %% save setup
 savefolder = codecorresfolder;
@@ -56,25 +56,45 @@ for fi = 1 : nfiles
     
     
     % average across each GM area
-    mask_GM = strcmp(T_chnsarea.electype, 'Gray Matter');
+    mask_notDBS = ~strcmp(T_chnsarea.electype, 'DBS');
     mask_DBS = strcmp(T_chnsarea.electype, 'DBS');
-    lfpdata_GM = lfpdata(mask_GM, :, :);
+    lfpdata_GM = lfpdata(mask_notDBS, :, :);
     lfpdata_DBS = lfpdata(mask_DBS, :, :);
-    T_GMchnsarea = T_chnsarea(mask_GM, :);
+    T_notDBSchnsarea = T_chnsarea(mask_notDBS, :);
     T_DBSchnsarea = T_chnsarea(mask_DBS, :);
-    [avglfp_GM, T_GMchnsarea_new] = avglfp_acrossGMArea(lfpdata_GM, T_GMchnsarea);
+    [avglfp_notDBS, T_notDBSchnsarea_new] = avglfp_acrossArea(lfpdata_GM, T_notDBSchnsarea);
     
-    if isempty(avglfp_GM)
+    if isempty(avglfp_notDBS)
         continue;
     end
     
+    
+    
+    
+    % change STN into stn0-1, stn1-2 et.al
+    for i = 1: height(T_DBSchnsarea)
+        chn = T_DBSchnsarea(i, :).recordingchn;
+        barea = cell2mat(T_DBSchnsarea(i, :).brainarea);
+        T_DBSchnsarea(i, :).brainarea = {[lower(barea) num2str(chn-1) '-' num2str(chn)]};
+        clear chn
+    end
+    
+    % remove unwanted DBS chns
+    rows_unwantedDBS = cellfun(@(x) any(strcmp(x, unwanted_DBS)), T_DBSchnsarea.brainarea);
+    T_DBSchnsarea(rows_unwantedDBS, :) = [];
+    lfpdata_DBS(rows_unwantedDBS, :, :) = [];
+    clear rows_unwantedDBS
+    
+    
+    
     % cat GM and DBS
-    lfpdata = cat(1, avglfp_GM, lfpdata_DBS);
-    T_chnsarea = [T_GMchnsarea_new; T_DBSchnsarea];
+    lfpdata = cat(1, avglfp_notDBS, lfpdata_DBS);
+    T_chnsarea = [T_notDBSchnsarea_new; T_DBSchnsarea];
+    
+    mask_unwanted = strcmp(T_chnsarea.brainarea, 'lCd') | strcmp(T_chnsarea.brainarea, 'rMC');
+    lfpdata(mask_unwanted, :, :) = [];
+    T_chnsarea(mask_unwanted, :) = [];
     T_chnsarea.chni = [1: height(T_chnsarea)]';
-    
-    
-    
     
     % save
     idx = strfind(filename, [animal '_']);
@@ -92,32 +112,32 @@ for fi = 1 : nfiles
 end
 end
 
-function [avglfp, T_GMchnsarea_new] = avglfp_acrossGMArea(lfpdata_GM, T_GMchnsarea)
-% average lfp across each GM area 
+function [avglfp, T_chnsarea_new] = avglfp_acrossArea(lfpdata, T_GMchnsarea)
+% average lfp across each area 
 % 
 % args:
-%       lfpdata_GM : lfp data in GM (nchns * ntemp * ntrials )
-%       T_GMchnsarea: chns-area table in GM
+%       lfpdata : lfp data in area (nchns * ntemp * ntrials )
+%       T_chnsarea: chns-area table 
 % return:
 %       avglfp: averaged lfp data (nareas * ntemp * ntrials
-%       T_GMchnsarea_new: the new chns-area table for GM
+%       T_chnsarea_new: the new chns-area table
 
 
-
-uniqGMAreas = unique(T_GMchnsarea.brainarea);
+uniqAreas = unique(T_GMchnsarea.brainarea);
 avglfp = [];
-T_GMchnsarea_new = T_GMchnsarea([], :);
-for ai = 1 : length(uniqGMAreas)
-    GMarea = uniqGMAreas{ai};
-   
+T_chnsarea_new = T_GMchnsarea([], :);
+for ai = 1 : length(uniqAreas)
+    GMarea = uniqAreas{ai};
+    
+    
     mask_area = strcmp(T_GMchnsarea.brainarea, GMarea);
-    lfp_area = lfpdata_GM(mask_area, :, :);
+    lfp_area = lfpdata(mask_area, :, :);
     avglfp_area = mean(lfp_area, 1);
     
     
     avglfp = cat(1, avglfp, avglfp_area);
     
-    T_GMchnsarea_new = [T_GMchnsarea_new; {ai, GMarea, nan, 'Gray Matter', []}];
+    T_chnsarea_new = [T_chnsarea_new; {ai, GMarea, nan,  'Gray Matter', []}];
     
     clear GMarea mask_area avglfp_area
 end
