@@ -10,7 +10,7 @@ from util.folder_extract import exp_subfolders, code_corresfolder
 from connAnalyTool.fc_visual_time import weight_visual_save
 
 
-from lfpextract import lfp_align2, Event 
+from lfpextract import lfp_align2_reachonset
 from fc_extract import dynciCOH_from_lfptrials
 from fc_extract import pval_perm_dynciCOH_SKT, truncate_dynfc, digitized_dynfc
 from network_metrics import fcnetwork_avgCC
@@ -36,19 +36,9 @@ files_mild = glob.glob(os.path.join(inputfolder, '*_mild_*'))
 
 
 
-
-t_minmax_reach = [0.6, 1]
-t_minmax_return = [0.6, 1]
-
-
-tdur_returnonset = [-0.2, 0.6]
-align2 = Event.RETURNONSET
-tdur_trial = tdur_returnonset
-savename_prefix = animal + '_returnonset'
-
-lfptrials_normal, chnAreas, fs = lfp_align2(files_normal, align2 = align2, tdur_trial = tdur_trial, t_minmax_reach = t_minmax_reach, t_minmax_return = t_minmax_return)
-lfptrials_mild, _, _ = lfp_align2(files_mild, align2 = align2, tdur_trial = tdur_trial, t_minmax_reach = t_minmax_reach, t_minmax_return = t_minmax_return)
-
+tdur_trial = [-0.5, 0.6]
+lfptrials_normal, chnAreas, fs = lfp_align2_reachonset(files_normal, tdur_trial = tdur_trial, tmin_reach = tdur_trial[1], tmax_reach = 1)
+lfptrials_mild, _, _ = lfp_align2_reachonset(files_mild, tdur_trial = tdur_trial, tmin_reach = tdur_trial[1], tmax_reach = 1)
 
 
 # balance trial numbers for normal and mild conditions
@@ -95,7 +85,7 @@ del dyn_avgCC, dynfc
 # plot dyn_avg_CC
 t = np.array([*range(0, ntemp, 1)]) / fs + tdur_trial[0]
 
-
+prefix = 'dyn_avg_CC'
 plt.plot(t, dyn_avgCC_normal, 'b', label = 'normal')
 plt.plot(t, dyn_avgCC_mild, 'r', label = 'mild')
 plt.xticks(ticks= [-0.4, -0.2, 0, 0.2, 0.4, 0.6], labels = ['-0.4', '-0.2', 'reach onset', '0.2', '0.4', '0.6'])
@@ -104,9 +94,9 @@ plt.xlabel('time/s')
 plt.ylabel('avg_CC')
 plt.title(animal)
 
-plt.savefig(os.path.join(savefolder, savename_prefix + '_dyn_avg_CC' + '.png'))
+plt.savefig(os.path.join(savefolder, prefix + '.png'))
 plt.clf()
-print('save' +  savename_prefix + '_dyn_avg_CC' + ' at ' + os.path.join(savefolder))
+print('save' +  prefix + ' at ' + os.path.join(savefolder))
 
 
 # cos diff along time
@@ -116,7 +106,7 @@ cosdiff_mild = cosSimilarity_SVDComps(trun_dynfc_mild)
 # plot dyn_avg_CC
 t = np.array([*range(0, ntemp-1, 1)]) / fs + tdur_trial[0]
 
-
+prefix = 'cos diff'
 plt.subplot(2, 1, 1)
 plt.plot(t, cosdiff_normal, 'b', label = 'normal')
 plt.legend()
@@ -130,14 +120,14 @@ plt.xlabel('time/s')
 plt.ylabel('cos diff')
 
 
-plt.savefig(os.path.join(savefolder, savename_prefix + '_cos diff' + '.png'))
+plt.savefig(os.path.join(savefolder, prefix + '.png'))
 plt.clf()
-print('save' +  savename_prefix + '_cos diff' + '.png' + ' at ' + os.path.join(savefolder))
+print('save' +  prefix + ' at ' + os.path.join(savefolder))
 
 
 # plot dyn_FC video
 images = []
-fps = round(fs / 10)
+fps = fs
 for ni in range(ntemp):
     saveFCGraph = os.path.join(savefolder, str(ni) + '.png')
     texts = dict()
@@ -147,7 +137,7 @@ for ni in range(ntemp):
 
     images.append(saveFCGraph)
 
-generate_video(genvideofile = os.path.join(savefolder, savename_prefix + '_normal.avi'), fps = fps, images = images)
+generate_video(genvideofile = os.path.join(savefolder, animal + '_normal.mp4'), fps = fps, images = images)
 for ni in range(ntemp):
     os.remove(os.path.join(savefolder, str(ni) + '.png'))
 
@@ -163,8 +153,6 @@ for ni in range(ntemp):
 
     images.append(saveFCGraph)
 
-generate_video(genvideofile = os.path.join(savefolder,  savename_prefix + '_mild.avi'), fps = fps, images = images)
+generate_video(genvideofile = os.path.join(savefolder, animal + '_mild.mp4'), fps = fps, images = images)
 for ni in range(ntemp):
     os.remove(os.path.join(savefolder, str(ni) + '.png'))
-
-

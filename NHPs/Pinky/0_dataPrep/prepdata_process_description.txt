@@ -1,0 +1,16 @@
+% describe the process of preparing data
+
+% (1) STKtrialextract('Pinky'):
+%       store extracted epochs in \exp\pipeline\0_dataPrep\epochs
+%
+%       
+%
+% (2) epochs_betafiltered(animal): 
+%       beta band filtered data, low beta [12 24]Hz and high beta [25 35]Hz
+%
+%       output:
+%           epochs_reorg_filtered/betaBand/Pinky_lfptrial_mild(normal)_091817_block3.mat
+%       
+
+
+

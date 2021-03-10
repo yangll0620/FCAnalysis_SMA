@@ -35,8 +35,21 @@ addpath(genpath(fullfile(codefolder,'util')));
 
 
 % animal
-[fi, j] = regexp(codecorresfolder, 'NHPs/[A-Za-z]*');
-animal = codecorresfolder(fi + length('NHPs/'):j);
+if ismac
+    % Code to run on Mac platform
+elseif isunix
+    % Code to run on Linux platform
+    
+    [fi, j] = regexp(codecorresfolder, ['NHPs', '/', '[A-Za-z]*']);
+elseif ispc
+    % Code to run on Windows platform
+    
+    [fi, j] = regexp(codecorresfolder, ['NHPs', '\\', '[A-Za-z]*']);
+else
+    disp('Platform not supported')
+end
+animal = codecorresfolder(fi + length('NHPs') + 1:j);
+
 
 
 %% input parameters
@@ -45,6 +58,9 @@ depthFile = fullfile(codecorresParentfolder, 'm1_dailyDepth', 'Bug_dailyDepth.xl
 
 
 %% global parameters
+
+conds = {'normal', 'mild', 'moderate'};
+
 
 % different Rest/SKB labels in the master sheet
 tasks_Rest = {'Resting', 'Rest'};
@@ -89,233 +105,107 @@ t_master = readtable(xlsxfile_master);
 
 %----  extract t_dateBlocks ---%
 
-disp('extract t_dateBlocks:')
+disp('extract t_dateBlocks without DBS for each condition:')
 
-% normal case
-disp('... dealing normal....')
-pdcond = "normal";
-t_dateUsedM1PMC = t_dateUsedM1PMC_normal;
-t_dateBlocks = table();
-for di = 1: height(t_dateUsedM1PMC)
-    dateofexp = datenum(t_dateUsedM1PMC{di, 1}{1}, strformat_date_depth);
+
+for condi = 1 : length(conds)
+    pdcond = conds{condi};
+    disp(['... dealing ' pdcond '....'])
     
     
-    % find the tasks records on dateofexp without DBS operation in t_master
-    folderName = [animal '_' datestr(dateofexp, strformat_date_master)];
-    rowsMask_date = cellfun(@(x) strcmp(x, folderName), t_master.OutputFolderName);
-    rowsMask_Task = cellfun(@(x)  any(strcmp(x, tasks)), t_master.BriefDescription);
-    rowsMask_noDBS = cellfun(@(x) isempty(x), t_master.DBS_Target);
-    rowsMask =  rowsMask_date & rowsMask_Task & rowsMask_noDBS;
-    t_tasks_dateofexp = t_master(rowsMask, :);
-    
-    if isempty(t_tasks_dateofexp)
-        continue;
-    end
-    
-    rest_tdtbk = []; rest_mabk = []; 
-    SKT_tdtbk = []; SKT_mabk = [];
-    for ti = 1: height(t_tasks_dateofexp)
-        tdtbk = t_tasks_dateofexp{ti, 'TDTBlock'};
-        mabk = t_tasks_dateofexp{ti, 'MAFile'};
-        
-        if any(strcmp(t_tasks_dateofexp{ti, 'BriefDescription'}, tasks_Rest))
-            rest_tdtbk = [rest_tdtbk, tdtbk];
-            rest_mabk = [rest_mabk, mabk];
-        end
-        
-        if any(strcmp(t_tasks_dateofexp{ti, 'BriefDescription'}, tasks_SKB))
-            SKT_tdtbk = [SKT_tdtbk, tdtbk];
-            SKT_mabk = [SKT_mabk, mabk];
+    eval(['t_dateUsedM1PMC = t_dateUsedM1PMC_' pdcond ';'])
+    t_dateBlocks_Rest_noDBS = table();
+    t_dateBlocks_SKT_noDBS = table();
+    for di = 1: height(t_dateUsedM1PMC)
+        dateofexp = datenum(t_dateUsedM1PMC{di, 1}{1}, strformat_date_depth);
+
+
+        % find the tasks records on dateofexp without DBS operation in t_master
+        folderName = [animal '_' datestr(dateofexp, strformat_date_master)];
+        rowsMask_date = cellfun(@(x) strcmp(x, folderName), t_master.OutputFolderName);
+        rowsMask_Task = cellfun(@(x)  any(strcmp(x, tasks)), t_master.BriefDescription);
+        rowsMask_noDBS = cellfun(@(x) isempty(x), t_master.DBS_Target);
+        rowsMask =  rowsMask_date & rowsMask_Task & rowsMask_noDBS;
+        t_tasks_dateofexp = t_master(rowsMask, :);
+
+        if isempty(t_tasks_dateofexp)
+            continue;
         end
 
-        clear tdtbk mabk
+        Rest_tdtbk = []; Rest_mabk = [];
+        SKT_tdtbk = []; SKT_mabk = [];
+        for ti = 1: height(t_tasks_dateofexp)
+            tdtbk = t_tasks_dateofexp{ti, 'TDTBlock'};
+            mabk = t_tasks_dateofexp{ti, 'MAFile'};
+
+            if any(strcmp(t_tasks_dateofexp{ti, 'BriefDescription'}, tasks_Rest))
+                Rest_tdtbk = [Rest_tdtbk, tdtbk];
+                Rest_mabk = [Rest_mabk, mabk];
+            end
+
+            if any(strcmp(t_tasks_dateofexp{ti, 'BriefDescription'}, tasks_SKB))
+                SKT_tdtbk = [SKT_tdtbk, tdtbk];
+                SKT_mabk = [SKT_mabk, mabk];
+            end
+
+            clear tdtbk mabk
+        end
+
+
+        if ~isempty(Rest_tdtbk)
+
+            for Resti = 1 : length(Rest_tdtbk)
+                t_dateblock_Rest = table(string(datestr(dateofexp, strformat_date_save)), string(pdcond),... 
+                                       Rest_tdtbk(Resti), Rest_mabk(Resti), ...
+                                       t_dateUsedM1PMC{di, 'chnsUsed_M1'}, t_dateUsedM1PMC{di, 'chnsUsed_PMC'}, ...
+                                       'VariableNames', {'Date', 'pdCond', 'Rest_tdtbk', 'Rest_mabk', 'chnsUsed_M1', 'chnsUsed_PMC'});
+
+
+                t_dateBlocks_Rest_noDBS = [t_dateBlocks_Rest_noDBS; t_dateblock_Rest];
+
+                clear t_dateblock_Rest
+            end
+        end
+
+        if ~isempty(SKT_tdtbk)
+
+            for SKTi = 1 : length(SKT_tdtbk)
+                t_dateblock_SKT = table(string(datestr(dateofexp, strformat_date_save)), string(pdcond),... 
+                                   SKT_tdtbk(SKTi), SKT_mabk(SKTi), ...
+                                   t_dateUsedM1PMC{di, 'chnsUsed_M1'}, t_dateUsedM1PMC{di, 'chnsUsed_PMC'}, ...
+                                   'VariableNames', {'Date', 'pdCond', 'SKT_tdtbk', 'SKT_mabk', 'chnsUsed_M1', 'chnsUsed_PMC'});
+
+                t_dateBlocks_SKT_noDBS = [t_dateBlocks_SKT_noDBS; t_dateblock_SKT];
+
+                clear t_dateblock_SKT
+            end
+        end
+
+
+
+        clear Rest_tdtbk Rest_mabk SKT_tdtbk SKT_mabk 
+        clear dateofexp folderName rowsMask_date rowsMask_Task rowsMask_noDBS rowsMask
+        clear t_tasks_dateofexp
     end
-    
-    if  length(rest_tdtbk) >=2 || length(SKT_tdtbk) >= 2
-        continue
-    end
-    
-    if isempty(rest_tdtbk)
-        rest_tdtbk = nan;
-        rest_mabk = nan;
-    end
-    if isempty(SKT_tdtbk)
-        SKT_tdtbk = nan;
-        SKT_mabk = nan;
-    end
-    
-    t_dateblock = table(string(datestr(dateofexp, strformat_date_save)), pdcond,... 
-                               rest_tdtbk, rest_mabk, SKT_tdtbk, SKT_mabk, ...
-                               t_dateUsedM1PMC{di, 'chnsUsed_M1'}, t_dateUsedM1PMC{di, 'chnsUsed_PMC'}, ...
-                               'VariableNames', {'Date', 'pdCond', 'Rest_tdtbk', 'Rest_mabk', 'SKT_tdtbk', 'SKT_mabk', 'chnsUsed_M1', 'chnsUsed_PMC'});
-    
-                    
-    t_dateBlocks = [t_dateBlocks; t_dateblock];
+
+    eval(['t_dateBlocks_noDBS_Rest_' pdcond ' =  t_dateBlocks_Rest_noDBS;'])
+    eval(['t_dateBlocks_noDBS_SKT_' pdcond ' =  t_dateBlocks_SKT_noDBS;'])
     
     
-    
-    clear rest_tdtbk rest_mabk SKT_tdtbk SKT_mabk t_dateblock
-    clear dateofexp folderName rowsMask_date rowsMask_Task rowsMask_noDBS rowsMask
-    clear t_tasks_dateofexp
+    clear pdcond t_dateBlocks_Rest_noDBS t_dateBlocks_SKT_noDBS t_dateUsedM1PMC
 end
-t_dateBlocks_normal =  t_dateBlocks;
-clear t_dateBlocks t_dateUsedM1PMC
-
-
-
-% mild case
-disp('... dealing mild....')
-pdcond = "mild";
-t_dateUsedM1PMC = t_dateUsedM1PMC_mild;
-t_dateBlocks = table();
-for di = 1: height(t_dateUsedM1PMC)
-    dateofexp = datenum(t_dateUsedM1PMC{di, 1}{1}, strformat_date_depth);
-    
-    
-    % find the tasks records on dateofexp without DBS operation in t_master
-    folderName = [animal '_' datestr(dateofexp, strformat_date_master)];
-    rowsMask_date = cellfun(@(x) strcmp(x, folderName), t_master.OutputFolderName);
-    rowsMask_Task = cellfun(@(x)  any(strcmp(x, tasks)), t_master.BriefDescription);
-    rowsMask_noDBS = cellfun(@(x) isempty(x), t_master.DBS_Target);
-    rowsMask =  rowsMask_date & rowsMask_Task & rowsMask_noDBS;
-    t_tasks_dateofexp = t_master(rowsMask, :);
-    
-    if isempty(t_tasks_dateofexp)
-        continue;
-    end
-    
-    rest_tdtbk = []; rest_mabk = []; 
-    SKT_tdtbk = []; SKT_mabk = [];
-    for ti = 1: height(t_tasks_dateofexp)
-        tdtbk = t_tasks_dateofexp{ti, 'TDTBlock'};
-        mabk = t_tasks_dateofexp{ti, 'MAFile'};
-        
-        if any(strcmp(t_tasks_dateofexp{ti, 'BriefDescription'}, tasks_Rest))
-            rest_tdtbk = [rest_tdtbk, tdtbk];
-            rest_mabk = [rest_mabk, mabk];
-        end
-        
-        if any(strcmp(t_tasks_dateofexp{ti, 'BriefDescription'}, tasks_SKB))
-            SKT_tdtbk = [SKT_tdtbk, tdtbk];
-            SKT_mabk = [SKT_mabk, mabk];
-        end
-
-        clear tdtbk mabk
-    end
-    
-    if  length(rest_tdtbk) >=2 || length(SKT_tdtbk) >= 2
-        continue
-    end
-    
-    if isempty(rest_tdtbk)
-        rest_tdtbk = nan;
-        rest_mabk = nan;
-    end
-    if isempty(SKT_tdtbk)
-        SKT_tdtbk = nan;
-        SKT_mabk = nan;
-    end
-    
-    t_dateblock = table(string(datestr(dateofexp, strformat_date_save)), pdcond,... 
-                               rest_tdtbk, rest_mabk, SKT_tdtbk, SKT_mabk, ...
-                               t_dateUsedM1PMC{di, 'chnsUsed_M1'}, t_dateUsedM1PMC{di, 'chnsUsed_PMC'}, ...
-                               'VariableNames', {'Date', 'pdCond', 'Rest_tdtbk', 'Rest_mabk', 'SKT_tdtbk', 'SKT_mabk', 'chnsUsed_M1', 'chnsUsed_PMC'});
-    
-                    
-    t_dateBlocks = [t_dateBlocks; t_dateblock];
-    
-    
-    
-    clear rest_tdtbk rest_mabk SKT_tdtbk SKT_mabk t_dateblock
-    clear dateofexp folderName rowsMask_date rowsMask_Task rowsMask_noDBS rowsMask
-    clear t_tasks_dateofexp
-end
-t_dateBlocks_mild =  t_dateBlocks;
-clear t_dateBlocks t_dateUsedM1PMC
-
-
-
-
-% moderate case
-disp('... dealing moderate....')
-t_dateUsedM1PMC = t_dateUsedM1PMC_moderate;
-pdcond = "moderate";
-t_dateBlocks = table();
-for di = 1: height(t_dateUsedM1PMC)
-    dateofexp = datenum(t_dateUsedM1PMC{di, 1}{1}, strformat_date_depth);
-    
-    
-    % find the tasks records on dateofexp without DBS operation in t_master
-    folderName = [animal '_' datestr(dateofexp, strformat_date_master)];
-    rowsMask_date = cellfun(@(x) strcmp(x, folderName), t_master.OutputFolderName);
-    rowsMask_Task = cellfun(@(x)  any(strcmp(x, tasks)), t_master.BriefDescription);
-    rowsMask_noDBS = cellfun(@(x) isempty(x), t_master.DBS_Target);
-    rowsMask =  rowsMask_date & rowsMask_Task & rowsMask_noDBS;
-    t_tasks_dateofexp = t_master(rowsMask, :);
-    
-    if isempty(t_tasks_dateofexp)
-        continue;
-    end
-    
-    rest_tdtbk = []; rest_mabk = []; 
-    SKT_tdtbk = []; SKT_mabk = [];
-    for ti = 1: height(t_tasks_dateofexp)
-        tdtbk = t_tasks_dateofexp{ti, 'TDTBlock'};
-        mabk = t_tasks_dateofexp{ti, 'MAFile'};
-        
-        if any(strcmp(t_tasks_dateofexp{ti, 'BriefDescription'}, tasks_Rest))
-            rest_tdtbk = [rest_tdtbk, tdtbk];
-            rest_mabk = [rest_mabk, mabk];
-        end
-        
-        if any(strcmp(t_tasks_dateofexp{ti, 'BriefDescription'}, tasks_SKB))
-            SKT_tdtbk = [SKT_tdtbk, tdtbk];
-            SKT_mabk = [SKT_mabk, mabk];
-        end
-
-        clear tdtbk mabk
-    end
-    
-    if  length(rest_tdtbk) >=2 || length(SKT_tdtbk) >= 2
-        continue
-    end
-    
-    if isempty(rest_tdtbk)
-        rest_tdtbk = nan;
-        rest_mabk = nan;
-    end
-    if isempty(SKT_tdtbk)
-        SKT_tdtbk = nan;
-        SKT_mabk = nan;
-    end
-    
-    t_dateblock = table(string(datestr(dateofexp, strformat_date_save)), pdcond,... 
-                               rest_tdtbk, rest_mabk, SKT_tdtbk, SKT_mabk, ...
-                               t_dateUsedM1PMC{di, 'chnsUsed_M1'}, t_dateUsedM1PMC{di, 'chnsUsed_PMC'}, ...
-                               'VariableNames', {'Date', 'pdCond', 'Rest_tdtbk', 'Rest_mabk', 'SKT_tdtbk', 'SKT_mabk', 'chnsUsed_M1', 'chnsUsed_PMC'});
-    
-                    
-    t_dateBlocks = [t_dateBlocks; t_dateblock];
-    
-    
-    
-    clear rest_tdtbk rest_mabk SKT_tdtbk SKT_mabk t_dateblock
-    clear dateofexp folderName rowsMask_date rowsMask_Task rowsMask_noDBS rowsMask
-    clear t_tasks_dateofexp
-end
-t_dateBlocks_moderate =  t_dateBlocks;
-clear t_dateBlocks t_dateUsedM1PMC
 
 
 
 % combine all pdcond
-t_dateBlocks = [t_dateBlocks_normal;t_dateBlocks_mild;t_dateBlocks_moderate];
+t_dateBlocks_Rest_noDBS = [t_dateBlocks_noDBS_Rest_normal; t_dateBlocks_noDBS_Rest_mild;t_dateBlocks_noDBS_Rest_moderate];
+t_dateBlocks_SKT_noDBS = [t_dateBlocks_noDBS_SKT_normal; t_dateBlocks_noDBS_SKT_mild;t_dateBlocks_noDBS_SKT_moderate];
 
 
 
 
 % -- save--  %
-save([savefile '.mat'], 't_dateUsedM1PMC_*', 't_dateBlocks')
+save([savefile '.mat'], 't_dateUsedM1PMC_*', 't_dateBlocks_*_noDBS')
 
 end % m2_dateBlocks_wUsedM1PMCChns
 

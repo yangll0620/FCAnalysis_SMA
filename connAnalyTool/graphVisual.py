@@ -190,7 +190,7 @@ def graph_style(graph, visual_style = None):
         print("No vertex name")
     
     # vertext label size
-    visual_style["vertex_label_size"] = 15
+    visual_style["vertex_label_size"] = 20
     
     visual_style["vertex_label_angle"] = 0
     
@@ -199,7 +199,7 @@ def graph_style(graph, visual_style = None):
     outdegree = graph.outdegree()
     
     
-    visual_style["margin"] = [30, 30, 75, 30]
+    visual_style["margin"] = 100
     
     visual_style['edge_width'] = 0.35
 

@@ -25,7 +25,7 @@ addpath(genpath(fullfile(codefolder,'NHPs')));
 
 %% global variables
 % animal
-[fi, j] = regexp(codecorresfolder, 'NHPs/[A-Za-z]*');
+[fi, j] = regexp(codecorresfolder, fullfile('NHPs','[A-Za-z]*'));
 animal = codecorresfolder(fi + length('NHPs/'):j);
 
 
@@ -69,16 +69,6 @@ for i = 1 : length(conds_cell)
     close all
     
 end
-
-
-
-
-
-
-
-
-
-
 
 
 

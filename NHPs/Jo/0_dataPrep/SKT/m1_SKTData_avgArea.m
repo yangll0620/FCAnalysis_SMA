@@ -2,6 +2,8 @@ function m1_SKTData_avgArea()
 %% average lfp across each area
 %
 %   remove unwanted stn3-4, stn4-5, stn5-6 and stn6-7
+%
+%   averaged across Brain area except DBS 
 
 
 codefilepath = mfilename('fullpath');
@@ -21,8 +23,20 @@ addpath(genpath(fullfile(codefolder, 'toolbox', 'NexMatlabFiles')))
 
 
 % animal
-[fi, j] = regexp(codecorresfolder, 'NHPs/[A-Za-z]*');
-animal = codecorresfolder(fi + length('NHPs/'):j);
+if ismac
+    % Code to run on Mac platform
+elseif isunix
+    % Code to run on Linux platform
+    
+    [fi, j] = regexp(codecorresfolder, ['NHPs', '/', '[A-Za-z]*']);
+elseif ispc
+    % Code to run on Windows platform
+    
+    [fi, j] = regexp(codecorresfolder, ['NHPs', '\\', '[A-Za-z]*']);
+else
+    disp('Platform not supported')
+end
+animal = codecorresfolder(fi + length('NHPs') + 1:j);
 
 
 
@@ -32,7 +46,8 @@ animal = codecorresfolder(fi + length('NHPs/'):j);
 % input folder: extracted raw STK data 
 inputfolder = fullfile(codecorresParentfolder, 'm0_SKTData_extract');
 
-unwanted_DBS = {'stn3-4', 'stn4-5', 'stn5-6', 'stn6-7'};
+
+unwanted_DBS = {};
 
 %% save setup
 savefolder = codecorresfolder;
@@ -41,6 +56,8 @@ savefilename_addstr = 'avgArea';
 %% start here
 
 files = dir(fullfile(inputfolder, '*.mat'));
+
+
 nfiles = length(files);
 close all;
 for fi = 1 : nfiles
@@ -51,9 +68,14 @@ for fi = 1 : nfiles
     
     % load lfpdata: nchns * ntemp * ntrials
     filename = files(fi).name;
-    load(fullfile(inputfolder, filename), 'lfpdata', 'fs', 'T_chnsarea', 'T_idxevent');
+    load(fullfile(files(fi).folder, filename), 'lfpdata', 'fs', 'T_chnsarea', 'T_idxevent');
     
     
+    % remove chns marked with multiple areas or GP/STN in Gray Matter
+    multipleAreas_mask = cellfun(@(x) contains(x, '/'), T_chnsarea.brainarea);
+    GPSTNinGM_mask = cellfun(@(x) contains(x, 'GP'), T_chnsarea.brainarea) & ~strcmp(T_chnsarea.electype, 'DBS');
+    T_chnsarea = T_chnsarea(~multipleAreas_mask & ~GPSTNinGM_mask, :); T_chnsarea.chni = [1:height(T_chnsarea)]';
+    lfpdata = lfpdata(~multipleAreas_mask, :, :);
     
     % average across each GM area
     mask_notDBS = ~strcmp(T_chnsarea.electype, 'DBS');
@@ -90,10 +112,6 @@ for fi = 1 : nfiles
     % cat GM and DBS
     lfpdata = cat(1, avglfp_notDBS, lfpdata_DBS);
     T_chnsarea = [T_notDBSchnsarea_new; T_DBSchnsarea];
-    
-    mask_unwanted = strcmp(T_chnsarea.brainarea, 'lCd') | strcmp(T_chnsarea.brainarea, 'rMC');
-    lfpdata(mask_unwanted, :, :) = [];
-    T_chnsarea(mask_unwanted, :) = [];
     T_chnsarea.chni = [1: height(T_chnsarea)]';
     
     % save

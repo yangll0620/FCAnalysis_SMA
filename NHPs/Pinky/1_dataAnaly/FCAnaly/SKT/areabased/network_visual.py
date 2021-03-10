@@ -75,17 +75,15 @@ def generate_video(genvideofile = None, fps = None, images = None):
     # setting the frame width, height width 
     # the width, height of first image 
     height, width, layers = frame.shape   
-    
-    
-    fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    outvideo = cv2.VideoWriter(genvideofile, fourcc, fps, (width, height))  
+  
+    video = cv2.VideoWriter(genvideofile, 0, fps, (width, height))  
   
     # Appending the images to the video one by one 
     for image in images:  
-        outvideo.write(cv2.imread(image))  
+        video.write(cv2.imread(image))  
       
     # Deallocating memories taken for window creation 
     cv2.destroyAllWindows()  
-    outvideo.release()  # releasing the video generated 
+    video.release()  # releasing the video generated 
     print("Generated video")
             

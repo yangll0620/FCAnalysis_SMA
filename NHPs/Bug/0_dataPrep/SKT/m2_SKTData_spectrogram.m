@@ -17,14 +17,28 @@ clear idx
 % add util path
 addpath(genpath(fullfile(codefolder,'util')));
 
+addpath(genpath(fullfile(codefolder,'NHPs')));
+
 
 % codecorresfolder, codecorresParentfolder
 [codecorresfolder, codecorresParentfolder] = code_corresfolder(codefilepath, true, false);
 
 %% global variables
 % animal
-[fi, j] = regexp(codecorresfolder, 'NHPs/[A-Za-z]*');
-animal = codecorresfolder(fi + length('NHPs/'):j);
+if ismac
+    % Code to run on Mac platform
+elseif isunix
+    % Code to run on Linux platform
+    
+    [fi, j] = regexp(codecorresfolder, ['NHPs', '/', '[A-Za-z]*']);
+elseif ispc
+    % Code to run on Windows platform
+    
+    [fi, j] = regexp(codecorresfolder, ['NHPs', '\\', '[A-Za-z]*']);
+else
+    disp('Platform not supported')
+end
+animal = codecorresfolder(fi + length('NHPs') + 1:j);
 
 
 %%  input setup
@@ -32,36 +46,45 @@ animal = codecorresfolder(fi + length('NHPs/'):j);
 % input folder: extracted raw rest data with grayMatter 
 inputfolder = fullfile(codecorresParentfolder, 'm1_SKTData_avgArea');
 
+conds_cell = {'normal', 'mild'};
+
+
+t_minmax_reach_normal = [0.6, 0.8];
+t_minmax_return_normal = [0.5, 0.9];
+t_minmax_reach_mild = [0.6, 0.8];
+t_minmax_return_mild = [0.5, 0.9];
+
+align2 = SKTEvent.ReachOnset;
+tdur_trial_normal = [-0.6 1];
+tdur_trial_mild = [-0.6 1];
+
 %% save setup
 savefolder = codecorresfolder;
 
 %% starting: narrow filter the lfp data of all the files
-files_normal = dir(fullfile(inputfolder, '*_normal_*.mat'));
-files_mild = dir(fullfile(inputfolder, '*_mild_*.mat'));
+for i = 1 : length(conds_cell)
+    cond = conds_cell{i};
+    
+    files = dir(fullfile(inputfolder, ['*_' cond '_*.mat']));
+    
+    eval(['tdur_trial = tdur_trial_' cond ';']);
+    eval(['t_minmax_reach = t_minmax_reach_' cond ';']);
+    eval(['t_minmax_return = t_minmax_return_' cond ';']);
+    
+    
+    [lfptrials, fs, T_chnsarea] = lfp_align2(files, align2, tdur_trial, t_minmax_reach, t_minmax_return);
+    plot_spectrogram_allfiles(lfptrials, T_chnsarea, fs, savefolder, animal, cond, align2, tdur_trial)
+    
+    clear cond files tdur_trial t_minmax_reach t_minmax_return
+    clear lfptrials fs T_chnsarea
+    
+    close all
+    
+end
 
 
-tmin_reach_normal = 0.4;
-tmax_reach_normal = 1;
-tdur_trial_normal = [-0.8 0.8];
-[lfptrials_normal, fs, T_chnsarea] = lfp_align2_reachonset(files_normal, tdur_trial_normal, tmin_reach_normal, tmax_reach_normal);
-plot_spectrogram_allfiles(lfptrials_normal, T_chnsarea, fs, savefolder, animal, 'normal')
 
-
-
-tmin_reach_mild = 0.5;
-tmax_reach_mild = 1;
-tdur_trial_mild = [-0.8 1];
-[lfptrials_mild, fs, T_chnsarea] = lfp_align2_reachonset(files_mild, tdur_trial_mild, tmin_reach_mild, tmax_reach_mild);
-plot_spectrogram_allfiles(lfptrials_mild, T_chnsarea, fs, savefolder, animal, 'mild')
-
-
-
-
-
-combined_imgs(savefolder, animal)
-
-
-function plot_spectrogram_allfiles(lfptrials, T_chnsarea, fs, savefolder, animal, pdcond)
+function plot_spectrogram_allfiles(lfptrials, T_chnsarea, fs, savefolder, animal, pdcond, align2, tdur_trial)
 %%
 
 % global parameters
@@ -109,28 +132,44 @@ for areai = 1 : height(T_chnsarea)
     idx_f = (f>=f_AOI(1) &  f<=f_AOI(2));
     f_selected =  f(idx_f);
     psd_selected = psd(idx_f, :);
-    t_selected = t - 1;
+    t_selected = t + tdur_trial(1);
     
     
     psd_selected = 10 * log10(psd_selected);
     psd_selected = imgaussfilt(psd_selected,'FilterSize',5);
     
     figure
-    set(gcf, 'PaperUnits', 'points',  'PaperPosition', [18, 180, 300 180]);
+    set(gcf, 'PaperUnits', 'points',  'Position', [675, 550, 700 450]);
+    
+    % spectrogram subplot
+    subplot('Position', [0.1 0.1 0.7 0.8])
     imagesc(t_selected, f_selected, psd_selected);
     colorbar
-    set(gca,'YDir','normal')
+    set(gca,'YDir','normal', 'CLim', [-116 -90])
     
     xlabel('time/s')
     ylabel('psd')
     xticks([-0.5 0 0.5])
-    xticklabels({-0.5, 'reachonset', 0.5})
+    xticklabels({-0.5, char(align2), 0.5})
     
     title([animal ' ' pdcond ': ' brainarea])
+    ylim1 = ylim;
     
     
-    savefile = fullfile(savefolder, [animal '_' pdcond '_'  brainarea]);
-    saveas(gcf, savefile, 'tiff');
+    % psd subplot
+    idx_t = (t_selected <0);
+    psd_base = mean(psd_selected(:, idx_t), 2);
+    psd_phase = mean(psd_selected(:, ~idx_t), 2);
+    psd_rel = psd_phase - psd_base;
+    subplot('Position', [0.85 0.1 0.1 0.8])
+    plot(psd_rel, f_selected);
+    ylim(ylim1)
+    xlabel('psd diff')
+    clear idx_t psd_base psd_phase psd_rel ylim1
+    
+    
+    savefile = fullfile(savefolder, [animal '_' char(align2) '_' pdcond '_'  brainarea]);
+    saveas(gcf, savefile, 'png');
    
     
     clear brainarea chnMask psds f t idx_f *_selected 
@@ -139,11 +178,41 @@ end
 
 
 
-function [lfptrials, fs, T_chnsarea] = lfp_align2_reachonset(files, tdur_trial, tmin_reach, tmax_reach)
+function [lfptrials, fs, T_chnsarea] = lfp_align2(files, align2, tdur_trial, t_minmax_reach, t_minmax_return)
+% extract lfp data respect to targetonset, reachonset, reach and returnonset separately
 
-coli_reachonset = 2;
-coli_reach = 3;
-coli_mouth = 5;
+% 
+%         Args:
+%             align2: the event to be aligned (e.g Event.REACHONSET or uint 1-5)
+% 
+%             tdur_trial: the duration of extracted trials respected to event(e.g. [-0.5 0.6])
+%             
+%             t_minmax_reach, t_minmax_return : min and max reach/return (s) for selecting trials (e.g [0.5 1])
+% 
+%         return:
+%             lfptrials: nchns * ntemp * ntrials
+% 
+%             chnAreas:
+% 
+%             fs:
+
+
+if nargin < 5
+    t_minmax_return = [0 inf];
+end
+if nargin < 4
+    t_minmax_reach = [0 inf];
+end
+
+
+coli_align2 = uint32(align2);
+
+
+
+coli_reachonset = uint32(SKTEvent.ReachOnset);
+coli_reach = uint32(SKTEvent.Reach);
+coli_returnonset = uint32(SKTEvent.ReturnOnset);
+coli_mouth = uint32(SKTEvent.Mouth);
 
 load(fullfile(files(1).folder, files(1).name),  'fs', 'T_chnsarea');
 
@@ -165,16 +234,26 @@ for filei = 1 : nfiles
     ntrials = size(lfpdata, 3);
     for tri = 1: ntrials
         
+        % select trials based on reach and return duration
         t_reach = (T_idxevent{tri, coli_reach} - T_idxevent{tri, coli_reachonset}) / fs;
-        t_dur = (T_idxevent{tri, coli_mouth} - T_idxevent{tri, coli_reachonset}) / fs;
-        if t_reach < tmin_reach || t_reach > tmax_reach || t_dur < tdur_trial(2)
+        t_return = (T_idxevent{tri, coli_mouth} - T_idxevent{tri, coli_returnonset}) / fs;
+        if t_reach < t_minmax_reach(1) || t_reach > t_minmax_reach(2)
+            clear t_reach
             continue
         end
-            
-        idxdur = round(tdur_trial * fs) + T_idxevent{tri, coli_reachonset};
+        if t_return < t_minmax_return(1) || t_reach > t_minmax_return(2)
+            clear t_return
+            continue
+        end
+        
+        
+        % extract trial with t_dur
+        idxdur = round(tdur_trial * fs) + T_idxevent{tri, coli_align2};
         lfp_phase_1trial = lfpdata(:, idxdur(1):idxdur(2), tri);
            
         lfptrials = cat(3, lfptrials, lfp_phase_1trial);
+        
+        clear t_reach t_return idxdur lfp_phase_1trial
     end
 end
 
