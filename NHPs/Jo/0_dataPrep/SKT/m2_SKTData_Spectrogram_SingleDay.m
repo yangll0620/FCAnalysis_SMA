@@ -1,4 +1,4 @@
-function m2_SKTData_Spectrogram_SingleDay()
+function m2_SKTData_spectrogram_singleDay()
 %  extract lfp data respect to reachonset
 %
 %  return:
@@ -195,7 +195,7 @@ for idxGi = 1 : length(idxGroups)
         subplot(3,3, idxi)
         imagesc(t_selected, f_selected, psd_selected);
         colormap(jet)
-        set(gca,'YDir','normal', 'CLim', clim)
+        %set(gca,'YDir','normal', 'CLim', clim)
         colorbar
         
         

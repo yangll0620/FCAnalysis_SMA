@@ -24,9 +24,22 @@ addpath(genpath(fullfile(codefolder,'NHPs')));
 [codecorresfolder, codecorresParentfolder] = code_corresfolder(codefilepath, true, false);
 
 %% global variables
+
 % animal
-[fi, j] = regexp(codecorresfolder, fullfile('NHPs','[A-Za-z]*'));
-animal = codecorresfolder(fi + length('NHPs/'):j);
+if ismac
+    % Code to run on Mac platform
+elseif isunix
+    % Code to run on Linux platform
+    
+    [fi, j] = regexp(codecorresfolder, ['NHPs', '/', '[A-Za-z]*']);
+elseif ispc
+    % Code to run on Windows platform
+    
+    [fi, j] = regexp(codecorresfolder, ['NHPs', '\\', '[A-Za-z]*']);
+else
+    disp('Platform not supported')
+end
+animal = codecorresfolder(fi + length('NHPs') + 1:j);
 
 
 %%  input setup
@@ -78,89 +91,112 @@ function plot_spectrogram_allfiles(lfptrials, T_chnsarea, fs, savefolder, animal
 % global parameters
 twin = 0.2;
 toverlap = 0.15;
-f_AOI = [8 50];
+f_AOI = [5 40];
 
 
 nwin = round(twin * fs);
 noverlap = round(toverlap * fs);
 nfft = noverlap;
 
-idxSTN = find(strcmp(T_chnsarea.brainarea, 'STN'));
-for i = 1 : length(idxSTN)
-    T_chnsarea.brainarea{idxSTN(i)} = ['stn' num2str(i-1) '-' num2str(i)];
-    
-end
-
-idxGP = find(strcmp(T_chnsarea.brainarea, 'GP'));
-for i = 1 : length(idxGP)
-    T_chnsarea.brainarea{idxGP(i)} = ['gp' num2str(i-1) '-' num2str(i)];
-    
-end
+mask_STN = contains(T_chnsarea.brainarea, 'stn');
+mask_GP = contains(T_chnsarea.brainarea, 'gp');
+mask_Others = ~(mask_STN | mask_GP);
+idxGroups = [{find(mask_STN)}; {find(mask_GP)}; {find(mask_Others)}];
 
 % plot for each brain area
-for areai = 1 : height(T_chnsarea)
+for idxGi = 1 : length(idxGroups)
+    idxs = idxGroups{idxGi};
     
-    brainarea = T_chnsarea.brainarea{areai};
-    chnMask =  strcmp(T_chnsarea.brainarea, brainarea);
-    
-    
-    % calculate psds: nf * nt * ntrials
-    psds = [];
-    for triali = 1: size(lfptrials, 3)
-        x = lfptrials(chnMask, : , triali);
-        
-        [~, f, t, ps] = spectrogram(x, nwin, noverlap,[],fs); % ps: nf * nt
-        
-        psds = cat(3, psds, ps);
-        
-        clear x ps
+    if idxGi == 1
+        clim = [-120 -100];
+        areaG = 'STN';
     end
-    psd = mean(psds, 3);
     
-    idx_f = (f>=f_AOI(1) &  f<=f_AOI(2));
-    f_selected =  f(idx_f);
-    psd_selected = psd(idx_f, :);
-    t_selected = t + tdur_trial(1);
+    if idxGi == 2
+        clim = [-120 -90];
+        areaG = 'GP';
+    end
     
+    if idxGi == 3
+        clim = [-60 -40];
+        areaG = 'noTDBS';
+    end
     
-    psd_selected = 10 * log10(psd_selected);
-    psd_selected = imgaussfilt(psd_selected,'FilterSize',5);
-    
-    figure
-    set(gcf, 'PaperUnits', 'points',  'Position', [675, 550, 700 450]);
-    
-    % spectrogram subplot
-    subplot('Position', [0.1 0.1 0.7 0.8])
-    imagesc(t_selected, f_selected, psd_selected);
-    colorbar
-    set(gca,'YDir','normal')
-    
-    xlabel('time/s')
-    ylabel('psd')
-    xticks([-0.5 0 0.5])
-    xticklabels({-0.5, char(align2), 0.5})
-    
-    title([animal ' ' pdcond ': ' brainarea])
-    ylim1 = ylim;
+    % subplots layout
+    if length(idxs) <= 4
+        rows = 2; cols = 2;
+    else
+        rows = 3; cols = 3;
+    end
     
     
-    % psd subplot
-    idx_t = (t_selected <0);
-    psd_base = mean(psd_selected(:, idx_t), 2);
-    psd_phase = mean(psd_selected(:, ~idx_t), 2);
-    psd_rel = psd_phase - psd_base;
-    subplot('Position', [0.85 0.1 0.1 0.8])
-    plot(psd_rel, f_selected);
-    ylim(ylim1)
-    xlabel('psd diff')
-    clear idx_t psd_base psd_phase psd_rel ylim1
+    
+    figure;
+    set(gcf, 'PaperUnits', 'points',  'Position', [200, 200, 1000 700]);
+    
+    for idxi = 1 : length(idxs)
+        areai = idxs(idxi);
+        brainarea = T_chnsarea.brainarea{areai};
+        chnMask =  strcmp(T_chnsarea.brainarea, brainarea);
+        
+        
+        % calculate psds: nf * nt * ntrials
+        psds = [];
+        for triali = 1: size(lfptrials, 3)
+            x = lfptrials(chnMask, : , triali);
+            
+            [~, f, t, ps] = spectrogram(x, hamming(nwin), noverlap,[],fs); % ps: nf * nt
+            
+            psds = cat(3, psds, ps);
+            
+            clear x ps
+        end
+        psd = mean(psds, 3);
+        
+        idx_f = (f>=f_AOI(1) &  f<=f_AOI(2));
+        f_selected =  f(idx_f);
+        psd_selected = psd(idx_f, :);
+        t_selected = t + tdur_trial(1);
+        
+        
+        %psd_selected = 10 * log10(psd_selected);
+        psd_selected = imgaussfilt(psd_selected,'FilterSize',5);
+        
+        
+
+        
+        % spectrogram subplot
+        subplot(rows,cols, idxi)
+        imagesc(t_selected, f_selected, psd_selected);
+        colormap(jet)
+        %set(gca,'YDir','normal', 'CLim', clim)
+        colorbar
+        
+        
+        xlabel('time/s')
+        ylabel('Frequency(Hz)')
+        xticks([-0.5 0 0.5])
+        xticklabels({-0.5, char(align2), 0.5})
+        title([animal ' ' pdcond ': ' brainarea])
+        ylim1 = ylim;
     
     
-    savefile = fullfile(savefolder, [animal '_' char(align2) '_' pdcond '_'  brainarea]);
-    saveas(gcf, savefile, 'png');
+%         % psd subplot
+%         idx_t = (t_selected <0);
+%         psd_base = mean(psd_selected(:, idx_t), 2);
+%         psd_phase = mean(psd_selected(:, ~idx_t), 2);
+%         psd_rel = psd_phase - psd_base;
+%         subplot('Position', [0.85 0.1 0.1 0.8])
+%         plot(psd_rel, f_selected);
+%         ylim(ylim1)
+%         xlabel('psd diff')
+%         clear idx_t psd_base psd_phase psd_rel ylim1
+    end
    
     
-    clear brainarea chnMask psds f t idx_f *_selected 
+    savefile = fullfile(savefolder, [animal '_' char(align2) '_' pdcond '_'  areaG]);
+    saveas(gcf, savefile, 'png');
+   
     clear savefile
 end
 

@@ -105,7 +105,7 @@ function plot_spectrogram_allfiles(lfptrials, T_chnsarea, fs, savefolder, animal
 % global parameters
 twin = 0.2;
 toverlap = 0.15;
-f_AOI = [8 50];
+f_AOI = [5 40];
 
 
 nwin = round(twin * fs);

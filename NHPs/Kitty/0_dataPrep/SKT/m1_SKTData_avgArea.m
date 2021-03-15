@@ -1,11 +1,12 @@
 function m1_SKTData_avgArea()
 %% average lfp across each area
 %
-%   remove unwanted stn3-4, stn4-5, stn5-6 and stn6-7
 %
-%   averaged across M1
-%
-%  combine files from normal COT and moderate SKT  folder
+%   1. remove chns marked with multiple areas or GP/STN in Gray Matter
+%   2. average across each GM area (no DBS)
+%   3. change STN/GP into stn0-1, stn1-2... gp0-1, gp1-2 et.al
+%   4. remove unwanted DBS chns
+
 
 
 codefilepath = mfilename('fullpath');
@@ -20,13 +21,24 @@ addpath(genpath(fullfile(codefolder,'util')));
 addpath(genpath(fullfile(codefolder, 'toolbox', 'NexMatlabFiles')))
 
 % datafolder, pipelinefolder 
-[datafolder, ~, ~, ~] = exp_subfolders();
 [codecorresfolder, codecorresParentfolder] = code_corresfolder(codefilepath, true, false);
 
 
 % animal
-[fi, j] = regexp(codecorresfolder, 'NHPs/[A-Za-z]*');
-animal = codecorresfolder(fi + length('NHPs/'):j);
+if ismac
+    % Code to run on Mac platform
+elseif isunix
+    % Code to run on Linux platform
+    
+    [fi, j] = regexp(codecorresfolder, ['NHPs', '/', '[A-Za-z]*']);
+elseif ispc
+    % Code to run on Windows platform
+    
+    [fi, j] = regexp(codecorresfolder, ['NHPs', '\\', '[A-Za-z]*']);
+else
+    disp('Platform not supported')
+end
+animal = codecorresfolder(fi + length('NHPs') + 1:j);
 
 
 
@@ -34,10 +46,21 @@ animal = codecorresfolder(fi + length('NHPs/'):j);
 %%  input setup
 
 % input folder: extracted raw STK data 
-inputfolder1 = fullfile(codecorresParentfolder, 'm0_SKTData_extract');
-inputfolder2 = fullfile(codecorresParentfolder, 'm0_normalCOTData_extract');
+inputfolder = fullfile(codecorresParentfolder, 'm0_SKTData_extract');
+
 
 unwanted_DBS = {};
+
+if strcmpi(animal,'Jo')
+    unwanted_DBS = {'stn4-5', 'stn5-6', 'stn6-7'};
+end
+if strcmpi(animal,'Kitty')
+    unwanted_DBS = {'stn3-4', 'stn4-5', 'stn5-6', 'stn6-7', 'gp6-7'};
+end
+if strcmpi(animal,'Jo')
+    unwanted_DBS = {'stn0-1', 'stn1-2', 'stn2-3', 'stn6-7', 'gp0-1'};
+end
+
 
 %% save setup
 savefolder = codecorresfolder;
@@ -45,9 +68,8 @@ savefilename_addstr = 'avgArea';
 
 %% start here
 
-files1 = dir(fullfile(inputfolder1, '*.mat'));
-files2 = dir(fullfile(inputfolder2, '*.mat'));
-files = [files1; files2];
+files = dir(fullfile(inputfolder, '*.mat'));
+
 
 nfiles = length(files);
 close all;
@@ -61,6 +83,12 @@ for fi = 1 : nfiles
     filename = files(fi).name;
     load(fullfile(files(fi).folder, filename), 'lfpdata', 'fs', 'T_chnsarea', 'T_idxevent');
     
+    
+    % remove chns marked with multiple areas or GP/STN in Gray Matter
+    multipleAreas_mask = cellfun(@(x) contains(x, '/'), T_chnsarea.brainarea);
+    GPSTNinGM_mask = cellfun(@(x) contains(x, 'GP'), T_chnsarea.brainarea) & ~strcmp(T_chnsarea.electype, 'DBS');
+    T_chnsarea = T_chnsarea(~multipleAreas_mask & ~GPSTNinGM_mask, :); T_chnsarea.chni = [1:height(T_chnsarea)]';
+    lfpdata = lfpdata(~multipleAreas_mask, :, :);
     
     
     % average across each GM area
@@ -79,7 +107,7 @@ for fi = 1 : nfiles
     
     
     
-    % change STN into stn0-1, stn1-2 et.al
+    % change STN/GP into stn0-1, stn1-2... gp0-1, gp1-2 et.al
     for i = 1: height(T_DBSchnsarea)
         chn = T_DBSchnsarea(i, :).recordingchn;
         barea = cell2mat(T_DBSchnsarea(i, :).brainarea);

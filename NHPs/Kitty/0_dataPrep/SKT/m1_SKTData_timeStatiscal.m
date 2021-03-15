@@ -14,7 +14,7 @@ addpath(genpath(fullfile(codefolder, 'util')));
 addpath(genpath(fullfile(codefolder, 'toolbox', 'NexMatlabFiles')))
 
 % pipelinefolder
-[correspipelinefolder, codecorresParentfolder] = code_corresfolder(codefilepath, true, false);
+[codecorresfolder, codecorresParentfolder] = code_corresfolder(codefilepath, true, false);
 
 
 %% input setup: For Kitty normal and moderate in two folders
@@ -22,12 +22,25 @@ folder_input_normal = fullfile(codecorresParentfolder, 'm0_normalCOTData_extract
 folder_input_moderate = fullfile(codecorresParentfolder, 'm0_SKTData_extract');
 
 %  animal 
-[i,j]= regexp(folder_input_moderate, 'NHPs/[A-Za-z]*');
-animal = folder_input_moderate(i + length('NHPs/'):j);
+if ismac
+    % Code to run on Mac platform
+elseif isunix
+    % Code to run on Linux platform
+    
+    [fi, j] = regexp(codecorresfolder, ['NHPs', '/', '[A-Za-z]*']);
+elseif ispc
+    % Code to run on Windows platform
+    
+    [fi, j] = regexp(codecorresfolder, ['NHPs', '\\', '[A-Za-z]*']);
+else
+    disp('Platform not supported')
+end
+animal = codecorresfolder(fi + length('NHPs') + 1:j);
+
 
 
 %% save setup
-savefolder = correspipelinefolder;
+savefolder = codecorresfolder;
 savefilename = [animal '_timeStaComp'];
 
 

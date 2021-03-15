@@ -1,6 +1,6 @@
-function m2_SKTData_Spectrogram_SingleTrial()
+function m2_SKTData_spectrogram_singleDay()
 %  extract lfp data respect to reachonset
-% 
+%
 %  return:
 %        lfptrials: nchns * ntemp * ntrials
 
@@ -24,26 +24,65 @@ addpath(genpath(fullfile(codefolder,'NHPs')));
 [codecorresfolder, codecorresParentfolder] = code_corresfolder(codefilepath, true, false);
 
 %% global variables
+
 % animal
-[fi, j] = regexp(codecorresfolder, fullfile('NHPs','[A-Za-z]*'));
-animal = codecorresfolder(fi + length('NHPs/'):j);
+if ismac
+    % Code to run on Mac platform
+elseif isunix
+    % Code to run on Linux platform
+    
+    [fi, j] = regexp(codecorresfolder, ['NHPs', '/', '[A-Za-z]*']);
+elseif ispc
+    % Code to run on Windows platform
+    
+    [fi, j] = regexp(codecorresfolder, ['NHPs', '\\', '[A-Za-z]*']);
+else
+    disp('Platform not supported')
+end
+animal = codecorresfolder(fi + length('NHPs') + 1:j);
 
 
 %%  input setup
 
-% input folder: extracted raw rest data with grayMatter 
+% input folder: extracted raw rest data with grayMatter
 inputfolder = fullfile(codecorresParentfolder, 'm1_SKTData_avgArea');
 
 
-t_minmax_reach_normal = [0.5, 1];
-t_minmax_return_normal = [0.5, 1];
-t_minmax_reach_mild = [0.5, 1];
-t_minmax_return_mild = [0.5, 1];
+% assign t_minmax_reach/return_normal/mild/moderate and
+% tdur_trial_normal_mild for each NHP
+if strcmpi(animal, 'Bug')
+    t_minmax_reach_normal = [0.5, 1];
+    t_minmax_return_normal = [0.5, 1];
+    t_minmax_reach_mild = [0.5, 1];
+    t_minmax_return_mild = [0.5, 1];
+    
+    tdur_trial_normal = [-0.6 1];
+    tdur_trial_mild = [-0.6 1];
+end
+if strcmpi(animal, 'Jo')
+    t_minmax_reach_normal = [0.5, 1];
+    t_minmax_return_normal = [0.5, 1];
+    t_minmax_reach_mild = [0.5, 1];
+    t_minmax_return_mild = [0.5, 1];
+    
+    tdur_trial_normal = [-0.6 1];
+    tdur_trial_mild = [-0.6 1];
+end
+if strcmpi(animal, 'Kitty') % Kitty not have mild
+    t_minmax_reach_normal = [0.5, 1];
+    t_minmax_return_normal = [0.5, 1];
+    t_minmax_reach_moderate = [0.5, 1];
+    t_minmax_return_moderate = [0.5, 1];
+    
+    tdur_trial_normal = [-0.6 1];
+    tdur_trial_mild = [-0.6 1];
+end
+
+
+
+
 
 align2 = SKTEvent.ReachOnset;
-tdur_trial_normal = [-0.6 1];
-tdur_trial_mild = [-0.6 1];
-
 coli_reachonset = uint32(SKTEvent.ReachOnset);
 coli_reach = uint32(SKTEvent.Reach);
 coli_returnonset = uint32(SKTEvent.ReturnOnset);
@@ -68,29 +107,29 @@ for filei = 1: length(files)
         tdur_trial = tdur_trial_normal;
         t_minmax_reach = t_minmax_reach_normal;
         t_minmax_return = t_minmax_return_normal;
-        cond = 'normal';
+        pdcond = 'normal';
     else
         if contains(filename, 'mild')
             tdur_trial = tdur_trial_mild;
             t_minmax_reach = t_minmax_reach_mild;
             t_minmax_return = t_minmax_return_mild;
-            cond = 'mild';
+            pdcond = 'mild';
         end
     end
-    
+
     ntrials = size(lfpdata, 3);
-    goodtrials = ones(ntrials,1);
+    lfp_phase_trials = [];
     for tri = 1: ntrials
         
         % select trials based on reach and return duration
         t_reach = (T_idxevent{tri, coli_reach} - T_idxevent{tri, coli_reachonset}) / fs;
         t_return = (T_idxevent{tri, coli_mouth} - T_idxevent{tri, coli_returnonset}) / fs;
         if t_reach < t_minmax_reach(1) || t_reach > t_minmax_reach(2)
-            clear t_reach
+            clear t_reach t_return
             continue
         end
         if t_return < t_minmax_return(1) || t_reach > t_minmax_return(2)
-            clear t_return
+            clear t_reach t_return
             continue
         end
         
@@ -98,30 +137,31 @@ for filei = 1: length(files)
         idxdur = round(tdur_trial * fs) + T_idxevent{tri, coli_align2};
         lfp_phase_1trial = lfpdata(:, idxdur(1):idxdur(2), tri); % lfp_phase_1trial: nchns * ntemp
         
+        lfp_phase_trials = cat(3, lfp_phase_trials, lfp_phase_1trial); % lfp_phase_trials: nchns * ntemp * ntrials
         
-        savename = fullfile(savefolder, [filename(1:end-length('.mat')) '_tr' num2str(tri)]);
-        plot_spectrogram(lfp_phase_1trial, T_chnsarea, fs, animal, cond, align2,tdur_trial, savename)
-        
-        
-%         % manualy check the good('y') and the bad (n) segment
-%         reply = input(['triali=' num2str(tri) '/' num2str(ntrials) ', remain this trial? y/n [y]:'], 's');
-%         if isempty(reply)
-%             reply = 'y';
-%         end
-%         reply = lower(reply);
-%         if reply == 'n'
-%             goodtrials(tri) = 0;
-%         end
-        
+        clear lfp_phase_1trial t_reach t_return
+        clear idxdur 
     end
     
+    
+    savename = fullfile(savefolder, filename(1:end-length('.mat')));
+    plot_spectrogram(lfp_phase_trials, T_chnsarea, fs, animal, pdcond, align2, tdur_trial, savename)
+    
+    close all
+    clear filename lfpdata T_idxevent fs T_chnsarea
+    clear tdur_trial t_minmax_reach t_minmax_return
+    clear ntrials lfp_phase_trials tri
+    clear savename
+end
+
 end
 
 
-function plot_spectrogram(lfp_1trial, T_chnsarea, fs, animal, pdcond, align2, tdur_trial, savename)
+
+function plot_spectrogram(lfptrials, T_chnsarea, fs, animal, pdcond, align2, tdur_trial, savename)
 %%
 %   Inputs:
-%           lfp_1trial: nchns * ntemp
+%           lfptrials: nchns * ntemp * ntrials
 %
 
 close all
@@ -129,7 +169,7 @@ close all
 % global parameters
 twin = 0.2;
 toverlap = 0.15;
-f_AOI = [8 50];
+f_AOI = [5 40];
 
 
 nwin = round(twin * fs);
@@ -146,17 +186,17 @@ for idxGi = 1 : length(idxGroups)
     idxs = idxGroups{idxGi};
     
     if idxGi == 1
-        clim = [-120 -90];
+        clim = [-120 -80];
         areaG = 'STN';
     end
     
     if idxGi == 2
-        clim = [-150 -120];
+        clim = [-120 -90];
         areaG = 'GP';
     end
     
     if idxGi == 3
-        clim = [-120 -100];
+        clim = [-100 -80];
         areaG = 'noTDBS';
     end
     
@@ -171,8 +211,17 @@ for idxGi = 1 : length(idxGroups)
         
         
         % calculate psds: nf * nt * ntrials
-        x = lfp_1trial(chnMask, :);
-        [~, f, t, psd] = spectrogram(x, nwin, noverlap,[],fs); % psd: nf * nt
+        psds = [];
+        for triali = 1: size(lfptrials, 3)
+            x = lfptrials(chnMask, : , triali);
+            
+            [~, f, t, ps] = spectrogram(x, nwin, noverlap,[],fs); % ps: nf * nt
+            
+            psds = cat(3, psds, ps);
+            
+            clear x ps
+        end
+        psd = mean(psds, 3);
         
         idx_f = (f>=f_AOI(1) &  f<=f_AOI(2));
         f_selected =  f(idx_f);
@@ -206,6 +255,9 @@ for idxGi = 1 : length(idxGroups)
     savefile = [savename '_' areaG];
     saveas(gcf, savefile, 'png');
 end
+
+end
+
 
 
 

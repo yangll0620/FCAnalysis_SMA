@@ -1,5 +1,9 @@
 clear
-mafolder = 'C:\Users\nmrc3\Desktop\Bug_062818\Block-3';
+% add util path
+codefolder = 'H:\My Drive\NMRC_umn\Projects\FCAnalysis\exp\code';
+addpath(genpath(fullfile(codefolder,'util')));
+
+mafolder = 'C:\Users\nmrc3\Desktop\Bug Data\Bug_060518\Block-1';
 
 mafilestruct = dir(fullfile(mafolder, '*SingleTargetKluver_Analyze2.mat'));
 

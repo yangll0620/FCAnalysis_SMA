@@ -1,9 +1,12 @@
 function m1_SKTData_avgArea()
 %% average lfp across each area
 %
-%   remove unwanted stn3-4, stn4-5, stn5-6 and stn6-7
 %
-%   averaged across Brain area except DBS 
+%   1. remove chns marked with multiple areas or GP/STN in Gray Matter
+%   2. average across each GM area (no DBS)
+%   3. change STN/GP into stn0-1, stn1-2... gp0-1, gp1-2 et.al
+%   4. remove unwanted DBS chns
+
 
 
 codefilepath = mfilename('fullpath');
@@ -46,8 +49,18 @@ animal = codecorresfolder(fi + length('NHPs') + 1:j);
 % input folder: extracted raw STK data 
 inputfolder = fullfile(codecorresParentfolder, 'm0_SKTData_extract');
 
-
 unwanted_DBS = {};
+
+if strcmpi(animal,'Jo')
+    unwanted_DBS = {'stn4-5', 'stn5-6', 'stn6-7'};
+end
+if strcmpi(animal,'Kitty')
+    unwanted_DBS = {'stn3-4', 'stn4-5', 'stn5-6', 'stn6-7', 'gp6-7'};
+end
+if strcmpi(animal,'Kitty')
+    unwanted_DBS = {'stn0-1', 'stn1-2', 'stn2-3', 'stn6-7', 'gp0-1'};
+end
+
 
 %% save setup
 savefolder = codecorresfolder;
@@ -77,6 +90,7 @@ for fi = 1 : nfiles
     T_chnsarea = T_chnsarea(~multipleAreas_mask & ~GPSTNinGM_mask, :); T_chnsarea.chni = [1:height(T_chnsarea)]';
     lfpdata = lfpdata(~multipleAreas_mask, :, :);
     
+    
     % average across each GM area
     mask_notDBS = ~strcmp(T_chnsarea.electype, 'DBS');
     mask_DBS = strcmp(T_chnsarea.electype, 'DBS');
@@ -93,7 +107,7 @@ for fi = 1 : nfiles
     
     
     
-    % change STN into stn0-1, stn1-2 et.al
+    % change STN/GP into stn0-1, stn1-2... gp0-1, gp1-2 et.al
     for i = 1: height(T_DBSchnsarea)
         chn = T_DBSchnsarea(i, :).recordingchn;
         barea = cell2mat(T_DBSchnsarea(i, :).brainarea);

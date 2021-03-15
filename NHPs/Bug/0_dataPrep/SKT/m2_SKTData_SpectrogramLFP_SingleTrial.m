@@ -1,6 +1,6 @@
-function m2_SKTData_spectrogram_singleDay()
+function m2_SKTData_SpectrogramLFP_SingleTrial()
 %  extract lfp data respect to reachonset
-%
+% 
 %  return:
 %        lfptrials: nchns * ntemp * ntrials
 
@@ -24,27 +24,14 @@ addpath(genpath(fullfile(codefolder,'NHPs')));
 [codecorresfolder, codecorresParentfolder] = code_corresfolder(codefilepath, true, false);
 
 %% global variables
-
 % animal
-if ismac
-    % Code to run on Mac platform
-elseif isunix
-    % Code to run on Linux platform
-    
-    [fi, j] = regexp(codecorresfolder, ['NHPs', '/', '[A-Za-z]*']);
-elseif ispc
-    % Code to run on Windows platform
-    
-    [fi, j] = regexp(codecorresfolder, ['NHPs', '\\', '[A-Za-z]*']);
-else
-    disp('Platform not supported')
-end
-animal = codecorresfolder(fi + length('NHPs') + 1:j);
+[fi, j] = regexp(codecorresfolder, fullfile('NHPs','[A-Za-z]*'));
+animal = codecorresfolder(fi + length('NHPs/'):j);
 
 
 %%  input setup
 
-% input folder: extracted raw rest data with grayMatter
+% input folder: extracted raw rest data with grayMatter 
 inputfolder = fullfile(codecorresParentfolder, 'm1_SKTData_avgArea');
 
 
@@ -81,18 +68,19 @@ for filei = 1: length(files)
         tdur_trial = tdur_trial_normal;
         t_minmax_reach = t_minmax_reach_normal;
         t_minmax_return = t_minmax_return_normal;
-        pdcond = 'normal';
+        cond = 'normal';
     else
         if contains(filename, 'mild')
             tdur_trial = tdur_trial_mild;
             t_minmax_reach = t_minmax_reach_mild;
             t_minmax_return = t_minmax_return_mild;
-            pdcond = 'mild';
+            cond = 'mild';
         end
     end
     
     ntrials = size(lfpdata, 3);
-    lfp_phase_trials = [];
+    goodtrials = ones(ntrials,1);
+    lfp_phase_oneday = [];
     for tri = 1: ntrials
         
         % select trials based on reach and return duration
@@ -111,26 +99,17 @@ for filei = 1: length(files)
         idxdur = round(tdur_trial * fs) + T_idxevent{tri, coli_align2};
         lfp_phase_1trial = lfpdata(:, idxdur(1):idxdur(2), tri); % lfp_phase_1trial: nchns * ntemp
         
-        lfp_phase_trials = cat(3, lfp_phase_trials, lfp_phase_1trial); % lfp_phase_trials: nchns * ntemp * ntrials
+        lfp_phase_oneday = cat(3, lfp_phase_oneday, lfp_phase_1trial); % lfp_phase_1trial: nchns * ntemp * ntrials
         
-        clear lfp_phase_1trial
     end
     
-    
-    savename = fullfile(savefolder, filename(1:end-length('.mat')));
-    plot_spectrogram(lfp_phase_trials, T_chnsarea, fs, animal, pdcond, align2, tdur_trial, savename)
-    
-    close all
-end
-
 end
 
 
-
-function plot_spectrogram(lfptrials, T_chnsarea, fs, animal, pdcond, align2, tdur_trial, savename)
+function plot_spectrogramLFP(lfp_1trial, T_chnsarea, fs, animal, pdcond, align2, tdur_trial, savename)
 %%
 %   Inputs:
-%           lfptrials: nchns * ntemp * ntrials
+%           lfp_1trial: nchns * ntemp
 %
 
 close all
@@ -154,24 +133,32 @@ idxGroups = [{find(mask_STN)}; {find(mask_GP)}; {find(mask_Others)}];
 for idxGi = 1 : length(idxGroups)
     idxs = idxGroups{idxGi};
     
+    if length(idxs) <= 4
+        rows = 2; cols = 2;
+        
+    else 
+        rows = 3; cols = 3;
+    end
+    
     if idxGi == 1
-        clim = [-120 -80];
+        clim = [-120 -90];
         areaG = 'STN';
     end
     
     if idxGi == 2
-        clim = [-120 -90];
+        clim = [-150 -120];
         areaG = 'GP';
     end
     
     if idxGi == 3
-        clim = [-100 -80];
+        clim = [-120 -100];
         areaG = 'noTDBS';
     end
     
     
     figure;
-    set(gcf, 'PaperUnits', 'points',  'Position', [0, 0, 1900 1080]);
+    set(gcf, 'PaperUnits', 'points',  'Position', [0, 0, 900 500]);
+    
     
     for idxi = 1 : length(idxs)
         areai = idxs(idxi);
@@ -180,17 +167,8 @@ for idxGi = 1 : length(idxGroups)
         
         
         % calculate psds: nf * nt * ntrials
-        psds = [];
-        for triali = 1: size(lfptrials, 3)
-            x = lfptrials(chnMask, : , triali);
-            
-            [~, f, t, ps] = spectrogram(x, nwin, noverlap,[],fs); % ps: nf * nt
-            
-            psds = cat(3, psds, ps);
-            
-            clear x ps
-        end
-        psd = mean(psds, 3);
+        x = lfp_1trial(chnMask, :);
+        [~, f, t, psd] = spectrogram(x, nwin, noverlap,[],fs); % psd: nf * nt
         
         idx_f = (f>=f_AOI(1) &  f<=f_AOI(2));
         f_selected =  f(idx_f);
@@ -224,9 +202,6 @@ for idxGi = 1 : length(idxGroups)
     savefile = [savename '_' areaG];
     saveas(gcf, savefile, 'png');
 end
-
-end
-
 
 
 
