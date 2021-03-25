@@ -1,9 +1,12 @@
 clear
+
+animal = 'Kitty';
+
 % add util path
 codefolder = 'H:\My Drive\NMRC_umn\Projects\FCAnalysis\exp\code';
 addpath(genpath(fullfile(codefolder,'util')));
 
-mafolder = 'C:\Users\nmrc3\Desktop\Bug Data\Bug_090419\Block-3';
+mafolder = 'H:\My Drive\NMRC_umn\Projects\FCAnalysis\exp\data\Kitty\Recording\Processed\DataDatabase\Kitty_041015\Block-1';
 
 mafilestruct = dir(fullfile(mafolder, '*SingleTargetKluver_Analyze2.mat'));
 
@@ -32,7 +35,7 @@ disp(['number of good trials = ' num2str(length(idx_goodtrials))])
 % get the pd conditioon for the date of experiment
 tmps = split(mafolder, '_');
 dateofexp = datenum(tmps{2}(1:6), 'mmddyy');
-pdcondition = parsePDCondition(dateofexp, 'Bug');
+pdcondition = parsePDCondition(dateofexp, animal);
 
 % ma sample rate
 fs_ma = SingleTargetKluverMAData.SR;
@@ -50,6 +53,6 @@ timeixtbl_ma = timeixtbl_ma(idx_goodtrials,:);
 
 onedayReachTimes = (timeixtbl_ma.TouchTimeix - timeixtbl_ma.ReachTimeix)/ fs_ma;
 onedayReturnTimes = (timeixtbl_ma.MouthTimeix - timeixtbl_ma.ReturnTimeix)/ fs_ma;
-disp([datestr(dateofexp, 'yyyymmdd') pdcondition ' avg reach time = ' num2str(mean(onedayReachTimes)) ...
-    ', return time = ' num2str(mean(onedayReturnTimes))])
 
+
+boxplot([onedayReachTimes onedayReturnTimes]);

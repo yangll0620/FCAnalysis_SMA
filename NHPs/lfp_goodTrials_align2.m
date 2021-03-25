@@ -1,4 +1,4 @@
-function [lfptrials, fs, T_chnsarea] = lfp_align2(files, align2, tdur_trial, t_minmax_reach, t_minmax_return)
+function [lfptrials, fs, T_chnsarea] = lfp_goodTrials_align2(files, align2, tdur_trial, t_minmax_reach, t_minmax_return)
 % extract lfp data respect to targetonset, reachonset, reach and returnonset separately
 
 % 
@@ -42,7 +42,7 @@ for filei = 1 : nfiles
     
     % load data, lfpdata: [nchns, ntemps, ntrials]
     filename = files(filei).name;
-    load(fullfile(files(filei).folder, filename), 'lfpdata', 'T_idxevent');
+    load(fullfile(files(filei).folder, filename), 'lfpdata', 'T_idxevent', 'goodTrials');
     
     if(height(T_idxevent) == 1)
         disp([filename ' has only 1 trial, skip!']);
@@ -53,6 +53,11 @@ for filei = 1 : nfiles
     
     ntrials = size(lfpdata, 3);
     for tri = 1: ntrials
+        
+        % ignore trials marked with 0
+        if ~goodTrials(tri)
+            continue
+        end
         
         % select trials based on reach and return duration
         t_reach = (T_idxevent{tri, coli_reach} - T_idxevent{tri, coli_reachonset}) / fs;
@@ -75,4 +80,5 @@ for filei = 1 : nfiles
         
         clear t_reach t_return idxdur lfp_phase_1trial
     end
+end
 end

@@ -129,7 +129,7 @@ load(file_dateBlocks, 't_dateBlocks_SKT_noDBS');
 close all
 f = waitbar(0, ['Extracting all STK trials']);
 nrecords = height(t_dateBlocks_SKT_noDBS);
-for i = 1 : nrecords
+for i = 99 : nrecords
     % waitbar
     waitbar(i/nrecords,f,['i = ' num2str(i) ', Extracting trials in file ' num2str(i) '/' num2str(nrecords)]);
     
@@ -509,11 +509,7 @@ end
 % disp play the max trial time
 disp(['max trial time for today is ' num2str(maxlen/fs_lfpcortical)]);
 
-if maxlen/fs_lfpcortical > 5
-    disp('Abandon the file with max trial time > 5s')
-    lfptrial_cortical = []; lfptrial_dbs = []; fs =[]; idxeventtbl = []; chantbl_dbs = [];
-    return
-end
+
 
 %% DBSLFP data
 % read DBSLFP in nex file

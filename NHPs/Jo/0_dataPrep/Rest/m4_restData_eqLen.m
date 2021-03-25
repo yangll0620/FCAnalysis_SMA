@@ -1,4 +1,4 @@
-function m4_restData_eqLen()
+ function m4_restData_eqLen()
     %%  Seg into equal length 
     %
     %   Input:

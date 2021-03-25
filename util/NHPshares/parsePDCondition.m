@@ -25,6 +25,11 @@ if strcmp(animal, 'bug')
     period_moderate = [datenum(datetime('2020-5-26'))];
 end
 
+if strcmpi(animal, 'kitty')
+    period_normal = [datenum(datetime('2014-07-08')) datenum(datetime('2014-10-26'))];
+    period_moderate = [datenum(datetime('2015-4-01'))];
+end
+
 
 
 % identify the NHP PD condition
@@ -33,19 +38,12 @@ if dateofexp >= period_normal(1) && dateofexp <= period_normal(2)
     condition  = 'normal';
 end
 
-if dateofexp > period_normal(2) && dateofexp < period_mild(1)
-    condition = 'tomild';
-end
-
-if dateofexp >= period_mild(1) && dateofexp <= period_mild(2)
+if exist('period_mild', 'var') && dateofexp >= period_mild(1) && dateofexp <= period_mild(2)
     condition = 'mild';
 end
 
-if dateofexp > period_mild(2) && dateofexp < period_moderate(1)
-   condition = 'tomoderate';
-end 
 
-if dateofexp >= period_moderate(1)
+if exist('period_moderate', 'var') && dateofexp >= period_moderate(1)
     condition = 'moderate';
 end
 

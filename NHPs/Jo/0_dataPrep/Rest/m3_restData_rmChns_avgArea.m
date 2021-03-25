@@ -34,16 +34,28 @@ function m3_restData_rmChns_avgArea()
 
     %% global variables
     % animal
-    [fi, j] = regexp(codecorresfolder, 'NHPs/[A-Za-z]*');
-    animal = codecorresfolder(fi + length('NHPs/'):j);
+    if ismac
+        % Code to run on Mac platform
+    elseif isunix
+        % Code to run on Linux platform
+        
+        [fi, j] = regexp(codecorresfolder, ['NHPs', '/', '[A-Za-z]*']);
+    elseif ispc
+        % Code to run on Windows platform
+        
+        [fi, j] = regexp(codecorresfolder, ['NHPs', '\\', '[A-Za-z]*']);
+    else
+        disp('Platform not supported')
+    end
+    animal = codecorresfolder(fi + length('NHPs') + 1:j);
 
     %%  input setup
 
     % input folder: extracted raw rest data with grayMatter
     inputfolder = fullfile(codecorresParentfolder, 'm2_restData_selectSeg_Power');
     
-    unWAreas = {'stn3-4', 'stn4-5', 'stn5-6', 'stn6-7'};
-
+    unwanted_DBS = unwanted_DBS_extract(animal);
+    
     %% save setup
     savefolder = codecorresfolder;
     savefilename_addstr = 'selAreas_avgArea';
@@ -89,7 +101,7 @@ function m3_restData_rmChns_avgArea()
         disp(filename);
         
         % rm unwanted areas and average across areas
-        [data_segments, T_chnsarea_new] = rmChns_avgArea_1file(data_segments, T_chnsarea, unWAreas);
+        [data_segments, T_chnsarea_new] = rmChns_avgArea_1file(data_segments, T_chnsarea, unwanted_DBS);
         
 
         

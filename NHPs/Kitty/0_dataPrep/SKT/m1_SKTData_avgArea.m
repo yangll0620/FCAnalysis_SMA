@@ -14,8 +14,9 @@ codefilepath = mfilename('fullpath');
 % codefolder = '/home/lingling/Insync/yang7003@umn.edu/NMRC_umn/Projects/FCAnalysis/exp/code'
 codefolder = codefilepath(1: strfind(codefilepath, 'code') + length('code')-1);
 
-% add util path
+% add util path and NHP path
 addpath(genpath(fullfile(codefolder,'util')));
+addpath(genpath(fullfile(codefolder,'NHPs')));
 
 % add NexMatablFiles path
 addpath(genpath(fullfile(codefolder, 'toolbox', 'NexMatlabFiles')))
@@ -48,18 +49,8 @@ animal = codecorresfolder(fi + length('NHPs') + 1:j);
 % input folder: extracted raw STK data 
 inputfolder = fullfile(codecorresParentfolder, 'm0_SKTData_extract');
 
+unwanted_DBS = unwanted_DBS_extract(animal);
 
-unwanted_DBS = {};
-
-if strcmpi(animal,'Jo')
-    unwanted_DBS = {'stn4-5', 'stn5-6', 'stn6-7'};
-end
-if strcmpi(animal,'Kitty')
-    unwanted_DBS = {'stn3-4', 'stn4-5', 'stn5-6', 'stn6-7', 'gp6-7'};
-end
-if strcmpi(animal,'Jo')
-    unwanted_DBS = {'stn0-1', 'stn1-2', 'stn2-3', 'stn6-7', 'gp0-1'};
-end
 
 
 %% save setup

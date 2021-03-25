@@ -41,7 +41,7 @@ function m3_restData_rmChns_avgArea()
     % input folder: extracted raw rest data with grayMatter
     inputfolder = fullfile(codecorresParentfolder, 'm2_restData_selectSeg_Power');
     
-    unWAreas = {'lCd', 'rMC', 'stn0-1', 'stn0-1', 'stn1-2', 'stn2-3', 'stn6-7', 'gp0-1', ...
+    unWAreas = {'lCd', 'rMC', 'stn0-1', 'stn1-2', 'stn2-3', 'stn6-7', 'gp0-1', ...
                 'lSMA', 'lVA', 'lVLo/VPLo'};
 
     %% save setup

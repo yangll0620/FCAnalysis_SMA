@@ -29,7 +29,22 @@ function m2_restData_selectSeg_Power()
     [codecorresfolder, codecorresParentfolder] = code_corresfolder(codefilepath, true, false);
 
     %% global parameters
-    animal = 'Jo';
+    
+    % animal
+    if ismac
+        % Code to run on Mac platform
+    elseif isunix
+        % Code to run on Linux platform
+        
+        [fi, j] = regexp(codecorresfolder, ['NHPs', '/', '[A-Za-z]*']);
+    elseif ispc
+        % Code to run on Windows platform
+        
+        [fi, j] = regexp(codecorresfolder, ['NHPs', '\\', '[A-Za-z]*']);
+    else
+        disp('Platform not supported')
+    end
+    animal = codecorresfolder(fi + length('NHPs') + 1:j);
 
     %% input setup
     inputfolder = fullfile(codecorresParentfolder, 'm1_restData_cleaned_extract');

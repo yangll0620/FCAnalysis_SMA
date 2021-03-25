@@ -49,17 +49,8 @@ animal = codecorresfolder(fi + length('NHPs') + 1:j);
 % input folder: extracted raw STK data 
 inputfolder = fullfile(codecorresParentfolder, 'm0_SKTData_extract');
 
-unwanted_DBS = {};
+unwanted_DBS = unwanted_DBS_extract(animal);
 
-if strcmpi(animal,'Jo')
-    unwanted_DBS = {'stn4-5', 'stn5-6', 'stn6-7'};
-end
-if strcmpi(animal,'Kitty')
-    unwanted_DBS = {'stn3-4', 'stn4-5', 'stn5-6', 'stn6-7', 'gp6-7'};
-end
-if strcmpi(animal,'Kitty')
-    unwanted_DBS = {'stn0-1', 'stn1-2', 'stn2-3', 'stn6-7', 'gp0-1'};
-end
 
 
 %% save setup
