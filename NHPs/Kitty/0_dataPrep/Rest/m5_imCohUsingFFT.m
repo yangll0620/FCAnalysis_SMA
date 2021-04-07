@@ -202,7 +202,7 @@ for ci = 1 : length(conds)
         [m, n, c] =  size(image);
     catch
         if exist('m', 'var')
-            image = zeros(m,n,c);
+            image = ones(m,n,c);
         end
     end
     

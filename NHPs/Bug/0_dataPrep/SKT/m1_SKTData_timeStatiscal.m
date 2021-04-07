@@ -56,17 +56,26 @@ coli_mouth = 5;
 pdcond  = 'normal';
 files = dir(fullfile(folder_input, ['*_' pdcond '_*.mat']));
 t_event = [];
+datebks = [];
 for fi = 1: length(files)
-    load(fullfile(folder_input, files(fi).name), 'T_idxevent', 'fs');
+    filename = files(fi).name;
+    dateBkStr = regexp(filename, [pdcond '_[0-9]*_bktdt[0-9]*'], 'match');
     
-    t_event = cat(1, t_event, T_idxevent{:, :}/ fs);
+    load(fullfile(files(fi).folder, files(fi).name), 'T_idxevent', 'fs');
+
+    t_event_today = T_idxevent{:, :}/ fs;
+    dateBk_today = cell(size(t_event_today, 1), 1);
+    dateBk_today(:) = dateBkStr;
     
-    clear T_idxevent
+    t_event = cat(1, t_event, t_event_today);
+    datebks = cat(1, datebks, dateBk_today);
+    
+    clear T_idxevent filename dateBkStr t_event_today dateBk_today
 end
 t_reach = t_event(:, coli_touch) - t_event(:, coli_reachonset);
 t_return = t_event(:, coli_mouth) - t_event(:, coli_returnonset);
-tbl_normal = table(t_reach, t_return);
-clear t_reach t_return pdcond files t_event
+tbl_normal = table(datebks, t_reach, t_return);
+clear t_reach t_return pdcond files t_event datebks
 
 
 
@@ -74,27 +83,29 @@ clear t_reach t_return pdcond files t_event
 pdcond  = 'mild';
 files = dir(fullfile(folder_input, ['*_' pdcond '_*.mat']));
 t_event = [];
+datebks = [];
 for fi = 1: length(files)
-    load(fullfile(folder_input, files(fi).name), 'T_idxevent', 'fs');
+    filename = files(fi).name;
+    dateBkStr = regexp(filename, [pdcond '_[0-9]*_bktdt[0-9]*'], 'match');
     
-    t_event = cat(1, t_event, T_idxevent{:, :}/ fs);
+    load(fullfile(files(fi).folder, files(fi).name), 'T_idxevent', 'fs');
+
+    t_event_today = T_idxevent{:, :}/ fs;
+    dateBk_today = cell(size(t_event_today, 1), 1);
+    dateBk_today(:) = dateBkStr;
     
-    clear T_idxevent
+    t_event = cat(1, t_event, t_event_today);
+    datebks = cat(1, datebks, dateBk_today);
+    
+    clear T_idxevent filename dateBkStr t_event_today dateBk_today
 end
 t_reach = t_event(:, coli_touch) - t_event(:, coli_reachonset);
 t_return = t_event(:, coli_mouth) - t_event(:, coli_returnonset);
-tbl_mild = table(t_reach, t_return);
-clear t_reach t_return pdcond files t_event
+tbl_mild = table(datebks, t_reach, t_return);
+clear t_reach t_return pdcond files t_event datebks
 
 
-%%% remove the trials with super longer reach and return
-t_maxreach = 2;
-t_maxreturn = 2;
-tbl_normal = tbl_normal(tbl_normal.t_reach<=t_maxreach & tbl_normal.t_return<=t_maxreturn,:);
-tbl_mild = tbl_mild(tbl_mild.t_reach<=t_maxreach & tbl_mild.t_return<=t_maxreturn,:);
-
-
-%%% plot normal, mild and mild comparison %%%
+%%% plot normal, mild and moderate comparison %%%
 figure('Position',[675 549 570* 2 413]);
 
 % position of each subplot
@@ -241,9 +252,9 @@ savefile = fullfile(savefolder, savefilename);
 saveas(gcf, savefile, 'png');
 
 % save task time 
-rowNames = {'normalCOT', 'moderateSKT'};
+rowNames = {'normal', 'mild'};
 
-coli = 1;
+coli = 2;
 t_median = [median(tbl_normal{:,coli});  median(tbl_mild{:,coli})];
 t_10 = [quantile(tbl_normal{:,coli}, 0.1);  quantile(tbl_mild{:,coli}, 0.1)];
 t_25 = [quantile(tbl_normal{:,coli}, 0.25);  quantile(tbl_mild{:,coli}, 0.25)];
@@ -251,7 +262,7 @@ t_75 = [quantile(tbl_normal{:,coli}, 0.75); quantile(tbl_mild{:,coli}, 0.75)];
 t_90 = [quantile(tbl_normal{:,coli}, 0.9);  quantile(tbl_mild{:,coli}, 0.9)];
 tbl_staReachT = table(t_median, t_10, t_25, t_75, t_90,'rowNames', rowNames);
 
-coli = 2;
+coli = 3;
 t_median = [median(tbl_normal{:,coli});  median(tbl_mild{:,coli})];
 t_10 = [quantile(tbl_normal{:,coli}, 0.1);  quantile(tbl_mild{:,coli}, 0.1)];
 t_25 = [quantile(tbl_normal{:,coli}, 0.25); quantile(tbl_mild{:,coli}, 0.25)];

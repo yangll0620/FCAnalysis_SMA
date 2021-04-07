@@ -3,7 +3,7 @@ clear
 codefolder = 'H:\My Drive\NMRC_umn\Projects\FCAnalysis\exp\code';
 addpath(genpath(fullfile(codefolder,'util')));
 
-mafolder = 'C:\Users\nmrc3\Desktop\Bug Data\Bug_090419\Block-3';
+mafolder = 'C:\Users\nmrc3\Desktop\Bug Data\Bug_060719\Block-3';
 
 mafilestruct = dir(fullfile(mafolder, '*SingleTargetKluver_Analyze2.mat'));
 

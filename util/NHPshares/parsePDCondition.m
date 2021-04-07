@@ -1,4 +1,4 @@
-function condition = parsePDCondition(dateofexp, animal)
+function pdcond = parsePDCondition(dateofexp, animal)
 % parsePDCondtion parse the PD condition
 %   parsePDCondtion_Pinky() return the PD condition (string) of one
 %   particular experimental date
@@ -27,24 +27,24 @@ end
 
 if strcmpi(animal, 'kitty')
     period_normal = [datenum(datetime('2014-07-08')) datenum(datetime('2014-10-26'))];
-    period_moderate = [datenum(datetime('2015-4-01'))];
+    period_moderate = [datenum(datetime('2014-12-09'))];
 end
 
 
 
 % identify the NHP PD condition
-condition = '';
+pdcond = '';
 if dateofexp >= period_normal(1) && dateofexp <= period_normal(2)
-    condition  = 'normal';
+    pdcond  = 'normal';
 end
 
 if exist('period_mild', 'var') && dateofexp >= period_mild(1) && dateofexp <= period_mild(2)
-    condition = 'mild';
+    pdcond = 'mild';
 end
 
 
 if exist('period_moderate', 'var') && dateofexp >= period_moderate(1)
-    condition = 'moderate';
+    pdcond = 'moderate';
 end
 
 

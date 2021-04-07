@@ -8,7 +8,6 @@ function m1_restData_cleaned_extract()
 %   3. remove data marked with movement 
 %   
 %   Inputs:
-%       configFile: datafolder/ config_m1lf_fromYing.mat
 %
 %       all_sync file: e.g /Block-1/Bug_20180411_1_all_sync.mat
 
@@ -45,7 +44,7 @@ folder_processed_root2 = fullfile('/home/lingling/root2/Animals2', animal, 'Reco
 
 
 % file_sycChecked by Ying
-file_sycChecked = fullfile(datafolder, animal, 'SycAllFileChecked.mat');
+file_sycChecked = fullfile(datafolder, 'root2', 'Ying Yu', 'Bug data','SycAllFileChecked.mat');
 
 % threshold used by Ying to extract cleaned resting data
 configFile = fullfile(datafolder, 'config_m1lf_fromYing.mat');

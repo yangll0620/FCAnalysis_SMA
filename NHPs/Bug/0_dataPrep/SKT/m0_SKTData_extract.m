@@ -129,7 +129,7 @@ load(file_dateBlocks, 't_dateBlocks_SKT_noDBS');
 close all
 f = waitbar(0, ['Extracting all STK trials']);
 nrecords = height(t_dateBlocks_SKT_noDBS);
-for i = 99 : nrecords
+for i = 1 : nrecords
     % waitbar
     waitbar(i/nrecords,f,['i = ' num2str(i) ', Extracting trials in file ' num2str(i) '/' num2str(nrecords)]);
     
