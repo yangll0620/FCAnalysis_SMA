@@ -34,6 +34,7 @@ codefolder = codefilepath(1: strfind(codefilepath, 'code') + length('code')-1);
 
 % add util path
 addpath(genpath(fullfile(codefolder,'util')));
+addpath(genpath(fullfile(codefolder,'NHPs')));
 
 % add NexMatablFiles path
 addpath(genpath(fullfile(codefolder, 'toolbox', 'NexMatlabFiles')))
@@ -65,7 +66,8 @@ animal = codecorresfolder(fi + length('NHPs') + 1:j);
 nSTN = 8; nGP = 8; nGM = 96;
 
 % Input dir:  preprocessed folder in root2
-inputfolder = fullfile(datafolder,animal, 'Recording', 'Processed', 'DataDatabase');
+inputfolder_normalMild = fullfile(datafolder,animal, 'Recording', 'Processed', 'DataDatabase');
+inputfolder_moderate = fullfile('Y:', 'Animals3', animal, 'Recording', 'Processed', 'DataDatabase');
 
 
 % master sheet
@@ -93,8 +95,7 @@ strformat_date_dateBlocks = 'yyyymmdd'; % the format of date string in master sh
 fs_new = 500;
 
 % conds
-conds_cell = {'normal', 'mild', 'moderate'};
-
+conds_cell = cond_cell_extract(animal);
 
 %% save setup
 savefolder = codecorresfolder;
@@ -144,17 +145,34 @@ for i = 1 : nrecords
     
     
     % get the pd conditioon for the date of experiment
-    pdcondition = parsePDCondition(dateofexp, animal);
+    pdcond = parsePDCondition(dateofexp, animal);
+    if ~strcmp(pdcond, 'moderate')
+        continue;
+    end
     
 
-    if ~any(strcmp(pdcondition, conds_cell)) % avoid tomild, tomoderate
+    if ~any(strcmp(pdcond, conds_cell)) % avoid tomild, tomoderate
         continue;
     end
     
     
     
     %%% extract oneday+tdtbk data %%%
+    savefilename = [savefilename_prefix  pdcond '_' datestr(dateofexp, strformat_date_save) '_bktdt' num2str(tdtbk) '.mat'];
+    savefile = fullfile(savefolder, savefilename);
+
     
+    switch pdcond
+        case 'normal'
+            inputfolder = inputfolder_normalMild;
+        case 'mild'
+            inputfolder = inputfolder_normalMild;
+        case 'moderate'
+            inputfolder = inputfolder_moderate;
+        otherwise
+            continue;
+    end
+        
     % one day path
     onedaypath = fullfile(inputfolder, [animal '_' datestr(dateofexp, 'mmddyy')]);
     
@@ -164,8 +182,25 @@ for i = 1 : nrecords
         continue;
     end
     
-    disp(['extracting ' onedaypath '-tdtbk' num2str(tdtbk)])
-   
+    if exist(savefile, 'file') % if already dealed
+        clear dateofexp tdtbk chnsUsed_M1 chnsUsed_PMC pdcond
+        clear savefilename savefile
+        continue;
+    end
+    
+    % check if mafile *_Analyze2.mat/ LFP/DBSLFP all exist
+    mafolder = fullfile(onedaypath, ['Block-' num2str(tdtbk)]); %  'Y:\Animals2\Pinky\Recording\Processed\DataDatabase\Pinky_071417\Block-1'
+    mafilestruct = dir(fullfile(mafolder, '*SingleTargetKluver_Analyze2.mat'));
+    folder_cortical = fullfile(onedaypath, 'LFP', ['Block-' num2str(tdtbk)]);
+    dbslfpfolder = fullfile(onedaypath, 'DBSLFP', ['Block-' num2str(tdtbk)]);
+    dbsfilepattern = fullfile(dbslfpfolder, ['*Block-' num2str(tdtbk) '_DBSLFP.nex']);
+    if isempty(mafilestruct) || isempty(dir(folder_cortical))|| isempty(dir(dbsfilepattern))
+        continue;
+    end
+    
+    disp([onedaypath '-tdtbk' num2str(tdtbk)])
+    continue;
+    
     % extract trials of lfp data for particular date and tdt block number, lfptrial_*: nchns * ntemp * ntrials
     [lfptrial_GM, lfptrial_dbs,fs,T_idxevent, T_dbsChn] = extractlfptrial_(onedaypath, tdtbk);
     
@@ -183,13 +218,13 @@ for i = 1 : nrecords
     %%% extract the lfptrial_GM used for brain areas %%%
     lfptrial_GM = lfptrial_GM([1:nGM], :,:);
     
-    if(strcmp(pdcondition, 'normal'))
+    if(strcmp(pdcond, 'normal'))
         T_chnsarea_GM = T_chnsarea_GM_normal;
     else
-        if (strcmp(pdcondition, 'mild'))
+        if (strcmp(pdcond, 'mild'))
             T_chnsarea_GM = T_chnsarea_GM_mild;
         else
-            if (strcmp(pdcondition, 'moderate'))
+            if (strcmp(pdcond, 'moderate'))
                 T_chnsarea_GM = T_chnsarea_GM_moderate;
             end
         end
@@ -263,15 +298,14 @@ for i = 1 : nrecords
     
     
     %%%  save  %%%
-    savefilename = [savefilename_prefix  pdcondition '_' datestr(dateofexp, strformat_date_save) '_bktdt' num2str(tdtbk)];
-    save(fullfile(savefolder, savefilename), 'lfpdata','fs', 'T_chnsarea', 'T_idxevent');
+    save(savefile, 'lfpdata','fs', 'T_chnsarea', 'T_idxevent');
     
     
     
     clear dateofexp tdtbk chnsUsed_M1 chnsUsed_PMC pdcondition
-    clear onedaypath
+    clear onedaypath inputfolder
     clear lfptrial_GM lfptrial_dbs fs T_idxevent T_dbsChn
-    clear lfpdata T_chnsarea savefilename
+    clear lfpdata T_chnsarea savefilename savefile
    
 end
 
@@ -336,7 +370,7 @@ mafilestruct = dir(fullfile(mafolder, '*SingleTargetKluver_Analyze2.mat'));
 
 % ma file does not exist
 if isempty(mafilestruct)
-    disp([mafolder 'has no Analyze2.mat'])
+    disp([mafolder ' has no Analyze2.mat'])
     
     lfptrial_cortical = []; lfptrial_dbs = [];
     fs = [];
@@ -344,6 +378,7 @@ if isempty(mafilestruct)
     
     return;
 end
+
 
 % load SingleTargetKluverMAData
 load(fullfile(mafolder, mafilestruct.name), 'SingleTargetKluverMAData'); 

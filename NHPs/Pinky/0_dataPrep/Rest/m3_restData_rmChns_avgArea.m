@@ -1,10 +1,10 @@
 function m3_restData_rmChns_avgArea()
     %%  average lfp acros each area
     %
-    %   1. combine lVlo and lVPLo, rVlo and rVPLo 
-    %   2. replace STN into stn0-1, stn1-2 .. and GP into gp0-1....
-    %   3. remove unwanted chns 
-    %	4. average across area
+    %   1. replace STN into stn0-1, stn1-2 .. and GP into gp0-1....
+    %   2. remove unwanted chns 
+    %   3. average across areas
+    %
     %
     % Input:
     %   m2_restData_selectSeg_Power
@@ -27,23 +27,35 @@ function m3_restData_rmChns_avgArea()
     % add util path
     addpath(genpath(fullfile(codefolder, 'util')));
     
+    addpath(genpath(fullfile('.', 'subFuncs')));
 
     % the corresponding pipeline and the parent folder for this code
     [codecorresfolder, codecorresParentfolder] = code_corresfolder(codefilepath, true, false);
 
     %% global variables
     % animal
-    [fi, j] = regexp(codecorresfolder, 'NHPs/[A-Za-z]*');
-    animal = codecorresfolder(fi + length('NHPs/'):j);
+    if ismac
+        % Code to run on Mac platform
+    elseif isunix
+        % Code to run on Linux platform
+        
+        [fi, j] = regexp(codecorresfolder, ['NHPs', '/', '[A-Za-z]*']);
+    elseif ispc
+        % Code to run on Windows platform
+        
+        [fi, j] = regexp(codecorresfolder, ['NHPs', '\\', '[A-Za-z]*']);
+    else
+        disp('Platform not supported')
+    end
+    animal = codecorresfolder(fi + length('NHPs') + 1:j);
 
     %%  input setup
 
     % input folder: extracted raw rest data with grayMatter
     inputfolder = fullfile(codecorresParentfolder, 'm2_restData_selectSeg_Power');
     
-    unWAreas = {'lCd', 'rMC', 'stn0-1', 'stn1-2', 'stn2-3', 'stn6-7', 'gp0-1', ...
-                'lSMA', 'lVA', 'lVLo/VPLo'};
-
+    unwanted_DBS = unwanted_DBS_extract(animal);
+    
     %% save setup
     savefolder = codecorresfolder;
     savefilename_addstr = 'selAreas_avgArea';
@@ -57,9 +69,6 @@ function m3_restData_rmChns_avgArea()
         
         filename = files(filei).name;
         file = fullfile(files(filei).folder, files(filei).name);
-        
-        
-        
            
         
         load(file, 'data_segments', 'fs', 'T_chnsarea')
@@ -70,11 +79,6 @@ function m3_restData_rmChns_avgArea()
         end
         
         
-        % replace *VLo and *VPLo with VLoVPLo
-        mask_VLoVPLo = strcmp(T_chnsarea.brainarea, 'lVLo') | strcmp(T_chnsarea.brainarea, 'lVPLo');
-        T_chnsarea{mask_VLoVPLo, 'brainarea'} = {'lVLo/VPLo'};
-        mask_VLoVPLo = strcmp(T_chnsarea.brainarea, 'rVLo') | strcmp(T_chnsarea.brainarea, 'rVPLo');
-        T_chnsarea{mask_VLoVPLo, 'brainarea'} = {'rVLo/VPLo'};
         
         
         % replace STN into stn0-1, stn1-2 ... 
@@ -97,7 +101,7 @@ function m3_restData_rmChns_avgArea()
         disp(filename);
         
         % rm unwanted areas and average across areas
-        [data_segments, T_chnsarea_new] = rmChns_avgArea_1file(data_segments, T_chnsarea, unWAreas);
+        [data_segments, T_chnsarea_new] = rmChns_avgArea_1file(data_segments, T_chnsarea, unwanted_DBS);
         
 
         

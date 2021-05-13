@@ -1,8 +1,8 @@
-function [mus, stds] = psedo_SKTLFP_Test(lfp1, lfp2, shuffleN, fs, twin, toverlap, f_AOI)
+function [mus, stds] = psedo_SKTLFP_Test_acrossTime(lfp1, lfp2, shuffleN, fs, twin, toverlap, f_AOI, t_AOI)
 % lfp1, lfp2: ntemp * ntrials
 %
 % return:
-%       mus, stds: the mu and std of the fitted normal distribution (nf * nt)
+%       mus, stds: the mu and std of the fitted normal distribution (nf * 1)
 
 ntrials = size(lfp2, 2);
 lfp2_origin = lfp2;
@@ -24,11 +24,13 @@ for si = 1 : shuffleN
             freqs = fx;
             times = tx;
             idx_f = (freqs>=f_AOI(1) &  freqs<=f_AOI(2));
+            idx_t = (times>=t_AOI(1) &  times<=t_AOI(2));
             f_selected =  freqs(idx_f);
+            t_selected = times(idx_t);
         end
         
-        phix = angle(Sx(idx_f, :));
-        phiy = angle(Sy(idx_f, :));
+        phix = angle(Sx(idx_f, idx_t));
+        phiy = angle(Sy(idx_f, idx_t));
         cross_density_sum = cross_density_sum + exp(1i * (phix - phiy));
         
         clear x y Sx fx tx Sy fy ty
@@ -48,17 +50,16 @@ end
 
 % abs imaginary of Coherency
 psedo_iCoh = imag(cross_densitys);
+psedo_iCoh_acrossTime = mean(psedo_iCoh, 3);
 
 % fit a normal distribution to psedo_iCoh
-[~, nf, nt] = size(psedo_iCoh);
-mus = zeros(nf,nt);
-stds = zeros(nf, nt);
+[~, nf] = size(psedo_iCoh_acrossTime);
+mus = zeros(nf,1);
+stds = zeros(nf, 1);
 for fi = 1 : nf
-    for ti = 1 : nt
-        pd = fitdist(squeeze(psedo_iCoh(:, fi,ti)),'Normal');
-        mus(fi, ti) = pd.mu;
-        stds(fi, ti) = pd.sigma;
-        
-        clear pd
-    end
+    pd = fitdist(squeeze(psedo_iCoh_acrossTime(:, fi)),'Normal');
+    mus(fi, 1) = pd.mu;
+    stds(fi, 1) = pd.sigma;
+    
+    clear pd
 end

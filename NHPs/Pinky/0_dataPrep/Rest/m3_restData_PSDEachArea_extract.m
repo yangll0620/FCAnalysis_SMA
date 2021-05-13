@@ -4,8 +4,6 @@ function m3_restData_PSDEachArea_extract()
     %       psd for each brain area, as well as each DBS contact
     %
     %
-    %   Input:
-    %       m3_restData_eqLen_avgArea_combVLoVPLo
 
     %% folder generate
     % the full path and the name of code file without suffix
@@ -23,9 +21,6 @@ function m3_restData_PSDEachArea_extract()
     [codecorresfolder, codecorresParentfolder] = code_corresfolder(codefilepath, true, false);
 
     %%  input setup
-    
-    tmp = char(regexp(codefilepath, '/NHP_\w*/', 'match'));
-    animal = tmp(length('/NHP_') + 1:end - 1);
 
     % pwelch psd estimate variable
     twin_pwelch = 2;
@@ -58,12 +53,12 @@ function m3_restData_PSDEachArea_extract()
         else
             F_pxx = F_pxx_normal;
 
-            save(file_psdall, 'pxxs_allfiles_normal', 'pxxs_allfiles_mild', 'pxxs_allfiles_moderate','F_pxx');
-            clear F_pxx_normal F_pxx_mild
+            save(file_psdall, 'pxxs_allfiles_normal', 'pxxs_allfiles_mild', 'pxxs_allfiles_moderate', 'F_pxx');
+            clear F_pxx_normal F_pxx_mild F_pxx_moderate
         end
 
     else
-        load(file_psdall, 'pxxs_allfiles_normal', 'pxxs_allfiles_mild', 'pxxs_allfiles_moderate','F_pxx');
+        load(file_psdall, 'pxxs_allfiles_normal', 'pxxs_allfiles_mild', 'pxxs_allfiles_moderate', 'F_pxx');
     end
 
     %%%  plot  %%%
@@ -88,91 +83,60 @@ function m3_restData_PSDEachArea_extract()
 
     end
     
-    
-    
     %%% combine all figures into one %%%%
+    close all
+    brainarea = 'M1';
+    img_M1 = imread(fullfile(savefolder,['psd_' brainarea '.png']));
     
-    % empty figure
+    imgs1 = [];
+    imgs1 = cat(2, imgs1, img_M1);
+    
     figure
     set(gcf, 'PaperUnits', 'points',  'PaperPosition', [18, 180, 300 180]);
     annotation(gcf,'textbox',...
-        [0.3 0.7 0.35 0.15],...
-        'String',{[animal ' Rest Data']},...
-        'LineStyle','none',...
-        'FontSize',15, 'FontWeight','bold',...
-        'FitBoxToText','off');
+    [0.3 0.7 0.35 0.15],...
+    'String',{'Jo Rest Data'},...
+    'LineStyle','none',...
+    'FontSize',15, 'FontWeight','bold',...
+    'FitBoxToText','off');
     saveas(gcf, fullfile(savefolder, 'text'), 'png')
+    
+    
     img_text =  imread(fullfile(savefolder, 'text.png'));
+    imgs1 = cat(2, imgs1, img_text);
     
-    
-    %%% combine all figures into one %%%%
-    close all
-    
-    %----DBS in one figure ---%
     brainarea = 'STN';
-    imgs_col1 = []; imgs_col2 = []; % two columns
-    for i = 1: 7
+    for i = 1: 2
         img = imread(fullfile(savefolder,['psd_' brainarea '_ch' num2str(i) '.png']));
-        
-        if mod(i, 2) == 1
-            imgs_col1 = cat(1, imgs_col1, img);
-        else
-            imgs_col2 = cat(1, imgs_col2, img);
-        end
-        
-        clear img
+        imgs1 = cat(2, imgs1, img);
     end
-    imgs_col2 = cat(1, imgs_col2, img_text); % the last one in column2 is empty
-    imgs_STN = cat(2, imgs_col1, imgs_col2);
-    clear imgs_col1 imgs_col2
+    imgs2 = [];
+    for i = 3: 6
+        img = imread(fullfile(savefolder,['psd_' brainarea '_ch' num2str(i) '.png']));
+        imgs2 = cat(2, imgs2, img);
+    end
+    imgs3 = [];
+    for i = 7: 7
+        img = imread(fullfile(savefolder,['psd_' brainarea '_ch' num2str(i) '.png']));
+        imgs3 = cat(2, imgs3, img);
+    end
     
     brainarea = 'GP';
-    imgs_col1 = []; imgs_col2 = []; % two columns
-    for i = 1: 7
+    for i = 1: 3
         img = imread(fullfile(savefolder,['psd_' brainarea '_ch' num2str(i) '.png']));
-        
-        if mod(i, 2) == 1
-            imgs_col1 = cat(1, imgs_col1, img);
-        else
-            imgs_col2 = cat(1, imgs_col2, img);
-        end
-        
-        clear img
+        imgs3 = cat(2, imgs3, img);
     end
-    imgs_col2 = cat(1, imgs_col2, zeros(size(img_text)) + 255); % the last one in column2 is empty
-    imgs_GP= cat(2, imgs_col1, imgs_col2);
+    imgs4 = [];
+    for i = 4: 7
+        img = imread(fullfile(savefolder,['psd_' brainarea '_ch' num2str(i) '.png']));
+        imgs4 = cat(2, imgs4, img);
+    end
     
+    imgs = cat(1, imgs1, imgs2, imgs3, imgs4);
+    imwrite(imgs,  fullfile(savefolder, 'combined.png'));
+    %%% %%%
     
-    imgs_DBS = cat(2, imgs_STN, imgs_GP);
-    imwrite(imgs_DBS,  fullfile(savefolder, 'combinedDBS.png'));
-    
-    
-    %----M1, SMA and Thalams in one figure ---%
-    imgs_tha = [];
-    thalamus = {'VA', 'VLo', 'VPLo'};
-    for i = 1 : length(thalamus)
-        brainarea = thalamus{i};
 
-        imgl = imread(fullfile(savefolder,['psd_l' brainarea '.png'])); 
-        imgr = imread(fullfile(savefolder,['psd_r' brainarea '.png'])); 
-        
-        img = cat(2, imgl, imgr);
-        imgs_tha = cat(1, imgs_tha, img);
-        
-        clear imgl imgr img brainarea
-    end
-    
-    img_M1 = imread(fullfile(savefolder,'psd_M1.png')); 
-    img_lSMA = imread(fullfile(savefolder,'psd_lSMA.png')); 
-    img_rSMA = imread(fullfile(savefolder,'psd_rSMA.png')); 
-    imgs_SMA = cat(2, img_lSMA, img_rSMA);
-    imgs_2M1 = cat(2, img_text, img_M1);
-    imgs_M1SMA = cat(1, imgs_SMA, imgs_2M1, zeros(size(imgs_SMA)) + 255);
-    clear img_M1 img_lSMA img_rSMA imgs_2M1 imgs_SMA
-    
-    img_M1SMATha = cat(2, imgs_tha, imgs_M1SMA);
-    imwrite(img_M1SMATha,  fullfile(savefolder, 'combinedM1SMATha.png'));
-    
 end
 
 function [pxxs_allfiles, F_pxx] = pxx_eacharea_allfiles(files, twin_pwelch)
@@ -201,13 +165,8 @@ function [pxxs_allfiles, F_pxx] = pxx_eacharea_allfiles(files, twin_pwelch)
 
         [pxxs_1file, F_pxx_1file] = pxx_eacharea_onefile(file, twin_pwelch);
 
-        if (isempty(pxxs_1file))
-            continue;
-        end
-        
         brainareas = fieldnames(pxxs_1file);
 
-        
         % combined pxxs from all the files
         if (~exist('pxxs_allfiles', 'var'))
             pxxs_allfiles = pxxs_1file;
@@ -258,9 +217,9 @@ function [pxxs, F_pxx] = pxx_eacharea_onefile(file, twin_pwelch)
     %       pxxs: the PSD estimate of all the segments from the files
     %           e.g. pxxs =
     %                   struct with fields:
-    %                      M1: [nfs * nsegs double]
-    %                     STN: [nfs * nSTNchns * nsegs double]
-    %                      GP: [nfs * nGPchns * nsegs double]
+    %                      M1: [nfs �� nsegs double]
+    %                     STN: [nfs �� nSTNchns �� nsegs double]
+    %                      GP: [nfs �� nGPchns �� nsegs double]
     %
     %       F_pxx: the vector of frequencies (in hertz) at which the PSD is estimated (nfs * 1)
 
@@ -270,12 +229,9 @@ function [pxxs, F_pxx] = pxx_eacharea_onefile(file, twin_pwelch)
     if (isempty(data_segments))% data_segments is empty
         F_pxx = [];
         pxxs = [];
-        return;
     end
 
-    % extract uniqBrainAreas
-    mask_emptyarea = cellfun(@(x) isempty(x), T_chnsarea.brainarea);
-    uniqBrainAreas = unique(T_chnsarea.brainarea(~mask_emptyarea));
+    uniqBrainAreas = unique(T_chnsarea.brainarea);
 
     % psd pwelch paramers
     nwins = round(twin_pwelch * fs);
@@ -342,12 +298,11 @@ function [pxxs, F_pxx] = pxx_eacharea_onefile(file, twin_pwelch)
 
 end
 
-
 function plotPSD_comp_1chn(psd_normal, psd_mild, psd_moderate, F_all, plotF_AOI, savefolder, brainarea)
     %%  plot the psd comparison of normal and mild
     %
     %   Inputs:
-    %       psd_normal, psd_mild, psd_moderate: psd of all segments in normal, mild and moderate, nfs * nsegs
+    %       psd_normal, psd_mild: psd of all segments in normal or mild, nfs * nsegs
     %
     %       F_all: the vector of frequencies (in hertz) at which the PSD is estimated (nfs * 1)
     %
@@ -419,11 +374,11 @@ function plotPSD_comp_1chn(psd_normal, psd_mild, psd_moderate, F_all, plotF_AOI,
     h1 = plot(F_AOI, psd_normal_mean, 'Color', color_normal_mean, 'LineWidth', linewidth);
     h2 = plot(F_AOI, psd_mild_mean, 'Color', color_mild_mean, 'LineWidth', linewidth);
     h3 = plot(F_AOI, psd_moderate_mean, 'Color', color_moderate_mean, 'LineWidth', linewidth);
-
-    % find the frequency with maximum density
-    [maxPSD, idx_max] = max(psd_mild_mean);
-    F_maxPSD = round(F_AOI(idx_max));
-    plot([F_maxPSD F_maxPSD], [0 maxPSD + maxPSD * 0.2], 'k--')
+% 
+%     % find the frequency with maximum density
+%     [maxPSD, idx_max] = max(psd_mild_mean);
+%     F_maxPSD = round(F_AOI(idx_max));
+%     plot([F_maxPSD F_maxPSD], [0 maxPSD + maxPSD * 0.2], 'k--')
 
     xlim([min(F_AOI) max(F_AOI)])
 
@@ -431,7 +386,7 @@ function plotPSD_comp_1chn(psd_normal, psd_mild, psd_moderate, F_all, plotF_AOI,
     legend([h1, h2, h3], {'normal', 'mild', 'moderate'})
 
     % title
-    title(['PSD in ' brainarea])
+    title(['PSD in ' upper(brainarea)])
 
     % save figure
     savename = fullfile(savefolder, ['psd_' brainarea]);
@@ -442,14 +397,14 @@ function plotPSD_comp_1chn(psd_normal, psd_mild, psd_moderate, F_all, plotF_AOI,
     clear psd_normal_high psd_normal_low psd_normal_mean psd_mild_high psd_mild_low psd_mild_mean psd_moderate_high psd_moderate_low psd_moderate_mean
     clear h1 h2 h3 maxPSD F_maxPSD idx_max
     clear savename
-
 end
 
 function plotPSD_comp_multichns(psd_normal, psd_mild, psd_moderate, F_all, plotF_AOI, savefolder, brainarea)
     %%  plot the psd comparison of normal and mild
     %
     %   Inputs:
-    %       psd_normal, psd_mild, psd_moderate: psd of all segments in normal, mild and moderate, nfs * nchns * nsegs
+    %       psd_normal, psd_mild: psd of all segments in normal
+    %       or mild, nfs * nchns * nsegs
     %
     %       F_all: the vector of frequencies (in hertz) at which the PSD is estimated (nfs * 1)
     %
@@ -478,8 +433,10 @@ function plotPSD_comp_multichns(psd_normal, psd_mild, psd_moderate, F_all, plotF
 
     nchns = size(psd_normal, 2);
 
+    
     for chni = 1:nchns
 
+        
         psd_allsegs_normal = squeeze(psd_normal(:, chni, :));
         psd_allsegs_mild = squeeze(psd_mild(:, chni, :));
         psd_allsegs_moderate = squeeze(psd_moderate(:, chni, :));
@@ -515,10 +472,11 @@ function plotPSD_comp_multichns(psd_normal, psd_mild, psd_moderate, F_all, plotF
         [m, n] = size(psd_moderate_low); psd_moderate_low = reshape(psd_moderate_low, 1, m * n); clear m n
         [m, n] = size(psd_moderate_mean); psd_moderate_mean = reshape(psd_moderate_mean, 1, m * n); clear m n
 
-
         % plot range
-        figure
+        figure 
         set(gcf, 'PaperUnits', 'points',  'PaperPosition', [18, 180, 300 180]);
+
+        
         fill([F_AOI flip(F_AOI)], [psd_normal_high flip(psd_normal_low)], color_normal_range, 'LineStyle', 'none')
         hold all
         fill([F_AOI flip(F_AOI)], [psd_mild_high flip(psd_mild_low)], color_mild_range, 'LineStyle', 'none')
@@ -529,10 +487,10 @@ function plotPSD_comp_multichns(psd_normal, psd_mild, psd_moderate, F_all, plotF
         h2 = plot(F_AOI, psd_mild_mean, 'Color', color_mild_mean, 'LineWidth', linewidth);
         h3 = plot(F_AOI, psd_moderate_mean, 'Color', color_moderate_mean, 'LineWidth', linewidth);
 
-        % find the frequency with maximum density
-        [maxPSD, idx_max] = max(psd_mild_mean);
-        F_maxPSD = round(F_AOI(idx_max));
-        plot([F_maxPSD F_maxPSD], [0 maxPSD + maxPSD * 0.2], 'k--')
+%         % find the frequency with maximum density
+%         [maxPSD, idx_max] = max(psd_mild_mean);
+%         F_maxPSD = round(F_AOI(idx_max));
+%         plot([F_maxPSD F_maxPSD], [0 maxPSD + maxPSD * 0.2], 'k--')
 
         xlim([min(F_AOI) max(F_AOI)])
 
@@ -546,10 +504,10 @@ function plotPSD_comp_multichns(psd_normal, psd_mild, psd_moderate, F_all, plotF
         savename = fullfile(savefolder, ['psd_' brainarea '_ch' num2str(chni)]);
         saveas(gcf, savename, 'png')
 
-        clear psd_allsegs_normal psd_allsegs_mild psd_allsegs_moderate 
+        clear psd_allsegs_normal psd_allsegs_mild psd_allsegs_moderate
         clear psd_normal_FAOI psd_mild_FAOI psd_moderate_FAOI
         clear psd_normal_high psd_normal_low psd_normal_mean psd_mild_high psd_mild_low psd_mild_mean psd_moderate_high psd_moderate_low psd_moderate_mean
-        clear h1 h2 h3  maxPSD F_maxPSD idx_max
+        clear h1 h2 h3 maxPSD F_maxPSD idx_max
         clear savename
     end
 

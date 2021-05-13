@@ -34,11 +34,23 @@ function m2_restData_selectSeg_Power()
     [datafolder, ~, ~, ~] = exp_subfolders();
     
     % animal
-    [i, j] = regexp(codecorresfolder, 'NHPs/[A-Za-z]*');
-    animal = codecorresfolder(i + length('NHPs/'):j);
+    if ismac
+        % Code to run on Mac platform
+    elseif isunix
+        % Code to run on Linux platform
+        
+        [fi, j] = regexp(codecorresfolder, ['NHPs', '/', '[A-Za-z]*']);
+    elseif ispc
+        % Code to run on Windows platform
+        
+        [fi, j] = regexp(codecorresfolder, ['NHPs', '\\', '[A-Za-z]*']);
+    else
+        disp('Platform not supported')
+    end
+    animal = codecorresfolder(fi + length('NHPs') + 1:j);
 
     %% input setup
-    inputfolder = fullfile(codecorresParentfolder, 'm1_restData_cleaned_extFromMaster');
+    inputfolder = fullfile(codecorresParentfolder, 'm1_restData_cleaned_extract');
     
     file_GMChnsarea = fullfile(datafolder, animal, [animal '_GMChnAreaInf.csv']);
     file_chnDepth = fullfile(codecorresParentfolder, '..', 'm1_dailyDepth', 'Bug_dailyDepth.xlsx');

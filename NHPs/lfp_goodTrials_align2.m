@@ -1,4 +1,4 @@
-function [lfptrials, fs, T_chnsarea] = lfp_goodTrials_align2(files, align2, tdur_trial, t_minmax_reach, t_minmax_return)
+function [lfptrials, fs, T_chnsarea, idxGroups, idxGroupNames] = lfp_goodTrials_align2(files, align2, tdur_trial, t_minmax_reach, t_minmax_return)
 % extract lfp data respect to targetonset, reachonset, reach and returnonset separately
 
 % 
@@ -43,6 +43,11 @@ for filei = 1 : nfiles
     % load data, lfpdata: [nchns, ntemps, ntrials]
     filename = files(filei).name;
     load(fullfile(files(filei).folder, filename), 'lfpdata', 'T_idxevent', 'goodTrials');
+    if filei == 1
+        load(fullfile(files(filei).folder, filename), 'idxGroups', 'tbl_goodTrialsMarks');
+        idxGroupNames = tbl_goodTrialsMarks.Properties.VariableNames;
+        clear tbl_goodTrialsMarks
+    end
     
     if(height(T_idxevent) == 1)
         disp([filename ' has only 1 trial, skip!']);

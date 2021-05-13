@@ -100,7 +100,9 @@ t_dateUsedM1PMC_mild = dates_has_usedM1PMC(t_depthArea_mild, depthUsed_M1, depth
 t_dateUsedM1PMC_moderate = dates_has_usedM1PMC(t_depthArea_moderate, depthUsed_M1, depthUsed_PMC); 
 
 
-t_master = readtable(xlsxfile_master);
+opts = detectImportOptions(xlsxfile_master);
+t_master = readtable(xlsxfile_master, opts);
+clear opts
 
 
 %----  extract t_dateBlocks ---%

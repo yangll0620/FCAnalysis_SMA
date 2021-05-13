@@ -90,7 +90,7 @@ savefolder = codecorresfolder;
 
 %% starting
 files = dir(fullfile(inputfolder, '*.mat'));
-filei = 31;
+filei = 32;
 nfiles = length(files);
 while(filei <=  nfiles)
     
@@ -270,7 +270,7 @@ while(filei <=  nfiles)
     % Recheck today or Check the next day
     reply = input(['Check the next day (y) or Recheck this day (n)[y]:'], 's');
     if isempty(reply) || lower(reply) == 'y'
-        saveas(gcf, fullfile(savefolder, [animal '_goodTrials_' pdcond '_' datestr(dateofexp, 'yyyymmdd') '_' bkstr]), 'png');
+        saveas(gcf, fullfile(savefolder, [animal '_goodTrials_' pdcond '_f' num2str(filei) '_' datestr(dateofexp, 'yyyymmdd') '_' bkstr]), 'png');
         
         filei = filei + 1;
     end

@@ -9,6 +9,7 @@ codefolder = codefilepath(1:strfind(codefilepath, 'code') + length('code') - 1);
 
 % add util path
 addpath(genpath(fullfile(codefolder, 'util')));
+addpath(genpath(fullfile(codefolder,'NHPs')));
 
 % add NexMatablFiles path
 addpath(genpath(fullfile(codefolder, 'toolbox', 'NexMatlabFiles')))
@@ -36,6 +37,7 @@ else
 end
 animal = codecorresfolder(fi + length('NHPs') + 1:j);
 
+tasks = {'reaction', 'reach', 'return'};
 
 %% save setup
 savefolder = codecorresfolder;
@@ -45,72 +47,50 @@ savefilename = [animal '_timeStaComp'];
 
 
 %% code Starting Here
-
+coli_targetonset = 1;
 coli_reachonset = 2;
 coli_touch = 3;
 coli_returnonset = 4;
 coli_mouth = 5;
 
+t_maxreach = 2;
+t_maxreturn = 2;
 
 %%% extract tbl_normal, tbl_mild and tbl_moderate %%%
-pdcond  = 'normal';
-files = dir(fullfile(folder_input, ['*_' pdcond '_*.mat']));
-t_event = [];
-for fi = 1: length(files)
-    load(fullfile(folder_input, files(fi).name), 'T_idxevent', 'fs');
+cond_cell = cond_cell_extract(animal);
+for ci = 1 : length(cond_cell)
     
-    t_event = cat(1, t_event, T_idxevent{:, :}/ fs);
+    pdcond  = cond_cell{ci};
+    files = dir(fullfile(folder_input, ['*_' pdcond '_*.mat']));
+    t_event = [];
+    for fi = 1: length(files)
+        load(fullfile(folder_input, files(fi).name), 'T_idxevent', 'fs');
+        
+        t_event = cat(1, t_event, T_idxevent{:, :}/ fs);
+        
+        clear T_idxevent
+    end
+    t_reaction = t_event(:, coli_reachonset) - t_event(:, coli_targetonset);
+    t_reach = t_event(:, coli_touch) - t_event(:, coli_reachonset);
+    t_return = t_event(:, coli_mouth) - t_event(:, coli_returnonset);
+    eval(['tbl_' pdcond ' = table(t_reaction, t_reach, t_return);'])
     
-    clear T_idxevent
+    clear t_reaction t_reach t_return pdcond files t_event
 end
-t_reach = t_event(:, coli_touch) - t_event(:, coli_reachonset);
-t_return = t_event(:, coli_mouth) - t_event(:, coli_returnonset);
-tbl_normal = table(t_reach, t_return);
-clear t_reach t_return pdcond files t_event
-
-
-pdcond  = 'mild';
-files = dir(fullfile(folder_input, ['*_' pdcond '_*.mat']));
-t_event = [];
-for fi = 1: length(files)
-    load(fullfile(folder_input, files(fi).name), 'T_idxevent', 'fs');
-    
-    t_event = cat(1, t_event, T_idxevent{:, :}/ fs);
-    
-    clear T_idxevent
-end
-t_reach = t_event(:, coli_touch) - t_event(:, coli_reachonset);
-t_return = t_event(:, coli_mouth) - t_event(:, coli_returnonset);
-tbl_mild = table(t_reach, t_return);
-clear t_reach t_return pdcond files t_event
-
-
-
-pdcond  = 'moderate';
-files = dir(fullfile(folder_input, ['*_' pdcond '_*.mat']));
-t_event = [];
-for fi = 1: length(files)
-    load(fullfile(folder_input, files(fi).name), 'T_idxevent', 'fs');
-    
-    t_event = cat(1, t_event, T_idxevent{:, :}/ fs);
-    
-    clear T_idxevent
-end
-t_reach = t_event(:, coli_touch) - t_event(:, coli_reachonset);
-t_return = t_event(:, coli_mouth) - t_event(:, coli_returnonset);
-tbl_moderate = table(t_reach, t_return);
-clear t_reach t_return pdcond files t_event
 
 
 %%% remove the trials with super longer reach and return
-t_maxreach = 2;
-t_maxreturn = 2;
-tbl_normal = tbl_normal(tbl_normal.t_reach<=t_maxreach & tbl_normal.t_return<=t_maxreturn,:);
-tbl_mild = tbl_mild(tbl_mild.t_reach<=t_maxreach & tbl_mild.t_return<=t_maxreturn,:);
-tbl_moderate = tbl_moderate(tbl_moderate.t_reach<=t_maxreach & tbl_moderate.t_return<=t_maxreturn,:);
+for ci = 1 : length(cond_cell)
+    pdcond  = cond_cell{ci};
+    
+    eval(['tbl_' pdcond ' = tbl_' pdcond '(tbl_' pdcond '.t_reach<=t_maxreach & tbl_' pdcond '.t_return<=t_maxreturn,:);'])
+    clear pdcond
+end
 
 
-%%% plot normal, mild and moderate comparison %%%
+
+
+%%% plot pdcond comparison %%%
 figure('Position',[675 549 570* 2 413]);
 
 % position of each subplot
@@ -119,39 +99,62 @@ w =  0.4; h = 0.815;  gap = 0.1;
 
 
 alpha = 0.05;
+gs =[];
+for ci = 1 : length(cond_cell)
+    pdcond  = cond_cell{ci};
+    
+    eval(['n = height(tbl_' pdcond ');'])
+    g = repmat({pdcond}, n,1);
+    gs = [gs; g];
+    clear pdcond
+end
 
-n_normal = height(tbl_normal);
-n_mild = height(tbl_mild);
-n_moderate = height(tbl_moderate);
-
-g1 = repmat({'normal'}, n_normal,1);
-g2 = repmat({'mild'}, n_mild,1);
-g3 = repmat({'moderate'}, n_moderate,1);
-g = [g1; g2; g3];
 
 
 %----- reach time comparison ----------%
-task = 'reach'; i = 1;
-position = [x0 + (w + gap) * (i-1) y w h];
 
-% extract t_normal, t_mild and t_moderate
-eval(['t_normal = tbl_normal.t_' task ';']);
-eval(['t_mild = tbl_mild.t_' task ';']);
-eval(['t_moderate = tbl_moderate.t_' task ';']);
+for ti = 1 : length(tasks)
+    task = tasks{ti};
+    position = [x0 + (w + gap) * (ti-1) y w h];
+    
+    
+    % extract t_normal, t_mild and t_moderate
+    ts = [];
+    for ci = 1 : length(cond_cell)
+        pdcond  = cond_cell{ci};
+        eval(['t_' pdcond ' = tbl_' pdcond '.t_' task ';']);
+        eval(['ts = [ts; t_' pdcond '];'])
+        clear pdcond
+    end
+    
+    % wilcoxon rank sum test
+    ps = [];
+    % wilcoxon rank sum test
+    p1 = ranksum(t_normal, t_mild);
+    p2 = ranksum(t_mild, t_moderate);
+    p3 = ranksum(t_normal, t_moderate);
+    
+    
+    % actual plot
+    subplot('Position', position);
+    boxplot(ts, gs); hold on
+    title([animal ':' task ' time comparison'])
+    
+
+    clear task position ts
+end
 
 
-ts = [t_normal; t_mild; t_moderate];
 
 
-% wilcoxon rank sum test
-p1 = ranksum(t_normal, t_mild);
-p2 = ranksum(t_mild, t_moderate);
-p3 = ranksum(t_normal, t_moderate);
 
-% actual plot 
-subplot('Position', position); 
-boxplot(ts, g); hold on
-title([animal ':' task ' time comparison'])
+
+
+
+
+
+
+
 
 % significant part
 xt = get(gca, 'XTick');
@@ -204,8 +207,8 @@ clear bp boxes
 
 
 %----- return time comparison ----------%
-task = 'return';  i = 2;
-position = [x0 + (w + gap) * (i-1) y w h];
+task = 'return';  ti = 2;
+position = [x0 + (w + gap) * (ti-1) y w h];
 
 % extract t_normal, t_mild and t_moderate
 eval(['t_normal = tbl_normal.t_' task ';']);
@@ -223,7 +226,7 @@ p3 = ranksum(t_normal, t_moderate);
 
 % actual plot 
 subplot('Position', position);
-boxplot(ts, g); hold on
+boxplot(ts, gs); hold on
 title([animal ':' task ' time comparison'])
 
 % significant part

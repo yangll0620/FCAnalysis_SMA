@@ -47,7 +47,7 @@ savefilename = [animal '_timeStaComp'];
 
 
 %% code Starting Here
-
+coli_argetonset = 1;
 coli_reachonset = 2;
 coli_touch = 3;
 coli_returnonset = 4;
@@ -65,6 +65,7 @@ for fi = 1: length(files)
     
     clear T_idxevent
 end
+t_reaction = t_event(:, coli_reachonset) - t_event(:, coli_TargetOnset);
 t_reach = t_event(:, coli_touch) - t_event(:, coli_reachonset);
 t_return = t_event(:, coli_mouth) - t_event(:, coli_returnonset);
 tbl_normal = table(t_reach, t_return);

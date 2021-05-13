@@ -30,8 +30,20 @@ addpath(genpath(fullfile(codefolder,'util')));
 
 
 % animal
-[fi, j] = regexp(codecorresfolder, 'NHPs/[A-Za-z]*');
-animal = codecorresfolder(fi + length('NHPs/'):j);
+if ismac
+    % Code to run on Mac platform
+elseif isunix
+    % Code to run on Linux platform
+    
+    [fi, j] = regexp(codecorresfolder, ['NHPs', '/', '[A-Za-z]*']);
+elseif ispc
+    % Code to run on Windows platform
+    
+    [fi, j] = regexp(codecorresfolder, ['NHPs', '\\', '[A-Za-z]*']);
+else
+    disp('Platform not supported')
+end
+animal = codecorresfolder(fi + length('NHPs') + 1:j);
 
 
 %% input parameters
@@ -47,29 +59,32 @@ savefile = fullfile(savefolder, [savename_prefix '.xlsx']);
 sheet_normal = 'Depth of GM array_Normal Channe';
 nCols_normal = 36; % the total column number
 row_area_normal = 19; row_chn_normal = 20;   % the row number for recording area, and channel number
-row_iniDepth_normal= 21; row_recStart_normal = 22; % the row number for recording initial depth, and recording start
+row_iniDepth_normal= 21; % the row number for recording initial depth
+row_recStart_normal = 22; row_recEnd_normal = 287; % the row number of recording start and end
 
 
 % setup for mild
 sheet_mild = 'Depth of GM array_Mild Channels';
 nCols_mild = 93; % the total column number
 row_area_mild = 2;     row_chn_mild = 3;   % the row number for recording area, and channel number
-row_iniDepth_mild= 5;  row_recStart_mild = 8; % the row number for recording initial depth, and recording start
+row_iniDepth_mild= 5;  % the row number for recording initial depth
+row_recStart_mild = 8; row_recEnd_mild = 185; % the row number of recording start and end
 
 
 % setup for moderate
 sheet_moderate = 'Depth of GM array_Moderate Chan';
 nCols_moderate = 94; % the total column number
 row_area_moderate = 1;          row_chn_moderate = 2;   % the row number for recording area, and channel number
-row_iniDepth_moderate= 8;   row_recStart_moderate = 10; % the row number for recording initial depth, and recording start
+row_iniDepth_moderate= 8;   % the row number for recording initial depth
+row_recStart_moderate = 10; row_recEnd_moderate = 221; % the row number of recording start and end
 
 
 
 
-% coding  running here
+% coding Start running here
 % normal case
 disp(' ..... Dealing Normal .........')
-t_areaDailyDepth_normal = dailyDepth_1cond(file_xlsmaster, sheet_normal, nCols_normal, row_chn_normal, row_area_normal, row_iniDepth_normal, row_recStart_normal);
+t_areaDailyDepth_normal = dailyDepth_1cond(file_xlsmaster, sheet_normal, nCols_normal, row_chn_normal, row_area_normal, row_iniDepth_normal, row_recStart_normal, row_recEnd_normal);
 writetable(t_areaDailyDepth_normal, savefile, 'sheet', 'normal');
 
 
@@ -78,7 +93,7 @@ writetable(t_areaDailyDepth_normal, savefile, 'sheet', 'normal');
 
 % mild case
 disp(' ..... Dealing mild .........')
-t_areaDailyDepth_mild = dailyDepth_1cond(file_xlsmaster, sheet_mild, nCols_mild, row_chn_mild, row_area_mild, row_iniDepth_mild, row_recStart_mild);
+t_areaDailyDepth_mild = dailyDepth_1cond(file_xlsmaster, sheet_mild, nCols_mild, row_chn_mild, row_area_mild, row_iniDepth_mild, row_recStart_mild, row_recEnd_mild);
 writetable(t_areaDailyDepth_mild, savefile, 'sheet', 'mild');
 
 
@@ -86,7 +101,7 @@ writetable(t_areaDailyDepth_mild, savefile, 'sheet', 'mild');
 
 % moderate case
 disp(' ..... Dealing moderate .........')
-t_areaDailyDepth_moderate = dailyDepth_1cond(file_xlsmaster, sheet_moderate, nCols_moderate, row_chn_moderate, row_area_moderate, row_iniDepth_moderate, row_recStart_moderate);
+t_areaDailyDepth_moderate = dailyDepth_1cond(file_xlsmaster, sheet_moderate, nCols_moderate, row_chn_moderate, row_area_moderate, row_iniDepth_moderate, row_recStart_moderate, row_recEnd_moderate);
 writetable(t_areaDailyDepth_moderate, savefile, 'sheet', 'moderate');
 
 
@@ -111,7 +126,7 @@ end %m1_dailyDepth
 
 
 
-function [t_areaDailyDepth]  = dailyDepth_1cond(xlsfile, sheetname, nCols, row_chn, row_area, row_iniDepth, row_recStart)
+function [t_areaDailyDepth]  = dailyDepth_1cond(xlsfile, sheetname, nCols, row_chn, row_area, row_iniDepth, row_recStart, row_recEnd)
 %
 %
 %   Inputs
@@ -122,6 +137,7 @@ function [t_areaDailyDepth]  = dailyDepth_1cond(xlsfile, sheetname, nCols, row_c
 %       row_area: the row number for area 
 %       row_iniDepth: the row number for the initial depth
 %       row_recStart: the row number for the recording start
+%       row_recEnd: the row number for the recording end
 %
 %   Return:
 %       t_areaDailyDepth: a table containing both area and daily depth (can be written directy using writetable)
@@ -174,7 +190,7 @@ varTypes = ['string', c_chnTypes];
 opts = spreadsheetImportOptions('Sheet', sheetname, ... 
                                 'VariableNames', varNames, ...
                                 'VariableTypes', varTypes, ...
-                                'DataRange', ['A' num2str(row_recStart)]);
+                                'DataRange', ['A' num2str(row_recStart) ':' colNum2ExcelColName(nCols) num2str(row_recEnd)]);
 t_records = readtable(xlsfile, opts);
 rowmasks_depth = cellfun(@(x) ~isempty(x), t_records.Date);
 t_recDepth = t_records(rowmasks_depth, :);

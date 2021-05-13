@@ -14,5 +14,10 @@ if strcmpi(animal,'bug')
     clim_Spectrogram_GP = [-130 -115];
     clim_Spectrogram_Others = [-110 -80];
 end
+if strcmpi(animal,'pinky')
+    clim_Spectrogram_STN = [-130 -115];
+    clim_Spectrogram_GP = [-130 -110];
+    clim_Spectrogram_Others = [-120 -90];
+end
 
 end

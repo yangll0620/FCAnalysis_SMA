@@ -1,6 +1,6 @@
 function cond_cell = cond_cell_extract(animal)
 if strcmpi(animal, 'bug')
-    cond_cell = {'normal', 'mild'};
+    cond_cell = {'normal', 'mild', 'moderate'};
 end
 if strcmpi(animal, 'jo')    
     cond_cell = {'normal', 'mild', 'moderate'};

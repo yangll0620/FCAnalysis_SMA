@@ -52,8 +52,8 @@ if strcmpi(animal, 'bug')
     tdur_trial_normal = [-0.6 1];
     tdur_trial_mild = [-0.6 1];
 end
-if strcmpi(animal, 'jo') 
-
+if strcmpi(animal, 'jo')
+    
     
     tdur_trial_normal = [-0.8 0.8];
     tdur_trial_mild = [-0.8 0.8];
@@ -61,7 +61,7 @@ if strcmpi(animal, 'jo')
 end
 
 if strcmpi(animal, 'kitty') % Kitty not have mild
-
+    
     tdur_trial_normal = [-0.6 2];
     tdur_trial_moderate = [-0.6 2];
 end
@@ -70,7 +70,7 @@ if strcmpi(animal, 'pinky')
     
     tdur_trial_normal = [-0.6 1];
     tdur_trial_mild = [-0.6 1];
-    tdur_trial_moderate = [-.6 1];
+    tdur_trial_moderate = [-0.6 1];
 end
 
 
@@ -90,7 +90,7 @@ savefolder = codecorresfolder;
 
 %% starting
 files = dir(fullfile(inputfolder, '*.mat'));
-filei = 4;
+filei = 31;
 nfiles = length(files);
 while(filei <=  nfiles)
     
@@ -108,7 +108,7 @@ while(filei <=  nfiles)
     if isempty(bkstrmatch)
         nstrmatch = regexp(filename, '_n[0-9]', 'match');
         bkstr = ['n' nstrmatch{1}(3:end)];
-        clear nstrmatch 
+        clear nstrmatch
     else
         bktdt = str2num(bkstrmatch{1}(7:end));
         bkstr = ['bktdt' num2str(bktdt)];
@@ -127,16 +127,60 @@ while(filei <=  nfiles)
     mask_GP = contains(T_chnsarea.brainarea, 'gp');
     mask_Others = ~(mask_STN | mask_GP);
     idxGroups = [{find(mask_STN)}; {find(mask_GP)}; {find(mask_Others)}];
-    
-    % reload saved markers if existed    
-    if exist(savefile_goodTrialsMarkers, 'file')
-        load(savefile_goodTrialsMarkers, 'tbl_goodTrialsMarks');
-        
-        goodTrials_allGs = [tbl_goodTrialsMarks{:, 'STN'} tbl_goodTrialsMarks{:, 'GP'} tbl_goodTrialsMarks{:, 'Others'}];
-        
-    else
-        goodTrials_allGs = ones(ntrials, 3);
+    groupNames = {'STN', 'GP', 'Others'};
+    % split if more than 7 chns in one group
+    idxGroups_split = {};
+    groupNames_split = {};
+    for idxGi = 1 : length(idxGroups)
+        idxs = idxGroups{idxGi};
+        if length(idxs) > 7
+            splitN = ceil(length(idxs) / 7);
+            for si = 1 : splitN
+                i_str = (si - 1) * 7 + 1;
+                i_end = si * 7;
+                if i_end > length(idxs)
+                    i_end = length(idxs);
+                end
+                idxGroups_split = [idxGroups_split; idxs(i_str:i_end)];
+                groupNames_split = [groupNames_split; [groupNames{idxGi} num2str(si)]];
+                clear i_str i_end
+            end
+        else
+            idxGroups_split = [idxGroups_split; idxs];
+            groupNames_split = [groupNames_split; groupNames{idxGi}];
+        end
     end
+    
+    % reload saved markers if existed
+    goodTrials_Loaded = false;
+    if exist(savefile_goodTrialsMarkers, 'file')
+        load(savefile_goodTrialsMarkers, 'tbl_goodTrialsMarks', 'idxGroups');
+        groupNames_load = tbl_goodTrialsMarks.Properties.VariableNames;
+        idxGroups_load = idxGroups; clear idxGroups
+        gName_iGroup_Equal = true;
+        if length(groupNames_load) == length(groupNames_split) && length(idxGroups_split) == length(groupNames_split) && length(groupNames_load) == length(idxGroups_load)
+            for gi = 1 :  length(groupNames_split)
+                if ~strcmp(groupNames_split{gi}, groupNames_load{gi}) || ~isequal(idxGroups_split{gi}, idxGroups_load{gi})
+                    gName_iGroup_Equal = false;
+                    break
+                end
+            end
+        else
+            gName_iGroup_Equal = false;
+        end
+        
+        if gName_iGroup_Equal
+            goodTrials_Loaded = true;
+        end
+    end
+    idxGroups = idxGroups_split;
+    groupNames = groupNames_split;
+    if goodTrials_Loaded
+        goodTrials_allGs = tbl_goodTrialsMarks{:, :};
+    else
+        goodTrials_allGs = ones(ntrials, length(idxGroups));
+    end
+    clear idxGroups_split groupNames_split
     
     % check_spectrogram_oneGroup
     for idxGi = 1 : length(idxGroups)
@@ -157,8 +201,8 @@ while(filei <=  nfiles)
     for gi = 1 : size(goodTrials_allGs, 2)
         goodTrials = goodTrials & goodTrials_allGs(:, gi);
     end
-    tbl_goodTrialsMarks = array2table(goodTrials_allGs, 'VariableNames', {'STN', 'GP', 'Others'});
-    save(savefile_goodTrialsMarkers, 'goodTrials', 'tbl_goodTrialsMarks', 'lfpdata', 'T_idxevent', 'fs', 'T_chnsarea');
+    tbl_goodTrialsMarks = array2table(goodTrials_allGs, 'VariableNames', groupNames);
+    save(savefile_goodTrialsMarkers, 'goodTrials', 'tbl_goodTrialsMarks', 'idxGroups', 'lfpdata', 'T_idxevent', 'fs', 'T_chnsarea');
     
     
     %%% --- show one day spectrogram using goodTrials --- %%%
@@ -210,16 +254,18 @@ while(filei <=  nfiles)
         
         clear t_reach t_return idxdur lfp_phase_1trial
     end
-        
+    
     if isempty(lfp_phase_trials)
         disp('lfp_phase_trials is empty, skip spectrogram across trials')
         filei = filei + 1;
         continue;
     end
-   
+    
     % plot spectrogram across all good trials of one day
     disp(['# of Good Trials for averaged spectrogram across trials: ' num2str(size(lfp_phase_trials, 3))])
-    plot_spectrogram_acrossTrials(lfp_phase_trials, T_chnsarea, tdur_trial, fs, animal, pdcond, align2)
+    idxGroupNames = tbl_goodTrialsMarks.Properties.VariableNames;
+    plot_spectrogram_acrossTrials(lfp_phase_trials, T_chnsarea, idxGroups, idxGroupNames, tdur_trial, fs, animal, pdcond, align2)
+    clear idxGroupNames
     
     % Recheck today or Check the next day
     reply = input(['Check the next day (y) or Recheck this day (n)[y]:'], 's');
@@ -241,7 +287,7 @@ end
 
 
 
-function plot_spectrogram_acrossTrials(lfp_phase_trials, T_chnsarea, tdur_trial, fs, animal, pdcond, align2)
+function plot_spectrogram_acrossTrials(lfp_phase_trials, T_chnsarea, idxGroups, idxGroupNames, tdur_trial, fs, animal, pdcond, align2)
 % plot lfpdata of all the channels: nchns * ntemp * ntrials
 
 twin = 0.2;
@@ -260,12 +306,16 @@ fig_height = 900;
 
 
 subp_startLeft = 0.05;
-subp_endLeft = 0.97;
+subp_endLeft = 0.98;
 subp_startTop = 0.98;
 subp_width = 0.25;
 subp_height = 0.12;
 supb_deltaX = 0.02;
 supb_deltaY = 0.015;
+nGrps = length(idxGroups);
+if (nGrps - 1) * supb_deltaX + nGrps * subp_width +  subp_startLeft > subp_endLeft
+    subp_width = round((subp_endLeft - subp_startLeft - (nGrps - 1) * supb_deltaX)/nGrps, 2);
+end
 
 
 % calculate psd for each chn across trials
@@ -296,24 +346,18 @@ for chi = 1 : size(lfp_phase_trials, 1)
 end
 
 % plot spectrogram
-% Group chns into STN, GP and others
-mask_STN = contains(T_chnsarea.brainarea, 'stn');
-mask_GP = contains(T_chnsarea.brainarea, 'gp');
-mask_Others = ~(mask_STN | mask_GP);
-idxGroups = [{find(mask_STN)}; {find(mask_GP)}; {find(mask_Others)}];
-idxGroupNames = {'STN'; 'GP'; 'Others'};
 [clim_Spectrogram_STN, clim_Spectrogram_GP, clim_Spectrogram_Others] = clim_SKTSpectrogram_extract(animal);
 fig = figure(); set(fig, 'PaperUnits', 'points',  'Position', [fig_left fig_bottom fig_width fig_height]);
 for idxGi = 1 : length(idxGroups)
     idxs = idxGroups{idxGi};
     
-    if strcmpi(idxGroupNames{idxGi}, 'STN')
+    if contains(idxGroupNames{idxGi}, 'STN')
         clim = clim_Spectrogram_STN;
     end
-    if strcmpi(idxGroupNames{idxGi}, 'GP')
+    if contains(idxGroupNames{idxGi}, 'GP')
         clim = clim_Spectrogram_GP;
     end
-    if strcmpi(idxGroupNames{idxGi}, 'Others')
+    if contains(idxGroupNames{idxGi}, 'Others')
         clim = clim_Spectrogram_Others;
     end
     
@@ -338,7 +382,7 @@ for idxGi = 1 : length(idxGroups)
         colorbar
         if idxi == length(idxs)
             xlabel('time/s')
-  
+            
             xtls = xticklabels;
             xtls{cellfun(@(x) strcmp(x, '0'), xtls)} = char(align2);
             xticklabels(xtls)
@@ -515,7 +559,7 @@ uiwait(fig)
             hcbs(tri) = uicontrol('Style','checkbox','Value', goodTrials(tri),...
                 'Position', [pos_cb_trialN_left pos_cb_trialN_bottom cb_width cb_height],'String', ['triali = ' num2str(tri) '/' num2str(ntrials)]);
             set(hcbs(tri),'Callback',{@box_value});
-
+            
             
             for chi = 1 : nchns
                 

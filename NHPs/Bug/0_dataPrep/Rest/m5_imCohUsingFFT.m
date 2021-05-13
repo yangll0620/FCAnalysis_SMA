@@ -62,6 +62,9 @@ for ci = 1 : length(cond_cell)
     
     if ~exist([savefile_prefix, '.mat'])
         files = dir(fullfile(inputfolder, ['*_' pdcond '_*.mat']));
+        if isempty(files)
+            continue;
+        end
         
         % extract all segments
         lfpAllSegs = [];
