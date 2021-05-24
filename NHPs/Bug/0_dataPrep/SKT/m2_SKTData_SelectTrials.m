@@ -51,10 +51,9 @@ if strcmpi(animal, 'bug')
     
     tdur_trial_normal = [-0.6 1];
     tdur_trial_mild = [-0.6 1];
+    tdur_trial_moderate = [-0.6 1];
 end
 if strcmpi(animal, 'jo')
-    
-    
     tdur_trial_normal = [-0.8 0.8];
     tdur_trial_mild = [-0.8 0.8];
     tdur_trial_moderate = [-0.8 0.8];
@@ -90,7 +89,7 @@ savefolder = codecorresfolder;
 
 %% starting
 files = dir(fullfile(inputfolder, '*.mat'));
-filei = 31;
+filei = 1;
 nfiles = length(files);
 while(filei <=  nfiles)
     
@@ -170,6 +169,7 @@ while(filei <=  nfiles)
         end
         
         if gName_iGroup_Equal
+            
             goodTrials_Loaded = true;
         end
     end
@@ -182,18 +182,36 @@ while(filei <=  nfiles)
     end
     clear idxGroups_split groupNames_split
     
+    showname = ['fi = ' num2str(filei) ':' animal '-' pdcond '-' datestr(dateofexp, 'yyyymmdd') '-' bkstr];
+    
     % check_spectrogram_oneGroup
+    [clim_Spectrogram_STN, clim_Spectrogram_GP, clim_Spectrogram_Others] = clim_SKTSpectrogram_extract(animal);
     for idxGi = 1 : length(idxGroups)
         idxs = idxGroups{idxGi};
         lfpdata_1group = lfpdata(idxs, :, :);
         T_chnsarea_1group = T_chnsarea(idxs, :);
         
-        showname = ['fi = ' num2str(filei) ':' animal '-' pdcond '-' datestr(dateofexp, 'yyyymmdd') '-' bkstr];
+        if all(contains(T_chnsarea_1group.brainarea, 'stn'))
+            clim_Spectrogram = clim_Spectrogram_STN;
+        else
+            if all(contains(T_chnsarea_1group.brainarea, 'gp'))
+                clim_Spectrogram = clim_Spectrogram_GP;
+            else
+                clim_Spectrogram = clim_Spectrogram_Others;
+            end
+        end
+        
         goodTrials_1Grp = goodTrials_allGs(:, idxGi);
-        goodTrials_1Grp = check_spectrogram_oneGroup(lfpdata_1group, T_idxevent, T_chnsarea_1group, fs, goodTrials_1Grp, showname);
+        goodTrials_1Grp = check_spectrogram_oneGroup(lfpdata_1group, T_idxevent, T_chnsarea_1group, fs, goodTrials_1Grp, showname, clim_Spectrogram);
+        
+        savefolder_eachTrial = fullfile(savefolder, 'eachTrial');
+        if ~exist(savefolder_eachTrial, 'dir')
+            mkdir(savefolder_eachTrial);
+        end
+        
         goodTrials_allGs(:, idxGi) = goodTrials_1Grp;
         
-        clear idxs lfpdata_1group T_chnsarea_1group goodTrials_1Grp
+        clear idxs lfpdata_1group T_chnsarea_1group goodTrials_1Grp clim_Spectrogram
     end
     
     % goodTrials = goodTrials_allGs(:, 1) & goodTrials_allGs(:, 2) & goodTrials_allGs(:, 3)
@@ -264,7 +282,7 @@ while(filei <=  nfiles)
     % plot spectrogram across all good trials of one day
     disp(['# of Good Trials for averaged spectrogram across trials: ' num2str(size(lfp_phase_trials, 3))])
     idxGroupNames = tbl_goodTrialsMarks.Properties.VariableNames;
-    plot_spectrogram_acrossTrials(lfp_phase_trials, T_chnsarea, idxGroups, idxGroupNames, tdur_trial, fs, animal, pdcond, align2)
+    plot_spectrogram_acrossTrials(lfp_phase_trials, T_chnsarea, idxGroups, idxGroupNames, tdur_trial, fs, animal, pdcond, align2, showname)
     clear idxGroupNames
     
     % Recheck today or Check the next day
@@ -281,13 +299,13 @@ while(filei <=  nfiles)
     clear mask_STN mask_GP mask_Others idxGroups
     clear idx_cond datestrmatch pdcond dateofexp bktdt
     clear tdur_trial t_minmax_reach t_minmax_return
-    clear lfpdata_origin T_idxevent_origin
+    clear lfpdata_origin T_idxevent_origin showname
 end
 end
 
 
 
-function plot_spectrogram_acrossTrials(lfp_phase_trials, T_chnsarea, idxGroups, idxGroupNames, tdur_trial, fs, animal, pdcond, align2)
+function plot_spectrogram_acrossTrials(lfp_phase_trials, T_chnsarea, idxGroups, idxGroupNames, tdur_trial, fs, animal, pdcond, align2, showname)
 % plot lfpdata of all the channels: nchns * ntemp * ntrials
 
 twin = 0.2;
@@ -348,6 +366,10 @@ end
 % plot spectrogram
 [clim_Spectrogram_STN, clim_Spectrogram_GP, clim_Spectrogram_Others] = clim_SKTSpectrogram_extract(animal);
 fig = figure(); set(fig, 'PaperUnits', 'points',  'Position', [fig_left fig_bottom fig_width fig_height]);
+annotation(gcf,'textbox',...
+    [subp_startLeft 0.1  1 0.03],...
+    'String', {showname}, ...
+    'LineStyle', 'none', 'FontWeight', 'bold', 'FitBoxToText', 'off');
 for idxGi = 1 : length(idxGroups)
     idxs = idxGroups{idxGi};
     
@@ -407,7 +429,7 @@ end
 end
 
 
-function goodTrials = check_spectrogram_oneGroup(lfpdata, T_idxevent, T_chnsarea, fs, goodTrials, showname)
+function goodTrials = check_spectrogram_oneGroup(lfpdata, T_idxevent, T_chnsarea, fs, goodTrials, showname, clim)
 % lfpdata: nchns * ntemp * ntrials
 
 
@@ -582,7 +604,7 @@ uiwait(fig)
                 subp_bottom = subp_startTop - subp_height - (chi -1) * (subp_height + supb_deltaY);
                 subplot('Position', [subp_left, subp_bottom, subp_width, subp_height])
                 imagesc(times_plot, freqs_plot, psd_plot);
-                set(gca,'YDir','normal')
+                set(gca,'YDir','normal', 'CLim', clim)
                 colormap(jet)
                 colorbar
                 if (chi == nchns)
@@ -618,6 +640,7 @@ uiwait(fig)
                 clear subp_bottom
             end
         end
+        
         
     end %plot_spectrogram
 

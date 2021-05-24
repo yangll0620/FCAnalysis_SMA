@@ -146,11 +146,7 @@ for i = 1 : nrecords
     
     % get the pd conditioon for the date of experiment
     pdcond = parsePDCondition(dateofexp, animal);
-    if ~strcmp(pdcond, 'moderate')
-        continue;
-    end
-    
-
+  
     if ~any(strcmp(pdcond, conds_cell)) % avoid tomild, tomoderate
         continue;
     end
@@ -165,8 +161,10 @@ for i = 1 : nrecords
     switch pdcond
         case 'normal'
             inputfolder = inputfolder_normalMild;
+            continue;
         case 'mild'
             inputfolder = inputfolder_normalMild;
+            continue;
         case 'moderate'
             inputfolder = inputfolder_moderate;
         otherwise
@@ -199,7 +197,6 @@ for i = 1 : nrecords
     end
     
     disp([onedaypath '-tdtbk' num2str(tdtbk)])
-    continue;
     
     % extract trials of lfp data for particular date and tdt block number, lfptrial_*: nchns * ntemp * ntrials
     [lfptrial_GM, lfptrial_dbs,fs,T_idxevent, T_dbsChn] = extractlfptrial_(onedaypath, tdtbk);

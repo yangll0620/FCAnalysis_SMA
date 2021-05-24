@@ -242,22 +242,21 @@ for ei = 1: length(EventPhases)
         usedChnPairsMask = M1DBS_mask | STN2GP_mask;
         clear M1DBS_mask STN2GP_mask
         
-        showData = iCoh_1time(usedChnPairsMask, :);
+        showData = abs(iCoh_1time(usedChnPairsMask, :));
         chnPairNames_show = chnPairNames(usedChnPairsMask);
         
         % plot
         figure;
         set(gcf, 'PaperUnits', 'points',  'Position', [fig_left fig_bottom fig_width fig_height]);
-        imagesc(showData)
-        set(gca, 'Position', [0.07 0.05 0.92 0.9])
+        imagesc(showData, [0 1])
+        set(gca, 'Position', [0.09 0.05 0.9 0.9])
         [npairs, nf] = size(showData);
         xticks([1:nf])
-        xticklabels(f_selected)
+        xticklabels(round(f_selected, 2))
         yticks([1:npairs]);
-        yticklabels(chnPairNames_show);
+        set(gca,'YTickLabel',chnPairNames_show,'fontsize',12,'FontWeight','bold')
         xlabel('freqs')
         title([animal '-'  pdcond '-'  event '['  num2str(t_AOI(1)) ' ' num2str(t_AOI(2))   ']s,' 'align2 = ' char(align2) 'ntrials = ' num2str(ntrials)])
-        set(gca,'CLim', [0 1])
         colorbar
         
         
@@ -282,7 +281,7 @@ for ei = 1: length(EventPhases)
             end
             
             if ~strcmp(chnPair_prev, '') && ~strcmp(chnPair_prev, chnPair) % a new site pairs
-                hold on; plot(gca, xlim, [(ci + ci -1)/2 (ci + ci -1)/2], 'r--')
+                hold on; plot(gca, xlim, [(ci + ci -1)/2 (ci + ci -1)/2], 'w--')
                 % Create line
             end
             chnPair_prev = chnPair;
@@ -291,7 +290,7 @@ for ei = 1: length(EventPhases)
         end
         
         % save image
-        saveas(gcf, [savefile_prefix '.' image_type], image_type);
+        saveas(gcf, fullfile(savefolder, [animal '_' event '_' pdcond '_align2' char(align2) '.' image_type]), image_type);
         close all
         
         
@@ -310,7 +309,7 @@ for ei = 1: length(EventPhases)
     for ci = 1 : length(cond_cell)
         pdcond = cond_cell{ci};
         try
-            image = imread(fullfile(savefolder, [animal '_' pdcond '_' event '_align2' char(align2) '.' image_type]));
+            image = imread(fullfile(savefolder, [animal '_' event '_' pdcond '_align2' char(align2) '.' image_type]));
             [m, n, c] =  size(image);
         catch
             if exist('m', 'var')
@@ -324,6 +323,138 @@ for ei = 1: length(EventPhases)
     
     
     clear t_AOI align2 event
+end
+
+
+
+
+%%%-------  plot Peak ---------%
+patterns = {'ko', 'g+', 'r*'};
+cond_cell = cond_cell_extract(animal);
+
+for ei = 1: length(EventPhases)
+    event = EventPhases{ei};
+    if strcmpi(event, 'preMove')
+        align2 = SKTEvent.TargetOnset;
+    end
+    if strcmpi(event, 'Reach')
+        align2 = SKTEvent.ReachOnset;
+    end
+    if strcmpi(event, 'Return')
+        align2 = SKTEvent.ReturnOnset;
+    end
+    
+    figure
+    set(gcf, 'PaperUnits', 'points',  'Position', [fig_left fig_bottom fig_width fig_height]);
+    for ci = 1 : length(cond_cell)
+        pdcond = cond_cell{ci};
+        savefile = fullfile(savefolder, [animal '_' pdcond '_' event '_align2' char(align2) '.mat']);
+        
+        load(savefile, 'chnPairNames', 'iCoh_1time');
+        if ~exist('f_selected_show', 'var')
+            load(savefile, 'f_selected');
+            f_selected_show = f_selected;
+        else
+            load(savefile, 'f_selected');
+            if any(~(f_selected_show == f_selected))
+                disp([pdcond ' f_selected_show not equal f_selected'])
+                continue;
+            end
+            clear f_selected
+        end
+
+
+
+        % select used chns
+        M1DBS_mask = cellfun(@(x) contains(x, 'M1-stn') || contains(x, 'M1-gp'), chnPairNames);
+        STN2GP_mask = cellfun(@(x) contains(x, 'stn') && contains(x, 'gp'), chnPairNames);
+        usedChnPairsMask = M1DBS_mask | STN2GP_mask;
+        showData = abs(iCoh_1time(usedChnPairsMask, :));
+        if ~exist('chnPairNames_show', 'var')
+            chnPairNames_show = chnPairNames(usedChnPairsMask);
+        else
+            chnPairNames_show_new = chnPairNames(usedChnPairsMask);
+            cellcmp = strcmp(chnPairNames_show, chnPairNames_show_new);
+            if any(~cellcmp)
+                disp([pdcond ' chnPairNames_show_new not equal chnPairNames_show'])
+                continue;
+            end
+            clear chnPairNames_show_new
+        end
+
+        if ~exist('npairs', 'var')
+            [npairs, nf] = size(showData);
+        else
+            [m, n] = size(showData);
+            if m ~= npairs || n ~= nf 
+                disp([pdcond ' m ~= npairs or n ~= nf'])
+                continue;
+            end
+            clear m n
+        end
+
+        [iCoh_Peak, idxs] = max(abs(showData), [], 2);
+        idxs = idxs(find(iCoh_Peak ~= 0));
+        pairs = find(iCoh_Peak ~= 0);
+
+        % plot
+        plot(f_selected_show(idxs), pairs, patterns{ci}, 'DisplayName',pdcond)
+        ylim([1, npairs])
+        xlim([f_selected_show(1), f_selected_show(end)])
+        hold on
+
+
+
+        if ci == length(cond_cell)
+            chnPair_prev = '';
+            for ci = 1: length(chnPairNames_show)
+                chnPair = chnPairNames_show{ci};
+
+                % replace M1-stn0-1 to M1-STN
+                s_stn = regexp(chnPair, 'stn[0-9]*-[0-9]*', 'match');
+                if ~isempty(s_stn)
+                    for si = 1 : length(s_stn)
+                        chnPair = strrep(chnPair, s_stn{si}, 'STN');
+                    end
+                end
+                % replace M1-stn0-1 to M1-STN
+                s_gp = regexp(chnPair, 'gp[0-9]*-[0-9]*', 'match');
+                if ~isempty(s_gp)
+                    for si = 1 : length(s_gp)
+                        chnPair = strrep(chnPair, s_gp{si}, 'GP');
+                    end
+                end
+
+                if ~strcmp(chnPair_prev, '') && ~strcmp(chnPair_prev, chnPair) % a new site pairs
+                    hold on; 
+                    plot(gca, xlim, [(ci + ci -1)/2 (ci + ci -1)/2], 'k--')
+                    % Create line
+                end
+                chnPair_prev = chnPair;
+
+                clear s_stn s_gp chnPair
+            end
+        end
+
+
+        clear M1DBS_mask STN2GP_mask usedChnPairsMask
+        clear chnPairNames f_selected iCoh_1time
+    end
+    yticks([1:npairs])
+    set(gca,'YTickLabel',chnPairNames_show,'fontsize',12,'FontWeight','bold')
+    set(gca, 'YDir','reverse')
+    xticks(f_selected_show)
+    xticklabels(round(f_selected_show,2) )
+    set(gca, 'Color', 'w');
+    hleg = legend('show', 'Color', 'w');
+    hleg.String(end-1:end) = [];
+    set(gca, 'Position', [0.09 0.05 0.9 0.9])
+    title([ animal ' Peak connectivity in ' event])
+
+    % save png
+    saveas(gcf, fullfile(savefolder,[animal '_peakFC_' event '.' image_type]), image_type);
+
+    close all
 end
 
 end

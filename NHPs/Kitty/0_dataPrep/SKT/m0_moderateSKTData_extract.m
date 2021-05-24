@@ -34,16 +34,15 @@ function m0_moderateSKTData_extract()
 
     % datafolder, pipelinefolder
     [datafolder, ~, ~, ~] = exp_subfolders();
-    correspipelinefolder = code_corresfolder(codefilepath, true, false);
+    [codecorresfolder, ~] = code_corresfolder(codefilepath, true, false);
 
     %% input setup
-    tmp = regexp(codefilepath, 'NHPs/[a-zA-Z]*', 'match');
-    animal = tmp{1}(length('NHPs/')+1:end);
-    clear tmp
+    % animal
+    animal = animal_extract(codecorresfolder);
 
     % Input dir:  preprocessed folder in root2
-    processedfolder_inroot = fullfile('/home', 'lingling', 'root', 'Animals', animal, 'Recording', 'Processed', 'DataDatabase');
-
+    processedfolder_inroot = fullfile('H:', 'My Drive', 'NMRC_umn', 'Projects', 'FCAnalysis', 'exp',  'data', animal, 'Recording', 'Processed', 'DataDatabase');
+   
     % master sheet: Kitty doesn't have SKT in normal
     SKTfile_master = fullfile(datafolder, animal, 'KittyModerateSKT.csv');
     strformat_date_master = 'yyyymmdd'; % the format of date string in  SKTfile_master, e.g. '20170123'
@@ -61,7 +60,7 @@ function m0_moderateSKTData_extract()
     strformat_date_onedaypath = 'mmddyy'; % the format of date string in  savedaypath, e.g. '012317'
 
     %% save setup
-    savefolder = correspipelinefolder;
+    savefolder = codecorresfolder;
     savefilename_prefix = [animal '_STKData_'];
 
     strformat_date_save = 'yyyymmdd'; % the format of date string in saved filename, e.g. '20170123'
@@ -102,6 +101,9 @@ function m0_moderateSKTData_extract()
          
         % one day path
         onedaypath = fullfile(processedfolder_inroot, [animal '_' datestr(dateofexp, strformat_date_onedaypath)]);
+        if ~exist(onedaypath, 'dir')
+            continue;
+        end
 
         disp(['extracting ' onedaypath '-tdtbk' num2str(tdtbk)])
 
@@ -242,10 +244,10 @@ function [lfptrial_cortical, lfptrial_dbs, fs, idxeventtbl, chantbl_dbs] = extra
     fs_ma = SingleTargetKluverMAData.SR;
 
     % time indices for target onset, reach onset, touch screen, return and mouth
-    TargetTime = SingleTargetKluverMAData.TargetTimeix;
+    TargetTime = SingleTargetKluverMAData.TargetTime;
     ReachTimeix = SingleTargetKluverMAData.ReachTimeix;
     TouchTimeix = SingleTargetKluverMAData.TouchTimeix;
-    ReturnTimeix = round(SingleTargetKluverMAData.ReturnTimeix); % not integer in .ReturnTimeix
+    ReturnTimeix = SingleTargetKluverMAData.ReturnTimeix; 
     MouthTimeix = SingleTargetKluverMAData.MouthTimeix;
 
     timeixtbl_ma = [table(TargetTime) table(ReachTimeix) table(TouchTimeix) table(ReturnTimeix) table(MouthTimeix)];

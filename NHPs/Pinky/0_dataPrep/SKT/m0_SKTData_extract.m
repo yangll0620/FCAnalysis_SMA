@@ -41,7 +41,7 @@ function m0_SKTData_extract()
     animal = 'Pinky';
 
     % Input dir:  preprocessed folder in root2
-    processedfolder_inroot2 = fullfile('/home', 'lingling', 'root2', 'Animals2', animal, 'Recording', 'Processed', 'DataDatabase');
+    processedfolder_inroot2 = fullfile('H:', 'My Drive', 'NMRC_umn', 'Projects', 'FCAnalysis', 'exp', 'data',animal, 'Recording', 'Processed', 'DataDatabase');
 
     % master sheet
     xlsxfile_master = fullfile(datafolder, animal, [animal 'MasterDatabase.xlsx']);
@@ -126,6 +126,10 @@ function m0_SKTData_extract()
 
         % get the pd conditioon for the date of experiment
         pdcondition = parsePDCondition(dateofexp, animal);
+        
+        if ~strcmp(pdcondition, 'moderate')
+            continue;
+        end
 
         if ~any(strcmp(pdcondition, conds_cell)) % avoid tomild, tomoderate
             continue;

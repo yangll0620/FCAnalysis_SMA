@@ -5,8 +5,8 @@ if strcmpi(animal, 'bug')
     t_minmax_reach_mild = [0.5, 2];
     t_minmax_return_mild = [0.5, 2];
     
-    t_minmax_reach_moderate = [];
-    t_minmax_return_moderate = [];
+    t_minmax_reach_moderate = [0.5 2];
+    t_minmax_return_moderate = [0.5 2];
     
 end
 if strcmpi(animal, 'jo') 

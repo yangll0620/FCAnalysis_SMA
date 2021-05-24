@@ -39,6 +39,7 @@ animal = codecorresfolder(fi + length('NHPs') + 1:j);
 
 inputfolder_normal = fullfile(codecorresParentfolder,'m1_restData_cleaned_extract_normal');
 inputfolder_mild = fullfile(codecorresParentfolder,'m1_restData_cleaned_extract_mild3chns');
+inputfolder_moderate = fullfile(codecorresParentfolder,'m1_restData_cleaned_extract_moderate');
 
 
 %%
@@ -48,12 +49,27 @@ savefolder = codecorresfolder;
 inputfolder = inputfolder_normal;
 files = dir(fullfile(inputfolder, '*.mat'));
 for fi = 1 : length(files)
+    if exist(fullfile(savefolder, files(fi).name), 'file')
+        continue
+    end
     copyfile(fullfile(inputfolder, files(fi).name), fullfile(savefolder, files(fi).name));
 end
 
 inputfolder = inputfolder_mild;
 files = dir(fullfile(inputfolder, '*.mat'));
 for fi = 1 : length(files)
+    if exist(fullfile(savefolder, files(fi).name), 'file')
+        continue
+    end
+    copyfile(fullfile(inputfolder, files(fi).name), fullfile(savefolder, files(fi).name));
+end
+
+inputfolder = inputfolder_moderate;
+files = dir(fullfile(inputfolder, '*.mat'));
+for fi = 1 : length(files)
+    if exist(fullfile(savefolder, files(fi).name), 'file')
+        continue
+    end
     copyfile(fullfile(inputfolder, files(fi).name), fullfile(savefolder, files(fi).name));
 end
 

@@ -53,6 +53,7 @@ cond_cell = cond_cell_extract(animal);
 if strcmpi(animal, 'bug')
     tdur_trial_normal = [-0.6 1];
     tdur_trial_mild = [-0.6 1];
+    tdur_trial_moderate = [-0.6 1];
 end
 if strcmpi(animal, 'jo') 
     

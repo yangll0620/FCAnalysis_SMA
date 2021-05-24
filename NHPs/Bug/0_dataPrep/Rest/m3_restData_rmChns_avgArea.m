@@ -1,9 +1,10 @@
 function m3_restData_rmChns_avgArea()
     %%  average lfp acros each area
     %
-    %   1. combine Vlo and VPLo
-    %   2. replace STN into stn0-1, stn1-2 .. and GP into gp0-1....
-    %   3. average across areas (M1 and PMC in selected Layer)
+    %   1. replace STN into stn0-1, stn1-2 .. and GP into gp0-1....
+    %   2. remove unwanted chns 
+    %   3. average across areas
+    %
     %
     % Input:
     %   m2_restData_selectSeg_Power
@@ -25,25 +26,36 @@ function m3_restData_rmChns_avgArea()
 
     % add util path
     addpath(genpath(fullfile(codefolder, 'util')));
-
+    addpath(genpath(fullfile(codefolder, 'NHPs')));
+    addpath(genpath(fullfile('.', 'subFuncs')));
 
     % the corresponding pipeline and the parent folder for this code
     [codecorresfolder, codecorresParentfolder] = code_corresfolder(codefilepath, true, false);
 
     %% global variables
     % animal
-    [fi, j] = regexp(codecorresfolder, 'NHPs/[A-Za-z]*');
-    animal = codecorresfolder(fi + length('NHPs/'):j);
-
-    segt = 2;
+    if ismac
+        % Code to run on Mac platform
+    elseif isunix
+        % Code to run on Linux platform
+        
+        [fi, j] = regexp(codecorresfolder, ['NHPs', '/', '[A-Za-z]*']);
+    elseif ispc
+        % Code to run on Windows platform
+        
+        [fi, j] = regexp(codecorresfolder, ['NHPs', '\\', '[A-Za-z]*']);
+    else
+        disp('Platform not supported')
+    end
+    animal = codecorresfolder(fi + length('NHPs') + 1:j);
 
     %%  input setup
 
     % input folder: extracted raw rest data with grayMatter
     inputfolder = fullfile(codecorresParentfolder, 'm2_restData_selectSeg_Power');
     
-    unWAreas = {};
-
+    unwanted_DBS = unwanted_DBS_extract(animal);
+    
     %% save setup
     savefolder = codecorresfolder;
     savefilename_addstr = 'selAreas_avgArea';
@@ -67,10 +79,6 @@ function m3_restData_rmChns_avgArea()
         end
         
         
-        % replace VLo and VPLo with VLoVPLo
-        mask_VLoVPLo = strcmp(T_chnsarea.brainarea, 'VLo') | strcmp(T_chnsarea.brainarea, 'VPLo');
-        T_chnsarea{mask_VLoVPLo, 'brainarea'} = {'VLo/VPLo'};
-
         
         
         % replace STN into stn0-1, stn1-2 ... 
@@ -93,10 +101,7 @@ function m3_restData_rmChns_avgArea()
         disp(filename);
         
         % rm unwanted areas and average across areas
-        [lfpdata, T_chnsarea_new] = rmChns_avgArea_1file(data_segments, T_chnsarea, unWAreas);
-        if isempty(lfpdata)
-            continue;
-        end
+        [data_segments, T_chnsarea_new] = rmChns_avgArea_1file(data_segments, T_chnsarea, unwanted_DBS);
         
 
         
@@ -104,12 +109,10 @@ function m3_restData_rmChns_avgArea()
         % save
         T_chnsarea = T_chnsarea_new;
         
-        idx = strfind(filename, [animal '_']);
-        tmpn = length([animal '_']);
-        savefilename = [filename(idx:idx + tmpn - 1) savefilename_addstr ...
-            upper(filename(idx + tmpn)) filename(idx + tmpn + 1:end)];
+        [i, j]= regexp(filename, [animal '_[a-zA-Z]*_' ]);
+        savefilename = [animal '_' savefilename_addstr filename(j:end)];
         
-        save(fullfile(savefolder, savefilename), 'lfpdata',  'T_chnsarea', 'fs');
+        save(fullfile(savefolder, savefilename), 'data_segments',  'T_chnsarea', 'fs');
         
         
         clear filename file lfpdata T_chnsarea fs idx tempn savefilename
@@ -123,24 +126,18 @@ function [avg_segments, T_chnsarea_new] = rmChns_avgArea_1file(data_segments, T_
     % Args:
     %   data_segments: a struct storing data segment
     %   T_chnsarea: height = nchns
-    %   
+    %   unWAreas: unWanted areas e.g unWAreas = {'lCd', 'rMC', 'stn0-1', 'stn0-1', 'stn1-2', 'stn2-3', 'stn6-7', 'gp0-1'};
     %
     %  Returns:
-    %   avg_segments: averaged lfp still struct (nsegs), selected Layer useds for M1 and PMC
+    %   avg_segments: averaged lfp still struct (nsegs)
     %   T_chnsarea_new: new T_chnsarea_new (height = (nareas + nDBS))
-    
-    
-    depth_M1Layer5 = [10 14];
-    depth_PMCLayer5 = [10 14];
-    
-    depthUsed_M1 = depth_M1Layer5;
-    depthUsed_PMC = depth_PMCLayer5;
+
     
     
     unWAreas_notDBS = unWAreas(~contains(unWAreas, 'stn') & ~contains(unWAreas, 'gp'));
 
     % extract mask_usedAreas (del unwanted areas, rm empty and DBS)
-    mask_notDBSAreas = ~strcmp(T_chnsarea.electype, 'DBS');
+    mask_notDBSAreas = strcmp(T_chnsarea.electype, 'Gray Matter') | strcmp(T_chnsarea.electype, 'Utah Array');
     mask_unwanted = false(size(T_chnsarea.brainarea));
     for i = 1 : length(unWAreas_notDBS)
         uArea = unWAreas_notDBS{i};
@@ -148,11 +145,8 @@ function [avg_segments, T_chnsarea_new] = rmChns_avgArea_1file(data_segments, T_
         clear uArea
     end
     mask_emptyarea = cellfun(@(x) isempty(x), T_chnsarea.brainarea);
-    mask_M1PMC = strcmp(T_chnsarea.brainarea, 'M1') | strcmp(T_chnsarea.brainarea, 'PMC');
     mask_usedAreas = mask_notDBSAreas & ~mask_unwanted & ~mask_emptyarea;
-    mask_usedAreas_notM1PMC = mask_usedAreas & ~mask_M1PMC;
-    mask_usedAreas_M1PMC = mask_usedAreas & mask_M1PMC;
-    clear mask_notDBSAreas mask_unwanted mask_emptyarea unWAreas_DBS mask_usedAreas
+    clear mask_notDBSAreas mask_unwanted mask_emptyarea unWAreas_DBS
     
     % DBS (del unwanted stn contact)
     unWAreas_DBS = unWAreas(contains(unWAreas, 'stn') | contains(unWAreas, 'gp'));
@@ -166,13 +160,12 @@ function [avg_segments, T_chnsarea_new] = rmChns_avgArea_1file(data_segments, T_
     clear unWAreas_DBS mask_unwanted
     
     
-    T_usedAreas_notM1PMC = T_chnsarea(mask_usedAreas_notM1PMC, :);
-    T_usedAreas_M1PMC = T_chnsarea(mask_usedAreas_M1PMC, :);
+    T_usedAreas = T_chnsarea(mask_usedAreas, :);
     T_DBS = T_chnsarea(mask_DBS, :);
     
 
 
-    % extract the averaged lfp avglfp seg
+    % extract the averaged lfp avglfp: (nareas + nDBS) * ntemp * nsegs
     avg_segments = struct(); 
     for segi = 1:length(data_segments)
         
@@ -180,49 +173,27 @@ function [avg_segments, T_chnsarea_new] = rmChns_avgArea_1file(data_segments, T_
         lfp_1seg = lfp_1seg'; % lfp_1seg: nchns * ntemp 
         
         
-        lfpdata_areas_notM1PMC = lfp_1seg(mask_usedAreas_notM1PMC, :);
-        lfpdata_areas_M1PMC = lfp_1seg(mask_usedAreas_M1PMC, :);
+        lfpdata_areas = lfp_1seg(mask_usedAreas, :);
         lfpdata_DBS = lfp_1seg(mask_DBS, :);
         
         
-        
-        %%% avg lfp across each area (M1 and PMC), avglfpdata_areas: nareas * ntemp %%%%
-        [avglfpdata_areas_M1PMC, T_new_M1PMC] = avglfp_acrossM1PMC(lfpdata_areas_M1PMC, T_usedAreas_M1PMC, depthUsed_M1, depthUsed_PMC);
-        if isempty(avglfpdata_areas_M1PMC)
-            disp('avglfpdata_areas_M1PMC is empty, return!')
-            avg_segments = [];
-            T_chnsarea_new = [];
-            return ;
-        end
-        if segi == 1
-            T_usedAreasM1PMC_new = T_new_M1PMC;
-        else
-            if ~(isequal(table2struct(T_new_M1PMC), table2struct(T_usedAreasM1PMC_new)))
-                disp(['T_new in' num2str(segi) ' not equal exist T_usedAreas_new.'])
-                disp(T_new_M1PMC)
-                disp(T_usedAreasM1PMC_new)
-            end
-        end
-         
         %%% avg lfp across each area, avglfpdata_areas: nareas * ntemp %%%%
-        [avglfpdata_areas_notM1PMC, T_new_notM1PMC] = avglfp_acrossArea(lfpdata_areas_notM1PMC, T_usedAreas_notM1PMC); 
+        [avglfpdata_areas, T_new] = avglfp_acrossArea(lfpdata_areas, T_usedAreas); 
         
-        if segi == 1
-            T_usedAreasNotM1PMC_new = T_new_notM1PMC;
+        if ~exist('T_usedAreas_new', 'var')
+            T_usedAreas_new = T_new;
         else
-            if ~(isequal(table2struct(T_new_notM1PMC), table2struct(T_usedAreasNotM1PMC_new)))
+            if ~(isequal(table2struct(T_new), table2struct(T_usedAreas_new)))
                 disp(['T_new in' num2str(segi) ' not equal exist T_usedAreas_new.'])
-                disp(T_new_notM1PMC)
-                disp(T_usedAreasNotM1PMC_new)
+                disp(T_new)
+                disp(T_usedAreas_new)
             end
         end
         
-            
-        
-        %%% cat notDBS M1PMC, notM1PMC areas and DBS %%%
-        avglfp = cat(1, avglfpdata_areas_M1PMC, avglfpdata_areas_notM1PMC, lfpdata_DBS);
+        %%% cat notDBS areas and DBS %%%
+        avglfp = cat(1, avglfpdata_areas, lfpdata_DBS);
         if segi == 1
-            T_chnsarea_new = [T_usedAreasM1PMC_new; T_usedAreasNotM1PMC_new; T_DBS];
+            T_chnsarea_new = [T_usedAreas_new; T_DBS];
             T_chnsarea_new.chni = [1: height(T_chnsarea_new)]';
         end
         
@@ -230,10 +201,8 @@ function [avg_segments, T_chnsarea_new] = rmChns_avgArea_1file(data_segments, T_
         % assign
         avg_segments(segi).lfp = avglfp;
         
-        clear lfp_1seg lfpdata_areas* lfpdata_DBS avglfpdata_areas T_new*
+        clear lfp_1seg lfpdata_areas lfpdata_DBS avglfpdata_areas T_new
     end
-    
-
      
 end
 
@@ -270,62 +239,6 @@ function [avglfp, T_chnsarea_new] = avglfp_acrossArea(lfpdata, T_chnsarea)
         clear barea mask_area avglfp_area tbl
     end
     T_chnsarea_new.chni = [1: height(T_chnsarea_new)]';
-end % avglfp_acrossArea
-
-function [avglfp, T_chnsareaM1PMC_new] = avglfp_acrossM1PMC(lfpdata, T_chnsareaM1PMC, depthUsed_M1, depthUsed_PMC)
-    % average lfp across M1 or PMC based on depthUsed 
-    % 
-    % args:
-    %       lfpdata : lfp data in area (nchns * ntemp)
-    %       T_chnsarea: chns-area table 
-    % return:
-    %       avglfp: averaged lfp data (nareas * ntemp)
-    %       T_chnsarea_new: the new chns-area table
-
-
-    uniqAreas = unique(T_chnsareaM1PMC.brainarea);
-    avglfp = [];
-    T_chnsareaM1PMC_new = T_chnsareaM1PMC([], :);
-    for ai = 1 : length(uniqAreas)
-        barea = uniqAreas{ai};
-        
-        if ~strcmp(barea, 'M1') && ~strcmp(barea, 'PMC')
-            avglfp = []; T_chnsareaM1PMC_new = [];
-            disp([barea ' exist, only M1 and PMC are allowed!']);
-            return;
-        end
-                
-        if strcmp(barea, 'M1')
-            depthUsed = depthUsed_M1 ;
-        end
-        if strcmp(barea, 'PMC')
-            depthUsed = depthUsed_PMC ;
-        end
-        
-        mask_area = strcmp(T_chnsareaM1PMC.brainarea, barea) & T_chnsareaM1PMC.depth >= depthUsed(1) & T_chnsareaM1PMC.depth <= depthUsed(2);
-        if ~any(mask_area) % if not channels in depthUsed
-            avglfp = []; T_chnsareaM1PMC_new = [];
-            disp([ 'no channels in Useddept for  ' barea]);
-            return;
-        end
-
-        lfp_area = lfpdata(mask_area, :);
-        avglfp_area = mean(lfp_area, 1);
-
-
-        avglfp = cat(1, avglfp, avglfp_area);
-
-        tbl = T_chnsareaM1PMC(find(mask_area,1),:);
-        tbl.recordingchn = nan;
-        T_chnsareaM1PMC_new = [T_chnsareaM1PMC_new; tbl];
-
-        clear barea mask_area avglfp_area tbl
-    end
-    T_chnsareaM1PMC_new.chni = [1: height(T_chnsareaM1PMC_new)]';
 end
-
-
-
-
 
 
