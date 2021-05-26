@@ -89,7 +89,7 @@ savefolder = codecorresfolder;
 
 %% starting
 files = dir(fullfile(inputfolder, '*.mat'));
-filei = 1;
+filei = 19;
 nfiles = length(files);
 while(filei <=  nfiles)
     
@@ -310,7 +310,7 @@ function plot_spectrogram_acrossTrials(lfp_phase_trials, T_chnsarea, idxGroups, 
 
 twin = 0.2;
 toverlap = 0.15;
-f_AOI = [5 40];
+f_AOI = [8 40];
 
 nwin = round(twin * fs);
 noverlap = round(toverlap * fs);
