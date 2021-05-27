@@ -53,8 +53,7 @@ if strcmpi(animal, 'bug')
     tdur_trial_mild = [-0.6 1];
 end
 if strcmpi(animal, 'jo')
-    
-    
+
     tdur_trial_normal = [-0.8 0.8];
     tdur_trial_mild = [-0.8 0.8];
     tdur_trial_moderate = [-0.8 0.8];
@@ -87,8 +86,11 @@ coli_align2 = uint32(align2);
 %% save setup
 savefolder = codecorresfolder;
 
-
 %% starting
+savefolder_trials = fullfile(savefolder, 'trials');
+if ~exist(savefolder_trials, 'dir')
+    mkdir(savefolder_trials);
+end
 files = dir(fullfile(inputfolder, '*.mat'));
 filei = 1;
 nfiles = length(files);
@@ -176,12 +178,14 @@ while(filei <=  nfiles)
     idxGroups = idxGroups_split;
     groupNames = groupNames_split;
     if goodTrials_Loaded
+        
         goodTrials_allGs = tbl_goodTrialsMarks{:, :};
     else
         goodTrials_allGs = ones(ntrials, length(idxGroups));
     end
     clear idxGroups_split groupNames_split
-    
+
+
     showname = ['fi = ' num2str(filei) ':' animal '-' pdcond '-' datestr(dateofexp, 'yyyymmdd') '-' bkstr];
     
     % check_spectrogram_oneGroup
@@ -194,19 +198,31 @@ while(filei <=  nfiles)
         
         if all(contains(T_chnsarea_1group.brainarea, 'stn'))
             clim_Spectrogram = clim_Spectrogram_STN;
+            groupname = 'STN';
         else
             if all(contains(T_chnsarea_1group.brainarea, 'gp'))
                 clim_Spectrogram = clim_Spectrogram_GP;
+                groupname = 'GP';
             else
                 clim_Spectrogram = clim_Spectrogram_Others;
+                
+                if any(contains(T_chnsarea_1group.brainarea, 'M1')) % only show M1, ignore SMA, VPLo et al.
+                    M1_mask = contains(T_chnsarea_1group.brainarea, 'M1');
+                    groupname = 'M1';
+                    lfpdata_1group = lfpdata_1group(M1_mask, :, :);
+                    T_chnsarea_1group = T_chnsarea_1group(M1_mask, :);
+                else
+                    continue;
+                end    
+                
             end
         end
-
+              
         goodTrials_1Grp = goodTrials_allGs(:, idxGi);
-        goodTrials_1Grp = check_spectrogram_oneGroup(lfpdata_1group, T_idxevent, T_chnsarea_1group, fs, goodTrials_1Grp, showname, clim_Spectrogram);
-        goodTrials_allGs(:, idxGi) = goodTrials_1Grp;
-        
-        clear idxs lfpdata_1group T_chnsarea_1group goodTrials_1Grp clim_Spectrogram
+        goodTrials_1Grp = check_spectrogram_oneGroup(lfpdata_1group, T_idxevent, T_chnsarea_1group, fs, goodTrials_1Grp, showname, clim_Spectrogram, ...
+                                                    savefolder_trials, animal, groupname, pdcond, datestr(dateofexp, 'yyyymmdd'), bkstr);
+   
+        clear idxs lfpdata_1group T_chnsarea_1group goodTrials_1Grp
     end
     
     % goodTrials = goodTrials_allGs(:, 1) & goodTrials_allGs(:, 2) & goodTrials_allGs(:, 3)
@@ -268,8 +284,12 @@ while(filei <=  nfiles)
         clear t_reach t_return idxdur lfp_phase_1trial
     end
     
+    oneday_spectrogram_img = fullfile(savefolder, [animal '_goodTrials_' pdcond '_' datestr(dateofexp, 'yyyymmdd') '_' bkstr]);
     if isempty(lfp_phase_trials)
         disp('lfp_phase_trials is empty, skip spectrogram across trials')
+        if exist(oneday_spectrogram_img, 'file') % delete if exist already
+            delete(oneday_spectrogram_img);
+        end
         filei = filei + 1;
         continue;
     end
@@ -282,8 +302,9 @@ while(filei <=  nfiles)
     
     % Recheck today or Check the next day
     reply = input(['Check the next day (y) or Recheck this day (n)[y]:'], 's');
-    if isempty(reply) || lower(reply) == 'y'
-        saveas(gcf, fullfile(savefolder, [animal '_goodTrials_' pdcond '_f' num2str(filei) '_' datestr(dateofexp, 'yyyymmdd') '_' bkstr]), 'png');
+    if isempty(reply) || lower(reply) ~= 'n'
+        
+        saveas(gcf, oneday_spectrogram_img, 'png');
         
         filei = filei + 1;
     end
@@ -424,8 +445,42 @@ end
 end
 
 
-function goodTrials = check_spectrogram_oneGroup(lfpdata, T_idxevent, T_chnsarea, fs, goodTrials, showname, clim)
+function goodTrials = check_spectrogram_oneGroup(lfpdata, T_idxevent, T_chnsarea, fs, goodTrials, showname, clim, varargin)
 % lfpdata: nchns * ntemp * ntrials
+
+% parse varargin
+if length(varargin) >= 6
+    bkstr = varargin{6};
+else
+    bkstr = '';
+end
+if length(varargin) >= 5
+    dateofexp_yyyymmdd = varargin{5};
+else
+    dateofexp_yyyymmdd = '';
+end
+if length(varargin) >= 4
+    pdcond = varargin{4};
+else
+    pdcond = '';
+end
+if length(varargin) >= 3
+    groupname = varargin{3};
+else
+    groupname = '';
+end
+if length(varargin) >= 2
+    animal = varargin{2};
+else
+    animal = '';
+end
+if length(varargin) >= 1
+    savefolder = varargin{1};
+else
+    savefolder = '';
+end
+
+
 
 
 % global parameters
@@ -599,6 +654,7 @@ uiwait(fig)
                 subp_bottom = subp_startTop - subp_height - (chi -1) * (subp_height + supb_deltaY);
                 subplot('Position', [subp_left, subp_bottom, subp_width, subp_height])
                 imagesc(times_plot, freqs_plot, psd_plot);
+                %set(gca,'YDir','normal')
                 set(gca,'YDir','normal', 'CLim', clim)
                 colormap(jet)
                 colorbar
@@ -635,6 +691,8 @@ uiwait(fig)
                 clear subp_bottom
             end
         end
+        trials_spectrogram_img = fullfile(savefolder, [animal '_' groupname '_trials_spect_' pdcond '_' dateofexp_yyyymmdd '_' bkstr '_trial' num2str(tri_str) '-' num2str(tri_end)]);
+        saveas(gcf, trials_spectrogram_img, 'png');
         
     end %plot_spectrogram
 
