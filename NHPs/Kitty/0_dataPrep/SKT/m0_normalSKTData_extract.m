@@ -1,4 +1,4 @@
-function m0_moderateSKTData_extract()
+function m0_normalSKTData_extract()
     %% extract the SKT moderate data for Kitty 
     %
     %	Inputs:
@@ -44,7 +44,7 @@ function m0_moderateSKTData_extract()
     processedfolder_inroot = fullfile('H:', 'My Drive', 'NMRC_umn', 'Projects', 'FCAnalysis', 'exp',  'data', animal, 'Recording', 'Processed', 'DataDatabase');
    
     % master sheet: Kitty doesn't have SKT in normal
-    SKTfile_master = fullfile(datafolder, animal, 'KittyModerateSKT.csv');
+    SKTfile_master = fullfile(datafolder, animal, 'KittyNormalCOT.csv');
     strformat_date_master = 'yyyymmdd'; % the format of date string in  SKTfile_master, e.g. '20170123'
 
 
@@ -55,7 +55,7 @@ function m0_moderateSKTData_extract()
     % downsample
     fs_new = 500;
     
-    conds_cell = {'moderate'};
+    conds_cell = {'normal', 'moderate'};
     
     strformat_date_onedaypath = 'mmddyy'; % the format of date string in  savedaypath, e.g. '012317'
 
@@ -266,7 +266,10 @@ function [lfptrial_cortical, lfptrial_dbs, fs, idxeventtbl, chantbl_dbs] = extra
     TouchTimeix = SingleTargetKluverMAData.TouchTimeix;
     ReturnTimeix = SingleTargetKluverMAData.ReturnTimeix; 
     MouthTimeix = SingleTargetKluverMAData.MouthTimeix;
-
+    [m, n] = size(TargetTime);
+    if m == 1 || n == 1
+        TargetTime = reshape(TargetTime, [m * n, 1]);
+    end
     timeixtbl_ma = [table(TargetTime) table(ReachTimeix) table(TouchTimeix) table(ReturnTimeix) table(MouthTimeix)];
 
     % the tag of good reach trials
@@ -438,7 +441,7 @@ function [lfptrial_cortical, lfptrial_dbs, fs, idxeventtbl, chantbl_dbs] = extra
         return
     end
 
-    if (convars(idx_dbs(1)).ADFrequency ~= fs_lfpcortical)
+    if ~(abs(convars(idx_dbs(1)).ADFrequency - fs_lfpcortical) < 0.001)
         % check the sampling frequency of dbs is the same as the lfp stored in separate channels or not
         disp(['the sampling frequency of dbs is not the same as the lfp stored in separate channels'])
         return

@@ -53,6 +53,7 @@ cond_cell = cond_cell_extract(animal);
 if strcmpi(animal, 'bug')
     tdur_trial_normal = [-0.6 1];
     tdur_trial_mild = [-0.6 1];
+    tdur_trial_moderate = [-0.6 1];
 end
 if strcmpi(animal, 'jo') 
     
@@ -83,6 +84,7 @@ coli_align2 = uint32(align2);
 savefolder = codecorresfolder;
 
 %% starting: narrow filter the lfp data of all the files
+noisy_chns = noisy_chns_extract(animal);
 for i = 1 : length(cond_cell)
     pdcond = cond_cell{i};
     
@@ -94,6 +96,12 @@ for i = 1 : length(cond_cell)
     
     
     [lfptrials, fs, T_chnsarea] = lfp_goodTrials_align2(files, align2, tdur_trial, t_minmax_reach, t_minmax_return);
+    mask_noisyChns = cellfun(@(x) contains(x, noisy_chns), T_chnsarea.brainarea);
+    mask_notDBS_notM1 = ~strcmp(T_chnsarea.brainarea, 'M1') & ~strcmp(T_chnsarea.electype, 'DBS');
+    mask_usedChns = ~(mask_noisyChns | mask_notDBS_notM1);
+    T_chnsarea = T_chnsarea(mask_usedChns, :); T_chnsarea.chni = [1: height(T_chnsarea)]';
+    lfptrials = lfptrials(mask_usedChns, :, :);
+    
     plot_spectrogram_acrossTrials(lfptrials, T_chnsarea, tdur_trial, fs, animal, pdcond, align2);
     saveas(gcf, fullfile(savefolder, [animal '_' pdcond]), 'png');
     
@@ -111,7 +119,7 @@ function plot_spectrogram_acrossTrials(lfp_phase_trials, T_chnsarea, tdur_trial,
 
 twin = 0.2;
 toverlap = 0.15;
-f_AOI = [5 40];
+f_AOI = [8 40];
 
 nwin = round(twin * fs);
 noverlap = round(toverlap * fs);

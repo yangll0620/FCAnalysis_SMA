@@ -51,6 +51,7 @@ if strcmpi(animal, 'bug')
     
     tdur_trial_normal = [-0.6 1];
     tdur_trial_mild = [-0.6 1];
+    tdur_trial_moderate = [-0.6 1];
 end
 if strcmpi(animal, 'jo')
 
@@ -92,13 +93,25 @@ if ~exist(savefolder_trials, 'dir')
     mkdir(savefolder_trials);
 end
 files = dir(fullfile(inputfolder, '*.mat'));
-filei = 1;
+filei = 9;
 nfiles = length(files);
 while(filei <=  nfiles)
     
     % load data, lfpdata: [nchns, ntemps, ntrials]
     filename = files(filei).name;
     load(fullfile(files(filei).folder, filename), 'lfpdata', 'T_idxevent', 'fs', 'T_chnsarea');
+    
+    %%% zscore the M1 data
+    chn_M1 = find(strcmp('M1', T_chnsarea.brainarea));
+    [~, ntemp, ntrials] = size(lfpdata);
+    zscored_M1lfpdata = zeros(ntemp, ntrials);
+    for tri = 1: ntrials
+        tmp = squeeze(lfpdata(chn_M1, :, tri));
+        zscored_M1lfpdata(:, tri) = zscore(tmp);
+        clear tmp
+    end
+    lfpdata(chn_M1, :, :) = zscored_M1lfpdata;
+    clear zscored_lfpdata
     
     
     % extract dateofexp, bktdt and pdcond
@@ -231,6 +244,9 @@ while(filei <=  nfiles)
         goodTrials = goodTrials & goodTrials_allGs(:, gi);
     end
     tbl_goodTrialsMarks = array2table(goodTrials_allGs, 'VariableNames', groupNames);
+    if exist(savefile_goodTrialsMarkers, 'file')
+        delete(savefile_goodTrialsMarkers)
+    end
     save(savefile_goodTrialsMarkers, 'goodTrials', 'tbl_goodTrialsMarks', 'idxGroups', 'lfpdata', 'T_idxevent', 'fs', 'T_chnsarea');
     
     
@@ -326,7 +342,7 @@ function plot_spectrogram_acrossTrials(lfp_phase_trials, T_chnsarea, idxGroups, 
 
 twin = 0.2;
 toverlap = 0.15;
-f_AOI = [5 40];
+f_AOI = [8 40];
 
 nwin = round(twin * fs);
 noverlap = round(toverlap * fs);
@@ -397,8 +413,21 @@ for idxGi = 1 : length(idxGroups)
     end
     if contains(idxGroupNames{idxGi}, 'Others')
         clim = clim_Spectrogram_Others;
+        idx_M1 = -1;
+        for i = 1: length(idxs)
+            if strcmp(T_chnsarea.brainarea{idxs(i)}, 'M1')
+                idx_M1 = idxs(i);
+            end
+        end
+        if idx_M1 == -1
+            continue;
+        else
+            idxs = idx_M1;
+        end
     end
     
+    
+
     
     subp_left = (idxGi -1) * (subp_width + supb_deltaX )+ subp_startLeft;
     
@@ -654,8 +683,12 @@ uiwait(fig)
                 subp_bottom = subp_startTop - subp_height - (chi -1) * (subp_height + supb_deltaY);
                 subplot('Position', [subp_left, subp_bottom, subp_width, subp_height])
                 imagesc(times_plot, freqs_plot, psd_plot);
-                %set(gca,'YDir','normal')
-                set(gca,'YDir','normal', 'CLim', clim)
+                if ~isempty(clim)
+                    set(gca,'YDir','normal', 'CLim', clim)
+                else
+                    set(gca,'YDir','normal')
+                end
+                
                 colormap(jet)
                 colorbar
                 if (chi == nchns)

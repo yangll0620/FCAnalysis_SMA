@@ -53,6 +53,7 @@ cond_cell = cond_cell_extract(animal);
 if strcmpi(animal, 'bug')
     tdur_trial_normal = [-0.6 1];
     tdur_trial_mild = [-0.6 1];
+    tdur_trial_moderate = [-0.6 1];
 end
 if strcmpi(animal, 'jo') 
     
@@ -83,6 +84,7 @@ coli_align2 = uint32(align2);
 savefolder = codecorresfolder;
 
 %% starting: narrow filter the lfp data of all the files
+noisy_chns = noisy_chns_extract(animal);
 for i = 1 : length(cond_cell)
     pdcond = cond_cell{i};
     
@@ -93,12 +95,18 @@ for i = 1 : length(cond_cell)
     eval(['t_minmax_return = t_minmax_return_' pdcond ';']);
     
     
-    [lfp_phase_trials, fs, T_chnsarea, idxGroups, idxGroupNames] = lfp_goodTrials_align2(files, align2, tdur_trial, t_minmax_reach, t_minmax_return);
-    plot_spectrogram_acrossTrials(lfp_phase_trials, T_chnsarea, idxGroups, idxGroupNames, tdur_trial, fs, animal, pdcond, align2)
+    [lfptrials, fs, T_chnsarea] = lfp_goodTrials_align2(files, align2, tdur_trial, t_minmax_reach, t_minmax_return);
+    mask_noisyChns = cellfun(@(x) contains(x, noisy_chns), T_chnsarea.brainarea);
+    mask_notDBS_notM1 = ~strcmp(T_chnsarea.brainarea, 'M1') & ~strcmp(T_chnsarea.electype, 'DBS');
+    mask_usedChns = ~(mask_noisyChns | mask_notDBS_notM1);
+    T_chnsarea = T_chnsarea(mask_usedChns, :); T_chnsarea.chni = [1: height(T_chnsarea)]';
+    lfptrials = lfptrials(mask_usedChns, :, :);
+    
+    plot_spectrogram_acrossTrials(lfptrials, T_chnsarea, tdur_trial, fs, animal, pdcond, align2);
     saveas(gcf, fullfile(savefolder, [animal '_' pdcond]), 'png');
     
     clear cond files tdur_trial t_minmax_reach t_minmax_return
-    clear lfp_phase_trials fs T_chnsarea
+    clear lfptrials fs T_chnsarea
     
     close all
     
@@ -106,12 +114,12 @@ end
 end
 
 
-function plot_spectrogram_acrossTrials(lfp_phase_trials, T_chnsarea, idxGroups, idxGroupNames, tdur_trial, fs, animal, pdcond, align2)
+function plot_spectrogram_acrossTrials(lfp_phase_trials, T_chnsarea, tdur_trial, fs, animal, pdcond, align2)
 % plot lfpdata of all the channels: nchns * ntemp * ntrials
 
 twin = 0.2;
 toverlap = 0.15;
-f_AOI = [5 40];
+f_AOI = [8 40];
 
 nwin = round(twin * fs);
 noverlap = round(toverlap * fs);
@@ -131,10 +139,6 @@ subp_width = 0.25;
 subp_height = 0.12;
 supb_deltaX = 0.02;
 supb_deltaY = 0.015;
-nGrps = length(idxGroups);
-if (nGrps - 1) * supb_deltaX + nGrps * subp_width +  subp_startLeft > subp_endLeft
-    subp_width = round((subp_endLeft - subp_startLeft - (nGrps - 1) * supb_deltaX)/nGrps, 2);
-end
 
 
 % calculate psd for each chn across trials
@@ -165,6 +169,12 @@ for chi = 1 : size(lfp_phase_trials, 1)
 end
 
 % plot spectrogram
+% Group chns into STN, GP and others
+mask_STN = contains(T_chnsarea.brainarea, 'stn');
+mask_GP = contains(T_chnsarea.brainarea, 'gp');
+mask_Others = ~(mask_STN | mask_GP);
+idxGroups = [{find(mask_STN)}; {find(mask_GP)}; {find(mask_Others)}];
+idxGroupNames = {'STN'; 'GP'; 'Others'};
 [clim_Spectrogram_STN, clim_Spectrogram_GP, clim_Spectrogram_Others] = clim_SKTSpectrogram_extract(animal);
 ntrials = size(lfp_phase_trials, 3);
 
@@ -172,13 +182,13 @@ fig = figure(); set(fig, 'PaperUnits', 'points',  'Position', [fig_left fig_bott
 for idxGi = 1 : length(idxGroups)
     idxs = idxGroups{idxGi};
     
-    if contains(idxGroupNames{idxGi}, 'STN')
+    if strcmpi(idxGroupNames{idxGi}, 'STN')
         clim = clim_Spectrogram_STN;
     end
-    if contains(idxGroupNames{idxGi}, 'GP')
+    if strcmpi(idxGroupNames{idxGi}, 'GP')
         clim = clim_Spectrogram_GP;
     end
-    if contains(idxGroupNames{idxGi}, 'Others')
+    if strcmpi(idxGroupNames{idxGi}, 'Others')
         clim = clim_Spectrogram_Others;
     end
     

@@ -51,6 +51,7 @@ if strcmpi(animal, 'bug')
     
     tdur_trial_normal = [-0.6 1];
     tdur_trial_mild = [-0.6 1];
+    tdur_trial_moderate = [-0.6 1];
 end
 if strcmpi(animal, 'jo')
 
@@ -92,7 +93,7 @@ if ~exist(savefolder_trials, 'dir')
     mkdir(savefolder_trials);
 end
 files = dir(fullfile(inputfolder, '*.mat'));
-filei = 1;
+filei = 11;
 nfiles = length(files);
 while(filei <=  nfiles)
     
@@ -231,6 +232,9 @@ while(filei <=  nfiles)
         goodTrials = goodTrials & goodTrials_allGs(:, gi);
     end
     tbl_goodTrialsMarks = array2table(goodTrials_allGs, 'VariableNames', groupNames);
+    if exist(savefile_goodTrialsMarkers, 'file')
+        delete(savefile_goodTrialsMarkers)
+    end
     save(savefile_goodTrialsMarkers, 'goodTrials', 'tbl_goodTrialsMarks', 'idxGroups', 'lfpdata', 'T_idxevent', 'fs', 'T_chnsarea');
     
     
@@ -326,7 +330,7 @@ function plot_spectrogram_acrossTrials(lfp_phase_trials, T_chnsarea, idxGroups, 
 
 twin = 0.2;
 toverlap = 0.15;
-f_AOI = [5 40];
+f_AOI = [8 40];
 
 nwin = round(twin * fs);
 noverlap = round(toverlap * fs);
@@ -397,8 +401,21 @@ for idxGi = 1 : length(idxGroups)
     end
     if contains(idxGroupNames{idxGi}, 'Others')
         clim = clim_Spectrogram_Others;
+        idx_M1 = -1;
+        for i = 1: length(idxs)
+            if strcmp(T_chnsarea.brainarea{idxs(i)}, 'M1')
+                idx_M1 = idxs(i);
+            end
+        end
+        if idx_M1 == -1
+            continue;
+        else
+            idxs = idx_M1;
+        end
     end
     
+    
+
     
     subp_left = (idxGi -1) * (subp_width + supb_deltaX )+ subp_startLeft;
     
