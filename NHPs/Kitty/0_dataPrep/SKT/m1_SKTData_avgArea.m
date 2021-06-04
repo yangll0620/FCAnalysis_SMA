@@ -72,8 +72,8 @@ for fi = 1 : nfiles
     
     % load lfpdata: nchns * ntemp * ntrials
     filename = files(fi).name;
-    load(fullfile(files(fi).folder, filename), 'lfpdata', 'fs', 'T_chnsarea', 'T_idxevent');
-    
+    load(fullfile(files(fi).folder, filename), 'lfpdata', 'fs_lfp', 'T_chnsarea', 'T_idxevent_lfp', ...
+                                               'fs_ma', 'T_idxevent_ma', 'smoothWspeed_trial', 'Wpos_smooth_trial', 'Wrist_smooth_trial');
     
     % remove chns marked with multiple areas or GP/STN in Gray Matter
     multipleAreas_mask = cellfun(@(x) contains(x, '/'), T_chnsarea.brainarea);
@@ -125,7 +125,8 @@ for fi = 1 : nfiles
     savefilename = [filename(idx:idx + tmpn - 1) savefilename_addstr ...
         upper(filename(idx + tmpn)) filename(idx + tmpn + 1:end)];
     
-    save(fullfile(savefolder, savefilename), 'lfpdata',  'T_chnsarea', 'fs', 'T_idxevent');
+    save(fullfile(savefolder, savefilename), 'lfpdata', 'fs_lfp', 'T_chnsarea', 'T_idxevent_lfp', ...
+                                               'fs_ma', 'T_idxevent_ma', 'smoothWspeed_trial', 'Wpos_smooth_trial', 'Wrist_smooth_trial');
     
     
     

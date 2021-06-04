@@ -5,8 +5,10 @@ if strcmpi(animal,'jo')
     clim_Spectrogram_Others = [-120 -90];
 end
 if strcmpi(animal,'kitty')
-    clim_Spectrogram_STN = [-130 -100];
-    clim_Spectrogram_GP = [-130 -100];
+    %clim_Spectrogram_STN = [-130 -100];
+    %clim_Spectrogram_GP = [-130 -100];
+    clim_Spectrogram_STN = [-40 10];
+    clim_Spectrogram_GP = [-40 10];
     clim_Spectrogram_Others = [-40 10];
 end
 if strcmpi(animal,'bug')

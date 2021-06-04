@@ -3,7 +3,7 @@ if strcmpi(animal,'jo')
     noisy_chns = {};
 end
 if strcmpi(animal,'kitty')
-    noisy_chns = {};
+    noisy_chns = {'gp3-4', 'gp4-5'};
 end
 if strcmpi(animal,'pinky')
     noisy_chns = {};
