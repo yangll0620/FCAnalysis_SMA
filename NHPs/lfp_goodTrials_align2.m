@@ -1,4 +1,4 @@
-function [lfptrials, fs, T_chnsarea, idxGroups, idxGroupNames] = lfp_goodTrials_align2(files, align2, tdur_trial, t_minmax_reach, t_minmax_return)
+function [lfptrials, fs_lfp, T_chnsarea, idxGroups, idxGroupNames] = lfp_goodTrials_align2(files, align2, tdur_trial, t_minmax_reach, t_minmax_return)
 % extract lfp data respect to targetonset, reachonset, reach and returnonset separately
 
 % 
@@ -34,7 +34,7 @@ coli_reach = uint32(SKTEvent.Reach);
 coli_returnonset = uint32(SKTEvent.ReturnOnset);
 coli_mouth = uint32(SKTEvent.Mouth);
 
-load(fullfile(files(1).folder, files(1).name),  'fs', 'T_chnsarea');
+load(fullfile(files(1).folder, files(1).name),  'fs_lfp', 'T_chnsarea');
 
 nfiles = length(files);
 lfptrials = [];
@@ -42,14 +42,14 @@ for filei = 1 : nfiles
     
     % load data, lfpdata: [nchns, ntemps, ntrials]
     filename = files(filei).name;
-    load(fullfile(files(filei).folder, filename), 'lfpdata', 'T_idxevent', 'goodTrials');
+    load(fullfile(files(filei).folder, filename), 'lfpdata', 'T_idxevent_lfp', 'goodTrials');
     if filei == 1
         load(fullfile(files(filei).folder, filename), 'idxGroups', 'tbl_goodTrialsMarks');
         idxGroupNames = tbl_goodTrialsMarks.Properties.VariableNames;
         clear tbl_goodTrialsMarks
     end
     
-    if(height(T_idxevent) == 1)
+    if(height(T_idxevent_lfp) == 1)
         disp([filename ' has only 1 trial, skip!']);
         continue;
     end
@@ -65,8 +65,8 @@ for filei = 1 : nfiles
         end
         
         % select trials based on reach and return duration
-        t_reach = (T_idxevent{tri, coli_reach} - T_idxevent{tri, coli_reachonset}) / fs;
-        t_return = (T_idxevent{tri, coli_mouth} - T_idxevent{tri, coli_returnonset}) / fs;
+        t_reach = (T_idxevent_lfp{tri, coli_reach} - T_idxevent_lfp{tri, coli_reachonset}) / fs_lfp;
+        t_return = (T_idxevent_lfp{tri, coli_mouth} - T_idxevent_lfp{tri, coli_returnonset}) / fs_lfp;
         if t_reach < t_minmax_reach(1) || t_reach > t_minmax_reach(2)
             clear t_reach
             continue
@@ -78,7 +78,7 @@ for filei = 1 : nfiles
         
         
         % extract trial with t_dur
-        idxdur = round(tdur_trial * fs) + T_idxevent{tri, coli_align2};
+        idxdur = round(tdur_trial * fs_lfp) + T_idxevent_lfp{tri, coli_align2};
         lfp_phase_1trial = lfpdata(:, idxdur(1):idxdur(2), tri);
            
         lfptrials = cat(3, lfptrials, lfp_phase_1trial);

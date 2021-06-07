@@ -93,13 +93,27 @@ if ~exist(savefolder_trials, 'dir')
     mkdir(savefolder_trials);
 end
 files = dir(fullfile(inputfolder, '*.mat'));
-filei = 11;
+filei = 1;
 nfiles = length(files);
 while(filei <=  nfiles)
     
     % load data, lfpdata: [nchns, ntemps, ntrials]
     filename = files(filei).name;
-    load(fullfile(files(filei).folder, filename), 'lfpdata', 'T_idxevent', 'fs', 'T_chnsarea');
+    load(fullfile(files(filei).folder, filename), 'lfpdata', 'fs_lfp', 'T_chnsarea', 'T_idxevent_lfp', ...
+                                               'fs_ma', 'T_idxevent_ma', 'smoothWspeed_trial', 'Wpos_smooth_trial', 'Wrist_smooth_trial');    
+    
+    %%% zscore the lfp data
+    if strcmp(animal, 'Kitty')
+        [nchns, ~, ~] = size(lfpdata);
+        zscored_lfpdata = zeros(size(lfpdata));
+        for chi = 1: nchns
+            tmp = squeeze(lfpdata(chi, :, :));
+            zscored_lfpdata(chi, :, :) = zscore(tmp);
+            clear tmp
+        end
+        lfpdata = zscored_lfpdata;
+        clear zscored_lfpdata
+    end
     
     
     % extract dateofexp, bktdt and pdcond
@@ -220,7 +234,12 @@ while(filei <=  nfiles)
         end
               
         goodTrials_1Grp = goodTrials_allGs(:, idxGi);
-        goodTrials_1Grp = check_spectrogram_oneGroup(lfpdata_1group, T_idxevent, T_chnsarea_1group, fs, goodTrials_1Grp, showname, clim_Spectrogram, ...
+        madata = smoothWspeed_trial;
+        madata2 = Wrist_smooth_trial;
+        maName = 'Wspeed  XYZ-wrist';
+        goodTrials_allGs(:, idxGi) = check_spectrogram_oneGroup(lfpdata_1group, T_idxevent_lfp, T_chnsarea_1group, fs_lfp, goodTrials_1Grp,... 
+                                                    madata, madata2, maName, fs_ma, T_idxevent_ma,...
+                                                    showname, clim_Spectrogram, ...
                                                     savefolder_trials, animal, groupname, pdcond, datestr(dateofexp, 'yyyymmdd'), bkstr);
    
         clear idxs lfpdata_1group T_chnsarea_1group goodTrials_1Grp
@@ -235,7 +254,8 @@ while(filei <=  nfiles)
     if exist(savefile_goodTrialsMarkers, 'file')
         delete(savefile_goodTrialsMarkers)
     end
-    save(savefile_goodTrialsMarkers, 'goodTrials', 'tbl_goodTrialsMarks', 'idxGroups', 'lfpdata', 'T_idxevent', 'fs', 'T_chnsarea');
+    save(savefile_goodTrialsMarkers, 'goodTrials', 'tbl_goodTrialsMarks', 'idxGroups', 'lfpdata', 'T_idxevent_lfp', 'fs_lfp', 'T_chnsarea',...
+                                      'fs_ma', 'T_idxevent_ma', 'smoothWspeed_trial', 'Wpos_smooth_trial', 'Wrist_smooth_trial');
     
     
     %%% --- show one day spectrogram using goodTrials --- %%%
@@ -266,8 +286,8 @@ while(filei <=  nfiles)
         end
         
         % select trials based on reach and return duration
-        t_reach = (T_idxevent{tri, coli_reach} - T_idxevent{tri, coli_reachonset}) / fs;
-        t_return = (T_idxevent{tri, coli_mouth} - T_idxevent{tri, coli_returnonset}) / fs;
+        t_reach = (T_idxevent_lfp{tri, coli_reach} - T_idxevent_lfp{tri, coli_reachonset}) / fs_lfp;
+        t_return = (T_idxevent_lfp{tri, coli_mouth} - T_idxevent_lfp{tri, coli_returnonset}) / fs_lfp;
         if t_reach < t_minmax_reach(1) || t_reach > t_minmax_reach(2)
             goodTrials(tri) = 0;
             clear t_reach
@@ -280,7 +300,7 @@ while(filei <=  nfiles)
         end
         
         % extract trial with t_dur
-        idxdur = round(tdur_trial * fs) + T_idxevent{tri, coli_align2};
+        idxdur = round(tdur_trial * fs_lfp) + T_idxevent_lfp{tri, coli_align2};
         lfp_phase_1trial = lfpdata(:, idxdur(1):idxdur(2), tri); % lfp_phase_1trial: nchns * ntemp
         
         lfp_phase_trials = cat(3, lfp_phase_trials, lfp_phase_1trial); % lfp_phase_trials: nchns * ntemp * ntrials
@@ -301,7 +321,7 @@ while(filei <=  nfiles)
     % plot spectrogram across all good trials of one day
     disp(['# of Good Trials for averaged spectrogram across trials: ' num2str(size(lfp_phase_trials, 3))])
     idxGroupNames = tbl_goodTrialsMarks.Properties.VariableNames;
-    plot_spectrogram_acrossTrials(lfp_phase_trials, T_chnsarea, idxGroups, idxGroupNames, tdur_trial, fs, animal, pdcond, align2, showname)
+    plot_spectrogram_acrossTrials(lfp_phase_trials, T_chnsarea, idxGroups, idxGroupNames, tdur_trial, fs_lfp, animal, pdcond, align2, showname)
     clear idxGroupNames
     
     % Recheck today or Check the next day
@@ -337,10 +357,10 @@ noverlap = round(toverlap * fs);
 
 
 % subplot/Figure parameters
-fig_left = 50;
-fig_bottom = 50;
-fig_width = 1800;
-fig_height = 900;
+fig_left = 1;
+fig_bottom = 41;
+fig_width = 1920;
+fig_height = 960;
 
 
 subp_startLeft = 0.05;
@@ -462,8 +482,9 @@ end
 end
 
 
-function goodTrials = check_spectrogram_oneGroup(lfpdata, T_idxevent, T_chnsarea, fs, goodTrials, showname, clim, varargin)
+function goodTrials = check_spectrogram_oneGroup(lfpdata, T_idxevent_lfp, T_chnsarea, fs_lfp, goodTrials, madata, madata2, maName, fs_ma, T_idxevent_ma, showname, clim, varargin)
 % lfpdata: nchns * ntemp * ntrials
+
 
 % parse varargin
 if length(varargin) >= 6
@@ -512,12 +533,13 @@ coli_returnonset = uint32(SKTEvent.ReturnOnset);
 coli_mouth = uint32(SKTEvent.Mouth);
 % align to event
 coli_align2 = coli_reachonset;
+align2 = 'reach onset';
 
 % subplot/Figure parameters
-fig_left = 50;
-fig_bottom = 50;
-fig_width = 1800;
-fig_height = 900;
+fig_left = 1;
+fig_bottom = 41;
+fig_width = 1920;
+fig_height = 960;
 
 
 areaName_left = 0.003;
@@ -544,6 +566,8 @@ pos_btn_prev_bottom = pos_btn_next_bottom + btn_height + 10;
 % Finish Button
 pos_btn_finish_left = (subp_endLeft) * fig_width;
 pos_btn_finish_bottom = 0.5 * fig_height;
+
+eventline_colors = ['c', 'r', 'g', 'y', 'k'];
 
 
 % trial number checkbox parameters
@@ -648,14 +672,14 @@ uiwait(fig)
             hcbs(tri) = uicontrol('Style','checkbox','Value', goodTrials(tri),...
                 'Position', [pos_cb_trialN_left pos_cb_trialN_bottom cb_width cb_height],'String', ['triali = ' num2str(tri) '/' num2str(ntrials)]);
             set(hcbs(tri),'Callback',{@box_value});
-            
-            
+                       
+           
             for chi = 1 : nchns
                 
-                x = lfpdata(chi, 1:T_idxevent{tri, coli_mouth}, tri);
+                x = lfpdata(chi, 1:T_idxevent_lfp{tri, coli_mouth}, tri);
                 
                 % spectrogram
-                [~, freqs, times, psd] = spectrogram(x, round(twin * fs), round(toverlap * fs),[],fs); % psd: nf * nt
+                [~, freqs, times, psd] = spectrogram(x, round(twin * fs_lfp), round(toverlap * fs_lfp),[],fs_lfp); % psd: nf * nt
                 
                 % select freqs_plot and corresponding psd
                 idx_f = (freqs >= f_AOI(1) & freqs <= f_AOI(2));
@@ -664,20 +688,35 @@ uiwait(fig)
                 % convert to db and gaussfilt
                 psd_plot = 10 * log10(psd_plot);
                 psd_plot = imgaussfilt(psd_plot,'FilterSize',5);
-                times_plot = times - T_idxevent{tri, coli_align2} / fs;
+                times_plot = times - T_idxevent_lfp{tri, coli_align2} / fs_lfp;
                 
-                
+                                
                 % spectrogram subplot
-                subp_bottom = subp_startTop - subp_height - (chi -1) * (subp_height + supb_deltaY);
+                subp_bottom = subp_startTop - subp_height - chi * (subp_height + supb_deltaY);
                 subplot('Position', [subp_left, subp_bottom, subp_width, subp_height])
-                imagesc(times_plot, freqs_plot, psd_plot);
-                %set(gca,'YDir','normal')
-                set(gca,'YDir','normal', 'CLim', clim)
+                imagesc(times_plot, freqs_plot, psd_plot, 'Tag', [num2str(tri) '-' num2str(chi)]);
+                if ~isempty(clim)
+                    set(gca,'YDir','normal', 'CLim', clim)
+                else
+                    set(gca,'YDir','normal')
+                end
+                
                 colormap(jet)
                 colorbar
                 if (chi == nchns)
                     xlabel('time/s')
+                    xtks = xticks();
+                    xtklabels = xticklabels();
+                    tmp = strsplit(align2);
+                    xtklabels{xtks == 0} = ['$$\begin{array}{c}' ...
+                               tmp{1} '\\'...
+                               tmp{2} '\\'...
+                               '\end{array}$$'];
+                    set(gca,'xtick',xtks,'XTickLabel',xtklabels,'TickLabelInterpreter','latex');
+                    
+                    clear xtks xtklabels
                 else
+                    
                     xticks([])
                 end
                 if(coli == 1)
@@ -687,12 +726,70 @@ uiwait(fig)
                 end
                 hold on
                 % plot event lines
-                for eventi = 1 : width(T_idxevent)
-                    t_event = (T_idxevent{tri, eventi} - T_idxevent{tri, coli_align2}) / fs;
-                    plot([t_event t_event], ylim, '--', 'LineWidth',1.5)
+                for eventi = 1 : width(T_idxevent_lfp)
+                    t_event = (T_idxevent_lfp{tri, eventi} - T_idxevent_lfp{tri, coli_align2}) / fs_lfp;
+                    plot([t_event t_event], ylim, [eventline_colors(eventi) '--'], 'LineWidth',1.5)
                     clear t_event
                 end
                 clear eventi
+                
+                % extract spectrogram width and height using the first trial/first chn
+                spect_axis_standerd = findobj('Tag', [num2str(tri_str) '-' num2str(1)]).Parent;
+                spect_pos_standerd = get(spect_axis_standerd, 'Position');
+                subp_width_standerd = spect_pos_standerd(3);
+                subp_height_standerd = spect_pos_standerd(4);
+                set(findobj('Tag', [num2str(tri) '-' num2str(chi)]).Parent, 'Position', [subp_left, subp_bottom, subp_width_standerd, subp_height_standerd])
+                clear spect_axis_standerd spect_pos_standerd subp_width_standerd subp_height_standerd
+
+                
+                
+                
+                
+                if chi == 1
+                    % plot MA data in the first row
+                    
+                    ma_WSpeed = madata(1:T_idxevent_ma{tri, coli_mouth}, tri);
+                    ma_W_X =  squeeze(madata2(1:T_idxevent_ma{tri, coli_mouth}, 1, tri));
+                    ma_W_Y =  squeeze(madata2(1:T_idxevent_ma{tri, coli_mouth}, 2, tri));
+                    ma_W_Z =  squeeze(madata2(1:T_idxevent_ma{tri, coli_mouth}, 3, tri));
+                    
+                    spect_axis = findobj('Tag', [num2str(tri) '-' num2str(1)]).Parent;
+                    spect_pos = get(spect_axis, 'Position');
+                    if tri == tri_str
+                        subp_width_ma = spect_pos(3);
+                        subp_height_ma = spect_pos(4);
+                    end
+                    spect_xlim = get(spect_axis, 'XLim');
+                    subp_left_ma = spect_pos(1);
+                    subp_bottom_ma = subp_startTop - subp_height;
+                    times_plot_ma = ([1: length(ma_WSpeed)] - T_idxevent_ma{tri, coli_align2} )/ fs_ma;
+                    subplot('Position', [subp_left_ma, subp_bottom_ma, subp_width_ma, subp_height_ma])                    
+                    
+                    
+                    % plot ma data
+                    plot(times_plot_ma, ma_WSpeed, 'b'); hold on
+                    plot(times_plot_ma, ma_W_X, 'r', times_plot_ma, ma_W_Y, 'g', times_plot_ma, ma_W_Z, 'k');
+                    set(gca, 'XLim', spect_xlim);
+                    xticks([])
+                    clear  ma_WSpeed ma_W_X ma_W_Y ma_W_Z
+                    
+                    % plot event lines
+                    for eventi = 1 : width(T_idxevent_ma)
+                        t_event = (T_idxevent_ma{tri, eventi} - T_idxevent_ma{tri, coli_align2}) / fs_ma;
+                        plot([t_event t_event], ylim, [eventline_colors(eventi) '--'], 'LineWidth',1.5)
+                        clear t_event
+                    end
+                    clear eventi
+                    
+                    
+                    
+                    annotation(gcf,'textbox',...
+                        [areaName_left subp_bottom_ma + subp_height / 2 0.03 0.03],...
+                        'String', maName, ...
+                        'LineStyle', 'none', 'FontWeight', 'bold', 'FitBoxToText', 'off');
+                    
+                    clear x_ma spect_pos spect_xlim subp_bottom_ma subp_left_ma  times_plot_ma
+                end
                 
                 
                 % plot chn Names only in the first shown trial

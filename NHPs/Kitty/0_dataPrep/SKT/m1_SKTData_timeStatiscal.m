@@ -233,6 +233,11 @@ for ti = 1 : length(tasks)
     clear ps p1 p2 p3 xt yt 
 end
 
+%---- save figure ---%
+savefile = fullfile(savefolder, savefilename);
+% save figure
+saveas(gcf, savefile, 'png');
+
 
 
 

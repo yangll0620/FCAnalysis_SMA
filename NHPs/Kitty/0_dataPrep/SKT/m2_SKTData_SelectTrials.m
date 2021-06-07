@@ -93,7 +93,7 @@ if ~exist(savefolder_trials, 'dir')
     mkdir(savefolder_trials);
 end
 files = dir(fullfile(inputfolder, '*.mat'));
-filei = 3;
+filei = 6;
 nfiles = length(files);
 while(filei <=  nfiles)
     
@@ -103,15 +103,17 @@ while(filei <=  nfiles)
                                                'fs_ma', 'T_idxevent_ma', 'smoothWspeed_trial', 'Wpos_smooth_trial', 'Wrist_smooth_trial');    
     
     %%% zscore the lfp data
-    [nchns, ~, ~] = size(lfpdata);
-    zscored_lfpdata = zeros(size(lfpdata));
-    for chi = 1: nchns
-        tmp = squeeze(lfpdata(chi, :, :));
-        zscored_lfpdata(chi, :, :) = zscore(tmp);
-        clear tmp
+    if strcmp(animal, 'Kitty')
+        [nchns, ~, ~] = size(lfpdata);
+        zscored_lfpdata = zeros(size(lfpdata));
+        for chi = 1: nchns
+            tmp = squeeze(lfpdata(chi, :, :));
+            zscored_lfpdata(chi, :, :) = zscore(tmp);
+            clear tmp
+        end
+        lfpdata = zscored_lfpdata;
+        clear zscored_lfpdata
     end
-    lfpdata = zscored_lfpdata;
-    clear zscored_lfpdata
     
     
     % extract dateofexp, bktdt and pdcond
@@ -234,7 +236,7 @@ while(filei <=  nfiles)
         goodTrials_1Grp = goodTrials_allGs(:, idxGi);
         madata = smoothWspeed_trial;
         madata2 = Wrist_smooth_trial;
-        maName = 'Wspeed  X-wrist';
+        maName = 'Wspeed  XYZ-wrist';
         goodTrials_allGs(:, idxGi) = check_spectrogram_oneGroup(lfpdata_1group, T_idxevent_lfp, T_chnsarea_1group, fs_lfp, goodTrials_1Grp,... 
                                                     madata, madata2, maName, fs_ma, T_idxevent_ma,...
                                                     showname, clim_Spectrogram, ...
@@ -565,7 +567,7 @@ pos_btn_prev_bottom = pos_btn_next_bottom + btn_height + 10;
 pos_btn_finish_left = (subp_endLeft) * fig_width;
 pos_btn_finish_bottom = 0.5 * fig_height;
 
-eventline_colors = ['c', 'r', 'g', 'm', 'k'];
+eventline_colors = ['c', 'r', 'g', 'y', 'k'];
 
 
 % trial number checkbox parameters
@@ -745,7 +747,11 @@ uiwait(fig)
                 
                 if chi == 1
                     % plot MA data in the first row
-                    x_ma = madata(1:T_idxevent_ma{tri, coli_mouth}, tri);
+                    
+                    ma_WSpeed = madata(1:T_idxevent_ma{tri, coli_mouth}, tri);
+                    ma_W_X =  squeeze(madata2(1:T_idxevent_ma{tri, coli_mouth}, 1, tri));
+                    ma_W_Y =  squeeze(madata2(1:T_idxevent_ma{tri, coli_mouth}, 2, tri));
+                    ma_W_Z =  squeeze(madata2(1:T_idxevent_ma{tri, coli_mouth}, 3, tri));
                     
                     spect_axis = findobj('Tag', [num2str(tri) '-' num2str(1)]).Parent;
                     spect_pos = get(spect_axis, 'Position');
@@ -756,17 +762,16 @@ uiwait(fig)
                     spect_xlim = get(spect_axis, 'XLim');
                     subp_left_ma = spect_pos(1);
                     subp_bottom_ma = subp_startTop - subp_height;
-                    times_plot_ma = ([1: length(x_ma)] - T_idxevent_ma{tri, coli_align2} )/ fs_ma;
-                    subplot('Position', [subp_left_ma, subp_bottom_ma, subp_width_ma, subp_height_ma])
-                    plot(times_plot_ma, x_ma)
+                    times_plot_ma = ([1: length(ma_WSpeed)] - T_idxevent_ma{tri, coli_align2} )/ fs_ma;
+                    subplot('Position', [subp_left_ma, subp_bottom_ma, subp_width_ma, subp_height_ma])                    
+                    
+                    
+                    % plot ma data
+                    plot(times_plot_ma, ma_WSpeed, 'b'); hold on
+                    plot(times_plot_ma, ma_W_X, 'r', times_plot_ma, ma_W_Y, 'g', times_plot_ma, ma_W_Z, 'k');
                     set(gca, 'XLim', spect_xlim);
                     xticks([])
-                    
-                    hold on
-                    
-                    % plot x trajectory
-                    xdim_ma =  squeeze(madata2(1:T_idxevent_ma{tri, coli_mouth}, 1, tri));
-                    plot(times_plot_ma, xdim_ma, 'r')
+                    clear  ma_WSpeed ma_W_X ma_W_Y ma_W_Z
                     
                     % plot event lines
                     for eventi = 1 : width(T_idxevent_ma)

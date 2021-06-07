@@ -57,7 +57,7 @@ function m0_SKTData_extract()
     % downsample
     fs_new = 500;
     
-    conds_cell = {'normal', 'moderate'};
+    conds_cell = cond_cell_extract(animal);
     
     strformat_date_onedaypath = 'mmddyy'; % the format of date string in  savedaypath, e.g. '012317'
 

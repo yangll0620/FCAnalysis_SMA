@@ -9,7 +9,6 @@ codefolder = codefilepath(1:strfind(codefilepath, 'code') + length('code') - 1);
 
 % add util path
 addpath(genpath(fullfile(codefolder, 'util')));
-addpath(genpath(fullfile(codefolder,'NHPs')));
 
 % add NexMatablFiles path
 addpath(genpath(fullfile(codefolder, 'toolbox', 'NexMatlabFiles')))
@@ -18,10 +17,10 @@ addpath(genpath(fullfile(codefolder, 'toolbox', 'NexMatlabFiles')))
 [codecorresfolder, codecorresParentfolder] = code_corresfolder(codefilepath, true, false);
 
 
-%% input setup
-folder_input = fullfile(codecorresParentfolder, 'm0_SKTData_extract');
+%% input setup: For Kitty normal and moderate in two folders
+folder_input = fullfile(codecorresParentfolder, 'm1_SKTData_avgArea');
 
-% animal
+%  animal 
 if ismac
     % Code to run on Mac platform
 elseif isunix
@@ -36,6 +35,7 @@ else
     disp('Platform not supported')
 end
 animal = codecorresfolder(fi + length('NHPs') + 1:j);
+
 
 tasks = {'reach', 'return'};
 
@@ -53,8 +53,6 @@ coli_touch = 3;
 coli_returnonset = 4;
 coli_mouth = 5;
 
-t_maxreach = 2;
-t_maxreturn = 2;
 
 %%% extract tbl_normal, tbl_mild and tbl_moderate %%%
 cond_cell = cond_cell_extract(animal);
@@ -64,11 +62,11 @@ for ci = 1 : length(cond_cell)
     files = dir(fullfile(folder_input, ['*_' pdcond '_*.mat']));
     t_event = [];
     for fi = 1: length(files)
-        load(fullfile(folder_input, files(fi).name), 'T_idxevent', 'fs');
+        load(fullfile(folder_input, files(fi).name), 'T_idxevent_lfp', 'fs_lfp');
         
-        t_event = cat(1, t_event, T_idxevent{:, :}/ fs);
+        t_event = cat(1, t_event, T_idxevent_lfp{:, :}/ fs_lfp);
         
-        clear T_idxevent
+        clear T_idxevent_lfp fs_lfp
     end
     t_reaction = t_event(:, coli_reachonset) - t_event(:, coli_targetonset);
     t_reach = t_event(:, coli_touch) - t_event(:, coli_reachonset);
@@ -77,16 +75,6 @@ for ci = 1 : length(cond_cell)
     
     clear t_reaction t_reach t_return pdcond files t_event
 end
-
-
-%%% remove the trials with super longer reach and return
-for ci = 1 : length(cond_cell)
-    pdcond  = cond_cell{ci};
-    
-    eval(['tbl_' pdcond ' = tbl_' pdcond '(tbl_' pdcond '.t_reach<=t_maxreach & tbl_' pdcond '.t_return<=t_maxreturn,:);'])
-    clear pdcond
-end
-
 
 
 
@@ -109,8 +97,8 @@ for ci = 1 : length(cond_cell)
     clear pdcond
 end
 
-%----- time comparison ----------%
 
+%----- time comparison ----------%
 for ti = 1 : length(tasks)
     task = tasks{ti};
     position = [x0 + (w + gap) * (ti-1) y w h];
@@ -126,11 +114,17 @@ for ti = 1 : length(tasks)
     end
     
     % wilcoxon rank sum test
-    p1 = ranksum(t_normal, t_mild);
-    p2 = ranksum(t_mild, t_moderate);
-    p3 = ranksum(t_normal, t_moderate);
+    if exist('t_normal', 'var') && exist('t_mild', 'var')
+        p1 = ranksum(t_normal, t_mild);
+    end
+    if exist('t_mild', 'var') && exist('t_moderate', 'var')
+        p2 = ranksum(t_mild, t_moderate);
+    end
+    if exist('t_normal', 'var') && exist('t_moderate', 'var')
+        p3 = ranksum(t_normal, t_moderate);
+    end
     
-    
+
     % actual plot
     subplot('Position', position);
     boxplot(ts, gs); hold on
@@ -142,41 +136,77 @@ for ti = 1 : length(tasks)
     yt = get(gca, 'YTick');
     axis([xlim    0  max(yt) * 1.1])
     
-    if p1 < alpha
-        plot(xt([1 2]), [1 1]*max(yt)*0.92, '-k',  mean(xt([1 2])), max(yt) * 0.94, '*k')
+    if exist('p1', 'var') && exist('p2', 'var') && exist('p3', 'var')
+        if p1 < alpha
+            plot(xt([1 2]), [1 1]*max(yt)*0.92, '-k',  mean(xt([1 2])), max(yt) * 0.94, '*k')
+        end
+        if p2 < alpha
+            plot(xt([2 3]), [1 1]*max(yt)*0.97, '-k',  mean(xt([2 3])), max(yt) * 0.99, '*k')
+        end
+        if p3 < alpha
+            plot(xt([1 3]), [1 1]*max(yt)*1.02, '-k',  mean(xt([1 2])), max(yt) * 1.04, '*k')
+        end
+    else
+        if exist('p1', 'var')
+            if p1 < alpha
+                plot(xt([1 2]), [1 1]*max(yt)*0.92, '-k',  mean(xt([1 2])), max(yt) * 0.94, '*k')
+            end
+        end
+        
+        if exist('p2', 'var')
+            if p2 < alpha
+                plot(xt([1 2]), [1 1]*max(yt)*0.92, '-k',  mean(xt([1 2])), max(yt) * 0.94, '*k')
+            end
+        end
+        
+        if exist('p3', 'var')
+            if p3 < alpha
+                plot(xt([1 2]), [1 1]*max(yt)*0.92, '-k',  mean(xt([1 2])), max(yt) * 0.94, '*k')
+            end
+        end
     end
-    if p2 < alpha
-        plot(xt([2 3]), [1 1]*max(yt)*0.97, '-k',  mean(xt([2 3])), max(yt) * 0.99, '*k')
-    end
-    if p3 < alpha
-        plot(xt([1 3]), [1 1]*max(yt)*1.02, '-k',  mean(xt([1 2])), max(yt) * 1.04, '*k')
-    end
+     
+    
+    
     
     % Create textbox
     if ti == 1
-        pos1 = [0.32 0.23 0.06 0.07];
-        pos2 = [0.25 0.05 0.2 0.2];
+        pos1 = [0.23 0.1 0.06 0.07];
+        pos2 = [0.25 0 0.2 0.2];
     else
         if ti == 2
-            pos1 = [0.82 0.23 0.06 0.07];
-            pos2 = [0.75 0.05 0.2 0.2];
+            pos1 = [0.73 0.1 0.06 0.07];
+            pos2 = [0.75 0 0.2 0.2];
         end
     end
 	
+    % annotation 'Median'
     annotation(gcf,'textbox',...
         pos1,...
         'String','Median',...
         'LineStyle','none',...
         'HorizontalAlignment','right',...
         'FitBoxToText','on');
+    
+    % annotation Median Values
+    medianValueString = [''];
+    for ci = 1 : length(cond_cell)
+        pdcond  = cond_cell{ci};
+        if ci > 1
+            medianValueString = [medianValueString, newline];
+        end
+        eval(['t_pdcond = t_' pdcond ';'])
+        medianValueString = [medianValueString [pdcond ': ' num2str(median(t_pdcond * 1000)) ' ms, ' num2str(length(t_pdcond)) ' trials']];
+        
+        clear pdcond t_pdcond
+    end
     annotation(gcf,'textbox',...
         pos2,...
-        'String',[['normal: ' num2str(median(t_normal * 1000)) ' ms, ' num2str(length(t_normal)) ' trials'], newline, ...
-        ['mild: ' num2str(median(t_mild * 1000)) ' ms, ' num2str(length(t_mild)) ' trials'], newline, ...
-        ['moderate: ' num2str(median(t_moderate * 1000)) ' ms, ' num2str(length(t_moderate)) ' trials']],...
+        'String',medianValueString,...
         'LineStyle','none',...
         'HorizontalAlignment','right',...
         'FitBoxToText','off');
+    clear medianValueString
     
     
     
@@ -184,15 +214,16 @@ for ti = 1 : length(tasks)
     bp = findobj(gca, 'Tag', 'boxplot');
     boxes = findobj(bp, 'Tag', 'Box');
     
-    % moderate
-    text(boxes(1).XData(3)* 1.01, boxes(1).YData(3), [num2str(quantile(t_moderate, 0.75) * 1000) ' ms'])
-    text(boxes(1).XData(4)* 1.01, boxes(1).YData(4), [num2str(quantile(t_moderate, 0.25) * 1000) ' ms'])
-    % mild
-    text(boxes(2).XData(3)* 1.01, boxes(2).YData(3), [num2str(quantile(t_mild, 0.75) * 1000) ' ms'])
-    text(boxes(2).XData(4)* 1.01, boxes(2).YData(4), [num2str(quantile(t_mild, 0.25) * 1000) ' ms'])
-    % normal
-    text(boxes(3).XData(3)* 1.01, boxes(3).YData(3), [num2str(quantile(t_normal, 0.75) * 1000) ' ms'])
-    text(boxes(3).XData(4)* 1.01, boxes(3).YData(4), [num2str(quantile(t_normal, 0.25) * 1000) ' ms'])
+    for ci = 1 : length(cond_cell)
+        pdcond  = cond_cell{ci};
+        eval(['t_pdcond = t_' pdcond ';'])
+        bi = length(cond_cell) - ci + 1;
+        text(boxes(bi).XData(3)* 1.01, boxes(bi).YData(3), [num2str(quantile(t_pdcond, 0.75) * 1000) ' ms'])
+        text(boxes(bi).XData(4)* 1.01, boxes(bi).YData(4), [num2str(quantile(t_pdcond, 0.25) * 1000) ' ms'])
+        
+        clear t_pdcond idx pdcond
+    end
+    
     set(gca, 'XLim', get(gca, 'XLim')+ 0.2)
     clear bp boxes
     
@@ -202,29 +233,16 @@ for ti = 1 : length(tasks)
     clear ps p1 p2 p3 xt yt 
 end
 
-%---- save-----%
+%---- save figure ---%
 savefile = fullfile(savefolder, savefilename);
-
 % save figure
 saveas(gcf, savefile, 'png');
 
-% save task time 
-rowNames = cond_cell;
 
-coli = 1;
-t_median = [median(tbl_normal{:,coli}); median(tbl_mild{:,coli}); median(tbl_moderate{:,coli})];
-t_10 = [quantile(tbl_normal{:,coli}, 0.1); quantile(tbl_mild{:,coli}, 0.1); quantile(tbl_moderate{:,coli}, 0.1)];
-t_25 = [quantile(tbl_normal{:,coli}, 0.25); quantile(tbl_mild{:,coli}, 0.25); quantile(tbl_moderate{:,coli}, 0.25)];
-t_75 = [quantile(tbl_normal{:,coli}, 0.75); quantile(tbl_mild{:,coli}, 0.75); quantile(tbl_moderate{:,coli}, 0.75)];
-t_90 = [quantile(tbl_normal{:,coli}, 0.9); quantile(tbl_mild{:,coli}, 0.9); quantile(tbl_moderate{:,coli}, 0.9)];
-tbl_staReachT = table(t_median, t_10, t_25, t_75, t_90,'rowNames', rowNames);
 
-coli = 2;
-t_median = [median(tbl_normal{:,coli}); median(tbl_mild{:,coli}); median(tbl_moderate{:,coli})];
-t_10 = [quantile(tbl_normal{:,coli}, 0.1); quantile(tbl_mild{:,coli}, 0.1); quantile(tbl_moderate{:,coli}, 0.1)];
-t_25 = [quantile(tbl_normal{:,coli}, 0.25); quantile(tbl_mild{:,coli}, 0.25); quantile(tbl_moderate{:,coli}, 0.25)];
-t_75 = [quantile(tbl_normal{:,coli}, 0.75); quantile(tbl_mild{:,coli}, 0.75); quantile(tbl_moderate{:,coli}, 0.75)];
-t_90 = [quantile(tbl_normal{:,coli}, 0.9); quantile(tbl_mild{:,coli}, 0.9); quantile(tbl_moderate{:,coli}, 0.9)];
-tbl_staReturnT = table(t_median, t_10, t_25, t_75, t_90, 'rowNames', rowNames);
 
-save(fullfile(savefolder, [animal '_SKTTime.mat']), 'tbl_normal', 'tbl_mild', 'tbl_moderate', 'tbl_staReachT', 'tbl_staReturnT')
+
+
+
+
+

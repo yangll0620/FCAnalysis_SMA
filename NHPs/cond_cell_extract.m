@@ -11,5 +11,5 @@ if strcmpi(animal, 'kitty') % Kitty not have mild
 end
 
 if strcmpi(animal, 'pinky')
-    cond_cell = {'normal', 'mild', 'moderate'};
+    cond_cell = {'normal', 'mild'};
 end

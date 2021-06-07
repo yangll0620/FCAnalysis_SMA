@@ -14,14 +14,14 @@ codefilepath = mfilename('fullpath');
 % codefolder = '/home/lingling/Insync/yang7003@umn.edu/NMRC_umn/Projects/FCAnalysis/exp/code'
 codefolder = codefilepath(1: strfind(codefilepath, 'code') + length('code')-1);
 
-% add util path
+% add util path and NHP path
 addpath(genpath(fullfile(codefolder,'util')));
+addpath(genpath(fullfile(codefolder,'NHPs')));
 
 % add NexMatablFiles path
 addpath(genpath(fullfile(codefolder, 'toolbox', 'NexMatlabFiles')))
 
 % datafolder, pipelinefolder 
-[datafolder, ~, ~, ~] = exp_subfolders();
 [codecorresfolder, codecorresParentfolder] = code_corresfolder(codefilepath, true, false);
 
 
@@ -49,18 +49,7 @@ animal = codecorresfolder(fi + length('NHPs') + 1:j);
 % input folder: extracted raw STK data 
 inputfolder = fullfile(codecorresParentfolder, 'm0_SKTData_extract');
 
-if strcmpi(animal,'jo')
-    unwanted_DBS = {'stn4-5', 'stn5-6', 'stn6-7'};
-end
-if strcmpi(animal,'kitty')
-    unwanted_DBS = {'stn3-4', 'stn4-5', 'stn5-6', 'stn6-7', 'gp6-7'};
-end
-if strcmpi(animal,'pinky')
-    unwanted_DBS = {'stn0-1', 'stn1-2', 'stn2-3', 'stn6-7', 'gp0-1'};
-end
-if strcmpi(animal,'bug')
-    unwanted_DBS = {};
-end
+unwanted_DBS = unwanted_DBS_extract(animal);
 
 
 
@@ -83,8 +72,8 @@ for fi = 1 : nfiles
     
     % load lfpdata: nchns * ntemp * ntrials
     filename = files(fi).name;
-    load(fullfile(files(fi).folder, filename), 'lfpdata', 'fs', 'T_chnsarea', 'T_idxevent');
-    
+    load(fullfile(files(fi).folder, filename), 'lfpdata', 'fs_lfp', 'T_chnsarea', 'T_idxevent_lfp', ...
+                                               'fs_ma', 'T_idxevent_ma', 'smoothWspeed_trial', 'Wpos_smooth_trial', 'Wrist_smooth_trial');
     
     % remove chns marked with multiple areas or GP/STN in Gray Matter
     multipleAreas_mask = cellfun(@(x) contains(x, '/'), T_chnsarea.brainarea);
@@ -136,11 +125,12 @@ for fi = 1 : nfiles
     savefilename = [filename(idx:idx + tmpn - 1) savefilename_addstr ...
         upper(filename(idx + tmpn)) filename(idx + tmpn + 1:end)];
     
-    save(fullfile(savefolder, savefilename), 'lfpdata',  'T_chnsarea', 'fs', 'T_idxevent');
+    save(fullfile(savefolder, savefilename), 'lfpdata', 'fs_lfp', 'T_chnsarea', 'T_idxevent_lfp', ...
+                                               'fs_ma', 'T_idxevent_ma', 'smoothWspeed_trial', 'Wpos_smooth_trial', 'Wrist_smooth_trial');
     
     
     
-    clear lfpdata fs T_chnsarea T_idxevent 
+    clear lfpdata fs_lfp T_chnsarea T_idxevent_lfp fs_ma  T_idxevent_ma smoothWspeed_trial Wpos_smooth_trial Wrist_smooth_trial
     clear mask_GM mask_DBS lfpdata_GM lfpdata_DBS T_GMchnsarea T_DBSchnsarea
     clear avglfp_GM T_GMchnsarea_new
 end

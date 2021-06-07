@@ -130,7 +130,7 @@ for fi = 1 : nfiles
     
     
     
-    clear lfpdata fs T_chnsarea T_idxevent 
+    clear lfpdata fs_lfp T_chnsarea T_idxevent_lfp fs_ma  T_idxevent_ma smoothWspeed_trial Wpos_smooth_trial Wrist_smooth_trial
     clear mask_GM mask_DBS lfpdata_GM lfpdata_DBS T_GMchnsarea T_DBSchnsarea
     clear avglfp_GM T_GMchnsarea_new
 end
