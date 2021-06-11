@@ -13,6 +13,10 @@
 
 % Resultant movement times are saved in a .mat file and .nex file
 
+
+%% add path YLL
+addpath(genpath(fullfile('H:\My Drive\NMRC_umn\Projects\FCAnalysis\exp\code', 'toolbox', 'NexMatlabFiles')))
+
 %% clear variables
 close all; clear all; 
 clc;
@@ -22,7 +26,7 @@ clear all
 % Initialize parameters
 
 header.MonkeyName     =  'Kitty'; % Define which animal
-header.server_dir = 'Y:\'; %enter appropriate directory on your PC for the server
+header.server_dir = 'H:\My Drive\NMRC_umn\Projects\FCAnalysis\exp\data\'; %enter appropriate directory on your PC for the server
 % SessionsBlocksToAnalyze{1}.Session = 'Jo_011116' % Corresponds to OutputFolderName in spreadsheet
 SessionsBlocksToAnalyze{1}.Session = 'Kitty_041515' % Corresponds to OutputFolderName in spreadsheet
 % SessionsBlocksToAnalyze{1}.Session = 'Pinky_030217' % Corresponds to OutputFolderName in spreadsheet
@@ -54,46 +58,35 @@ plotON = 0;
 
 
 %% Access Speadsheet Database
-
-    if strcmp(header.MonkeyName, 'Jo')
-
-        % Select spreadsheet and worksheet to read from your google drive
-        spreadsheetName='JoMasterDatabase';
-        sheetName = 'MasterList' %choose appropriate excel sheet
-web_link ='1DtQo5qMbkvTDDQlHdPUcFMIOWUP09pZMiZen0t6yEXM';  %% it would be different for other user
-    elseif strcmp(header.MonkeyName, 'Pinky')
-web_link ='1Mn_HcvWt4FVc2kcvRMbDj5jQffyGNrwppNOK6T5W-zI';  %% it would be different for other user
-        spreadsheetName='PinkyMasterDatabase';
-        sheetName = 'MasterList' %choose appropriate excel sheet
-         elseif strcmp(header.MonkeyName, 'Bug')
-web_link ='1mvTwDnWtN2-UhF4o_NSC9NjF1681lIss9zI1vn48GlU';  %% it would be different for other user
-        spreadsheetName='BugMasterDatabase';
-        sheetName = 'MasterList' %choose appropriate excel sheet
-    elseif strcmp(header.MonkeyName, 'Kitty')
-
-        % Select spreadsheet and worksheet to read from your google drive
-        spreadsheetName='KittyMasterDatabase';
-        sheetName = 'MasterList' %choose appropriate excel sheet
-web_link ='1B4lnBGlYiI-O_tZWEz9Thvj3hVkczh7iWNS7mQ3PNsc';  %% it would be different for other user
-    end
+if strcmp(header.MonkeyName, 'Jo')
     
-    % Access the spreadsheet
-%     Access google drive worksheet
-
+    % Select spreadsheet and worksheet to read from your google drive
+    spreadsheetName='JoMasterDatabase';
+    sheetName = 'MasterList' %choose appropriate excel sheet
+    web_link ='1DtQo5qMbkvTDDQlHdPUcFMIOWUP09pZMiZen0t6yEXM';  %% it would be different for other user
+elseif strcmp(header.MonkeyName, 'Pinky')
+    web_link ='1Mn_HcvWt4FVc2kcvRMbDj5jQffyGNrwppNOK6T5W-zI';  %% it would be different for other user
+    spreadsheetName='PinkyMasterDatabase';
+    sheetName = 'MasterList' %choose appropriate excel sheet
+elseif strcmp(header.MonkeyName, 'Bug')
+    web_link ='1mvTwDnWtN2-UhF4o_NSC9NjF1681lIss9zI1vn48GlU';  %% it would be different for other user
+    spreadsheetName='BugMasterDatabase';
+    sheetName = 'MasterList' %choose appropriate excel sheet
+elseif strcmp(header.MonkeyName, 'Kitty')
+    
+    % Select spreadsheet and worksheet to read from your google drive
+    spreadsheetName='KittyMasterDatabase';
+    sheetName = 'MasterList' %choose appropriate excel sheet
+    web_link ='1B4lnBGlYiI-O_tZWEz9Thvj3hVkczh7iWNS7mQ3PNsc';  %% it would be different for other user
+end
+    
+    % Access the spreadsheet i.e. google drive worksheet
     result = GetGoogleSpreadsheet(web_link);
     [raw, txt] = rawToString(result );
     heads = txt(1,:);
-    %%old token
-%     [ aTokenDocs, aTokenSpreadsheet ] = connect_to_google('', '');
-%     if isempty(aTokenDocs) || isempty(aTokenSpreadsheet)
-%         warndlg('Could not obtain authorization tokens from Google.','');
-%         return;    
-%     end
-%     [raw,txt] = get_cell_array( spreadsheetName,sheetName,aTokenSpreadsheet );
-%     heads = txt(1,:);
+
 
     %% Find files in spreadsheet to analyze based on Session and Block information provided
-
     k = [];
     SessionList    = (raw(:,ismember(heads,'OutputFolderName')==1)); %find excel rows that have been marked for processing
     BlockList    = (raw(:,ismember(heads,'MA File')==1)); %find excel rows that have been marked for processing
@@ -147,9 +140,9 @@ for files_ix = 1:length(k)
     
     %% If kluver movement times output file already exists, confirm that you want to overwrite
     %.mat file
-    savefilename = [savedir_block '\' header.MASessionName{files_ix} '_' num2str(header.MAFileName(files_ix)) header.MACleanedFileName{files_ix} '_MA_SingleTargetKluver']; 
-        savefilename1 = [savedir_block '\' header.MASessionName{files_ix} '_' num2str(header.MAFileName(files_ix)) header.MACleanedFileName{files_ix} '_Analyze']; 
-
+    savefilename = [savedir_block '\' header.MASessionName{files_ix} '_' num2str(header.MAFileName(files_ix)) header.MACleanedFileName{files_ix} '_MA_SingleTargetKluver'];
+    savefilename1 = [savedir_block '\' header.MASessionName{files_ix} '_' num2str(header.MAFileName(files_ix)) header.MACleanedFileName{files_ix} '_Analyze'];
+    
     if exist([savefilename '.mat']) == 2 ||(exist([savefilename1 '.mat']))
         fileinfo = [header.MASessionName{files_ix} '_' num2str(header.MAFileName(files_ix)) header.MACleanedFileName{files_ix} '_MA_SingleTargetKluver.mat']
         output = overwrite_file(fileinfo)

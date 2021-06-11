@@ -1,8 +1,11 @@
 function [clim_Spectrogram_STN, clim_Spectrogram_GP, clim_Spectrogram_Others] = clim_SKTSpectrogram_extract(animal)
 if strcmpi(animal,'jo')
-    clim_Spectrogram_STN = [-130 -110];
-    clim_Spectrogram_GP = [-130 -110];
-    clim_Spectrogram_Others = [-120 -90];
+%     clim_Spectrogram_STN = [-130 -110];
+%     clim_Spectrogram_GP = [-130 -110];
+%     clim_Spectrogram_Others = [-120 -90];
+    clim_Spectrogram_STN = [-30 10];
+    clim_Spectrogram_GP = [-30 10];
+    clim_Spectrogram_Others = [-30 10];
 end
 if strcmpi(animal,'kitty')
     %clim_Spectrogram_STN = [-130 -100];

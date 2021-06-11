@@ -27,6 +27,8 @@ function m3_restData_PSDEachArea_extract()
 
     % variables for plotting
     plotF_AOI = [5 50];
+    
+    ylimits = [0 0.2];
 
     % input folder
     inputfolder = fullfile(codecorresParentfolder, 'm2_restData_selectSeg_Power');
@@ -74,11 +76,11 @@ function m3_restData_PSDEachArea_extract()
 
         if ~strcmp(brainarea, 'STN') &&~strcmp(brainarea, 'GP')
             % if not DBS case, psd_normal, psd_mild: nfs * nsegs
-            plotPSD_comp_1chn(psd_normal, psd_mild, psd_moderate, F_pxx, plotF_AOI, savefolder, brainarea)
+            plotPSD_comp_1chn(psd_normal, psd_mild, psd_moderate, F_pxx, plotF_AOI, savefolder, brainarea, ylimits)
 
         else
             % if DBS case, pxxs_allfiles.GP, pxxs.GP: nfs * nchns * nsegs
-            plotPSD_comp_multichns(psd_normal, psd_mild, psd_moderate, F_pxx, plotF_AOI, savefolder, brainarea)
+            plotPSD_comp_multichns(psd_normal, psd_mild, psd_moderate, F_pxx, plotF_AOI, savefolder, brainarea, ylimits)
         end
 
     end
@@ -298,7 +300,7 @@ function [pxxs, F_pxx] = pxx_eacharea_onefile(file, twin_pwelch)
 
 end
 
-function plotPSD_comp_1chn(psd_normal, psd_mild, psd_moderate, F_all, plotF_AOI, savefolder, brainarea)
+function plotPSD_comp_1chn(psd_normal, psd_mild, psd_moderate, F_all, plotF_AOI, savefolder, brainarea, ylimits)
     %%  plot the psd comparison of normal and mild
     %
     %   Inputs:
@@ -381,6 +383,7 @@ function plotPSD_comp_1chn(psd_normal, psd_mild, psd_moderate, F_all, plotF_AOI,
 %     plot([F_maxPSD F_maxPSD], [0 maxPSD + maxPSD * 0.2], 'k--')
 
     xlim([min(F_AOI) max(F_AOI)])
+    ylim(ylimits)
 
     % legend
     legend([h1, h2, h3], {'normal', 'mild', 'moderate'})
@@ -399,7 +402,7 @@ function plotPSD_comp_1chn(psd_normal, psd_mild, psd_moderate, F_all, plotF_AOI,
     clear savename
 end
 
-function plotPSD_comp_multichns(psd_normal, psd_mild, psd_moderate, F_all, plotF_AOI, savefolder, brainarea)
+function plotPSD_comp_multichns(psd_normal, psd_mild, psd_moderate, F_all, plotF_AOI, savefolder, brainarea, ylimtis)
     %%  plot the psd comparison of normal and mild
     %
     %   Inputs:
@@ -493,6 +496,7 @@ function plotPSD_comp_multichns(psd_normal, psd_mild, psd_moderate, F_all, plotF
 %         plot([F_maxPSD F_maxPSD], [0 maxPSD + maxPSD * 0.2], 'k--')
 
         xlim([min(F_AOI) max(F_AOI)])
+        ylim(ylimtis);
 
         % legend
         legend([h1, h2, h3], {'normal', 'mild', 'moderate'})

@@ -80,6 +80,9 @@ coli_reach = uint32(SKTEvent.Reach);
 coli_returnonset = uint32(SKTEvent.ReturnOnset);
 coli_mouth = uint32(SKTEvent.Mouth);
 
+
+imFormat = 'tif';
+
 % align to event
 align2 = SKTEvent.ReachOnset;
 coli_align2 = uint32(align2);
@@ -92,28 +95,53 @@ savefolder_trials = fullfile(savefolder, 'trials');
 if ~exist(savefolder_trials, 'dir')
     mkdir(savefolder_trials);
 end
+
+savefolder_aveDay = fullfile(savefolder, 'avgDay');
+if ~exist(savefolder_aveDay, 'dir')
+    mkdir(savefolder_aveDay);
+end
+
+
+
+% input start file number or start with 1
+reply = input('Input start file number = ', 's');
+if isempty(reply)
+    filei = 1;
+else
+    filei = str2num(reply);
+end
+clear reply
+
+
+% auto save without click
+reply = input('Auto save mode [y] or no [n] ', 's');
+if isempty(reply) || ~strcmpi(reply, 'y')
+    autoSaveMode =  'n';
+else
+    autoSaveMode = 'y';
+end
+clear reply
+
+
 files = dir(fullfile(inputfolder, '*.mat'));
-filei = 1;
 nfiles = length(files);
 while(filei <=  nfiles)
     
     % load data, lfpdata: [nchns, ntemps, ntrials]
     filename = files(filei).name;
     load(fullfile(files(filei).folder, filename), 'lfpdata', 'fs_lfp', 'T_chnsarea', 'T_idxevent_lfp', ...
-                                               'fs_ma', 'T_idxevent_ma', 'smoothWspeed_trial', 'Wpos_smooth_trial', 'Wrist_smooth_trial');    
+        'fs_ma', 'T_idxevent_ma', 'smoothWspeed_trial', 'Wpos_smooth_trial', 'Wrist_smooth_trial');
     
-    %%% zscore the lfp data
-    if strcmp(animal, 'Kitty')
-        [nchns, ~, ~] = size(lfpdata);
-        zscored_lfpdata = zeros(size(lfpdata));
-        for chi = 1: nchns
-            tmp = squeeze(lfpdata(chi, :, :));
-            zscored_lfpdata(chi, :, :) = zscore(tmp);
-            clear tmp
-        end
-        lfpdata = zscored_lfpdata;
-        clear zscored_lfpdata
+    %%% zscore the lfp data   
+    [nchns, ~, ~] = size(lfpdata);
+    zscored_lfpdata = zeros(size(lfpdata));
+    for chi = 1: nchns
+        tmp = squeeze(lfpdata(chi, :, :));
+        zscored_lfpdata(chi, :, :) = zscore(tmp);
+        clear tmp
     end
+    lfpdata = zscored_lfpdata;
+    clear zscored_lfpdata
     
     
     % extract dateofexp, bktdt and pdcond
@@ -238,24 +266,29 @@ while(filei <=  nfiles)
         madata2 = Wrist_smooth_trial;
         maName = 'Wspeed  XYZ-wrist';
         goodTrials_allGs(:, idxGi) = check_spectrogram_oneGroup(lfpdata_1group, T_idxevent_lfp, T_chnsarea_1group, fs_lfp, goodTrials_1Grp,... 
-                                                    madata, madata2, maName, fs_ma, T_idxevent_ma,...
-                                                    showname, clim_Spectrogram, ...
-                                                    savefolder_trials, animal, groupname, pdcond, datestr(dateofexp, 'yyyymmdd'), bkstr);
-   
+            madata, madata2, maName, fs_ma, T_idxevent_ma,...
+            showname, clim_Spectrogram, ...
+            savefolder_trials, animal, groupname, pdcond, datestr(dateofexp, 'yyyymmdd'), bkstr, autoSaveMode);
+        
+        
         clear idxs lfpdata_1group T_chnsarea_1group goodTrials_1Grp
+        
+        
+        %%% save goodTrials and tbl_goodTrialsMarks
+        % goodTrials = goodTrials_allGs(:, 1) & goodTrials_allGs(:, 2) & goodTrials_allGs(:, 3)
+        goodTrials = ones(size(goodTrials_allGs, 1), 1);
+        for gi = 1 : size(goodTrials_allGs, 2)
+            goodTrials = goodTrials & goodTrials_allGs(:, gi);
+        end
+        tbl_goodTrialsMarks = array2table(goodTrials_allGs, 'VariableNames', groupNames);
+        if exist(savefile_goodTrialsMarkers, 'file')
+            delete(savefile_goodTrialsMarkers)
+        end
+        save(savefile_goodTrialsMarkers, 'goodTrials', 'tbl_goodTrialsMarks', 'idxGroups', 'lfpdata', 'T_idxevent_lfp', 'fs_lfp', 'T_chnsarea',...
+            'fs_ma', 'T_idxevent_ma', 'smoothWspeed_trial', 'Wpos_smooth_trial', 'Wrist_smooth_trial');
     end
     
-    % goodTrials = goodTrials_allGs(:, 1) & goodTrials_allGs(:, 2) & goodTrials_allGs(:, 3)
-    goodTrials = ones(size(goodTrials_allGs, 1), 1);
-    for gi = 1 : size(goodTrials_allGs, 2)
-        goodTrials = goodTrials & goodTrials_allGs(:, gi);
-    end
-    tbl_goodTrialsMarks = array2table(goodTrials_allGs, 'VariableNames', groupNames);
-    if exist(savefile_goodTrialsMarkers, 'file')
-        delete(savefile_goodTrialsMarkers)
-    end
-    save(savefile_goodTrialsMarkers, 'goodTrials', 'tbl_goodTrialsMarks', 'idxGroups', 'lfpdata', 'T_idxevent_lfp', 'fs_lfp', 'T_chnsarea',...
-                                      'fs_ma', 'T_idxevent_ma', 'smoothWspeed_trial', 'Wpos_smooth_trial', 'Wrist_smooth_trial');
+
     
     
     %%% --- show one day spectrogram using goodTrials --- %%%
@@ -289,11 +322,13 @@ while(filei <=  nfiles)
         t_reach = (T_idxevent_lfp{tri, coli_reach} - T_idxevent_lfp{tri, coli_reachonset}) / fs_lfp;
         t_return = (T_idxevent_lfp{tri, coli_mouth} - T_idxevent_lfp{tri, coli_returnonset}) / fs_lfp;
         if t_reach < t_minmax_reach(1) || t_reach > t_minmax_reach(2)
+            disp(['trial i = ' num2str(tri) ', t_reach = ' num2str(t_reach)])
             goodTrials(tri) = 0;
             clear t_reach
             continue
         end
         if t_return < t_minmax_return(1) || t_reach > t_minmax_return(2)
+            disp(['trial i = ' num2str(tri) ', t_return = ' num2str(t_reach)])
             goodTrials(tri) = 0;
             clear t_return
             continue
@@ -308,7 +343,7 @@ while(filei <=  nfiles)
         clear t_reach t_return idxdur lfp_phase_1trial
     end
     
-    oneday_spectrogram_img = fullfile(savefolder, [animal '_goodTrials_' pdcond '_' datestr(dateofexp, 'yyyymmdd') '_' bkstr]);
+    oneday_spectrogram_img = fullfile(savefolder_aveDay, [animal '_goodTrials_' pdcond '_' datestr(dateofexp, 'yyyymmdd') '_' bkstr]);
     if isempty(lfp_phase_trials)
         disp('lfp_phase_trials is empty, skip spectrogram across trials')
         if exist(oneday_spectrogram_img, 'file') % delete if exist already
@@ -328,7 +363,7 @@ while(filei <=  nfiles)
     reply = input(['Check the next day (y) or Recheck this day (n)[y]:'], 's');
     if isempty(reply) || lower(reply) ~= 'n'
         
-        saveas(gcf, oneday_spectrogram_img, 'png');
+        saveas(gcf, oneday_spectrogram_img, imFormat);
         
         filei = filei + 1;
     end
@@ -354,7 +389,6 @@ f_AOI = [8 40];
 
 nwin = round(twin * fs);
 noverlap = round(toverlap * fs);
-
 
 % subplot/Figure parameters
 fig_left = 1;
@@ -487,6 +521,12 @@ function goodTrials = check_spectrogram_oneGroup(lfpdata, T_idxevent_lfp, T_chns
 
 
 % parse varargin
+if length(varargin) >= 7
+    autoSaveMode = varargin{7};
+else
+    autoSaveMode = 'n';
+end
+
 if length(varargin) >= 6
     bkstr = varargin{6};
 else
@@ -519,7 +559,7 @@ else
 end
 
 
-
+imFormat = 'tif';
 
 % global parameters
 twin = 0.2;
@@ -627,16 +667,28 @@ uiwait(fig)
 
     function finishCheck(src,event)
         finishedCheck = true;
+        
+        trials_spectrogram_img = fullfile(savefolder, [animal '_' groupname '_trials_spect_' pdcond '_' dateofexp_yyyymmdd '_' bkstr '_trial' num2str(tri_str) '-' num2str(tri_end)]);
+        saveas(gcf, trials_spectrogram_img, imFormat);
+        
         close(fig)
     end % finishCheck
 
     function nextTrials(src,event)
         gi = mod(gi + 1, ngs);
+        
+        trials_spectrogram_img = fullfile(savefolder, [animal '_' groupname '_trials_spect_' pdcond '_' dateofexp_yyyymmdd '_' bkstr '_trial' num2str(tri_str) '-' num2str(tri_end)]);
+        saveas(gcf, trials_spectrogram_img, imFormat);
+        
         showNewTrials()
     end % nextTrials
 
     function prevTrials(src,event)
         gi = mod(gi - 1, ngs);
+        
+        trials_spectrogram_img = fullfile(savefolder, [animal '_' groupname '_trials_spect_' pdcond '_' dateofexp_yyyymmdd '_' bkstr '_trial' num2str(tri_str) '-' num2str(tri_end)]);
+        saveas(gcf, trials_spectrogram_img, imFormat);
+        
         showNewTrials()
     end % prevTrials
 
@@ -651,9 +703,9 @@ uiwait(fig)
 
     function plot_spectrogram()
         % plot lfpdata_1group of all the channels: nchns * ntemp * ntrial
-        
+       
         annotation(gcf,'textbox',...
-            [subp_startLeft subp_startTop 1 0.03],...
+            [0.87 0.45 1 0.03],...
             'String', {showname}, ...
             'LineStyle', 'none', 'FontWeight', 'bold', 'FitBoxToText', 'off');
         
@@ -767,6 +819,10 @@ uiwait(fig)
                     
                     
                     % plot ma data
+%                     ma_WSpeed = zscore(ma_WSpeed); ma_WSpeed = ma_WSpeed - ma_WSpeed(1);
+%                     ma_W_X = zscore(ma_W_X); ma_W_X  = ma_W_X - ma_W_X(1);
+%                     ma_W_Y = zscore(ma_W_Y); ma_W_Y  = ma_W_Y - ma_W_Y(1);
+%                     ma_W_Z = zscore(ma_W_Z); ma_W_Z  = ma_W_Z - ma_W_Z(1);
                     plot(times_plot_ma, ma_WSpeed, 'b'); hold on
                     plot(times_plot_ma, ma_W_X, 'r', times_plot_ma, ma_W_Y, 'g', times_plot_ma, ma_W_Z, 'k');
                     set(gca, 'XLim', spect_xlim);
@@ -782,6 +838,13 @@ uiwait(fig)
                     clear eventi
                     
                     
+                    if(coli == 1)
+                        hl = legend({'WSpeed','W-X', 'W-Y', 'W-Z'},'AutoUpdate','off', 'Location', 'Best');
+                        set(hl,'Position',[0.86 0.86 0.047 0.064],...
+                            'AutoUpdate','off');
+                        
+                        clear h1
+                    end
                     
                     annotation(gcf,'textbox',...
                         [areaName_left subp_bottom_ma + subp_height / 2 0.03 0.03],...
@@ -805,8 +868,10 @@ uiwait(fig)
                 clear subp_bottom
             end
         end
+        
+        
         trials_spectrogram_img = fullfile(savefolder, [animal '_' groupname '_trials_spect_' pdcond '_' dateofexp_yyyymmdd '_' bkstr '_trial' num2str(tri_str) '-' num2str(tri_end)]);
-        saveas(gcf, trials_spectrogram_img, 'png');
+        saveas(gcf, trials_spectrogram_img, imFormat);
         
     end %plot_spectrogram
 

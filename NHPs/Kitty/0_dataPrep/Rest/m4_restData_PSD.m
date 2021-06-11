@@ -42,11 +42,12 @@ animal = codecorresfolder(fi + length('NHPs') + 1:j);
 twin_pwelch = 2;
 
 % variables for plotting
-plotF_AOI = [5 50];
+plotF_AOI = [5 40];
 
 % input folder
 inputfolder = fullfile(codecorresParentfolder, 'm3_restData_rmChns_avgArea');
 
+ylimits = [0 0.25];
 %% save setup
 savefolder = codecorresfolder;
 savefilename_prefix = 'psd_';
@@ -87,11 +88,13 @@ for i = 1:length(brainareas)
     eval(['psd_moderate = pxxs_allfiles_moderate.' brainarea ';'])
     
     %  psd_normal, psd_mild: nfs * nsegs
-    plotPSD_comp_1chn(psd_normal, psd_moderate, F_pxx, plotF_AOI, savefolder, brainarea, animal)
+    plotPSD_comp_1chn(psd_normal, psd_moderate, F_pxx, plotF_AOI, savefolder, brainarea, animal, ylimits)
+    
+    
 end
 
 %%% combine %%%
-close all
+%close all
 
 end
 
@@ -240,7 +243,7 @@ end
 
 end
 
-function plotPSD_comp_1chn(psd_normal, psd_moderate, F_all, plotF_AOI, savefolder, brainarea, animal)
+function plotPSD_comp_1chn(psd_normal, psd_moderate, F_all, plotF_AOI, savefolder, brainarea, animal, ylimits)
 %%  plot the psd comparison of normal and mild
 %
 %   Inputs:
@@ -305,16 +308,22 @@ h3 = plot(F_AOI, psd_moderate_mean, 'Color', color_moderate_mean, 'LineWidth', l
 
 
 xlim([min(F_AOI) max(F_AOI)])
+ylim(ylimits)
+set(gca, 'Box', 'off')
+
+xlabel('Frequency (Hz)', 'FontWeight','bold')
+ylabel('Power', 'FontWeight','bold')
 
 % legend
 legend([h1, h3], {'normal',  'moderate'})
 
 % title
-title([animal ' PSD in ' strrep(brainarea, '_', '-')])
+title([animal ' Rest PSD in ' strrep(brainarea, '_', '-')])
 
 % save figure
-savename = fullfile(savefolder, ['psd_' brainarea]);
-saveas(gcf, savename, 'png')
+savename = fullfile(savefolder, [animal 'Rest_psd_' brainarea]);
+exportgraphics(gca,[savename '.tif'], 'Resolution', 300) 
+
 
 clear psd_allsegs_normal  psd_allsegs_moderate
 clear psd_normal_FAOI  psd_moderate_FAOI

@@ -95,7 +95,7 @@ for i = 1 : length(cond_cell)
     eval(['t_minmax_return = t_minmax_return_' pdcond ';']);
     
     
-    [lfptrials, fs, T_chnsarea] = lfp_goodTrials_align2(files, align2, tdur_trial, t_minmax_reach, t_minmax_return);
+    [lfptrials, idxs_peakV, fs, T_chnsarea] = lfp_goodTrials_align2Reachonset_PeakV(files, tdur_trial, t_minmax_reach, t_minmax_return);
     mask_noisyChns = cellfun(@(x) contains(x, noisy_chns), T_chnsarea.brainarea);
     mask_notDBS_notM1 = ~strcmp(T_chnsarea.brainarea, 'M1') & ~strcmp(T_chnsarea.electype, 'DBS');
     mask_usedChns = ~(mask_noisyChns | mask_notDBS_notM1);
@@ -148,7 +148,10 @@ for chi = 1 : size(lfp_phase_trials, 1)
     for tri = 1: size(lfp_phase_trials, 3)
         x = lfp_phase_trials(chi, :, tri);
         [~, freqs, times, ps] = spectrogram(x, nwin, noverlap,[],fs); % ps: nf * nt
-        psds = cat(3, psds, ps);
+        
+        %convert into dB
+        ps = 10 * log10(ps);
+        psds = cat(3, psds, 10 * log10(ps));
         
         clear x ps
     end
@@ -160,8 +163,7 @@ for chi = 1 : size(lfp_phase_trials, 1)
     psd_plot = psd(idx_f, :);
     times_plot = times + tdur_trial(1);
     
-    % convert into dB and then gauss filted
-    psd_plot = 10 * log10(psd_plot);
+    % gauss filted
     psd_plot = imgaussfilt(psd_plot,'FilterSize',[1,11]);
     
     psd_allchns = cat(3, psd_allchns, psd_plot); % psd_allchns: nf * nt * nchns

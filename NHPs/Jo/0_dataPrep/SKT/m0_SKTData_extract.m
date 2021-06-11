@@ -257,43 +257,23 @@ function [lfptrial_cortical, lfptrial_dbs, fs_lfp, T_idxevent_lfp, fs_ma, T_idxe
     % read the MA data
     mafolder = fullfile(onedaypath, ['Block-' num2str(tdtblock)]); 
     mafilestruct = dir(fullfile(mafolder, '*SingleTargetKluver_Analyze2.mat'));
-
-    if length(mafilestruct) == 1
-        % load SingleTargetKluverMAData from  *SingleTargetKluver_Analyze2.mat
-        load(fullfile(mafolder, mafilestruct.name), 'SingleTargetKluverMAData');
-    else
-        if isempty(mafilestruct) % check *SingleTargetKluver_Analyze1.mat
-            mafilestruct = dir(fullfile(mafolder, '*SingleTargetKluver_Analyze1.mat'));
-            
-            if length(mafilestruct) == 1
-             
-                load(fullfile(mafolder, mafilestruct.name), 'Analyze');
-                SingleTargetKluverMAData = Analyze;
-                clear Analyze
-            else
-                disp([mafolder 'has ' num2str(length(mafilestruct)) ' files, skip!'])
-                
-                lfptrial_cortical = []; lfptrial_dbs = [];
-                fs_lfp = []; T_idxevent_lfp = [];
-                fs_ma = []; T_idxevent_ma = [];
-                smoothWspeed_trial = []; Wpos_smooth_trial = []; Wrist_smooth_trial = [];
-                T_dbsChn = [];
-                
-                return
-            end
-            
-        else
-            disp([mafolder 'has ' num2str(length(mafilestruct)) ' files, skip!'])
-            
-            lfptrial_cortical = []; lfptrial_dbs = [];
-            fs_lfp = []; T_idxevent_lfp = []; 
-            fs_ma = []; T_idxevent_ma = [];
-            smoothWspeed_trial = []; Wpos_smooth_trial = []; Wrist_smooth_trial = [];
-            T_dbsChn = [];
-            
-            return;
-        end
+    
+    
+    if length(mafilestruct) ~= 1 
+        
+        disp([mafolder 'has ' num2str(length(mafilestruct)) ' files, skip!'])
+        
+        lfptrial_cortical = []; lfptrial_dbs = [];
+        fs_lfp = []; T_idxevent_lfp = [];
+        fs_ma = []; T_idxevent_ma = [];
+        smoothWspeed_trial = []; Wpos_smooth_trial = []; Wrist_smooth_trial = [];
+        T_dbsChn = [];
+        
+        return
     end
+    
+    % load SingleTargetKluverMAData from  *SingleTargetKluver_Analyze2.mat
+    load(fullfile(mafolder, mafilestruct.name), 'SingleTargetKluverMAData');
     
     % ma sample rate
     fs_ma = SingleTargetKluverMAData.SR;

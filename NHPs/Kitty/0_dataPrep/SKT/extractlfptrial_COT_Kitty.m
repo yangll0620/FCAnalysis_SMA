@@ -1,182 +1,5 @@
-function m0_SKTData_extract()
-    %% extract the COT normal and SKT moderate data for Kitty 
-    %
-    %	Inputs:
-    %
-    %		root/Animals/Kitty/Recording/Processed/DataDatabase/
-    %
-    %   Steps:
-    %       1. extract trials from processed folder in server (call function _extractlfptrial
-    %           a. trial length = max(each trial length) + t_bef + t_aft 
-    %                   t_bef: the time before target on (default: t_bef = 1)
-    %                   t_aft: the time after mouth (default: t_aft = 0.5)
-    %           b. only remain the trials markedin both good reach and good return
-    %
-    %
-    %       2. bipolar for DBS channels
-    %
-    %       3. Down sample trials into fs_new = 500
-    %
-    %       4. add variable T_chnsarea
-
-
-    %% extract the corresponding pipeline folder for this code
-    % the full path and the name of code file without suffix
-    codefilepath = mfilename('fullpath');
-    % code folder
-    codefolder = codefilepath(1:strfind(codefilepath, 'code') + length('code') - 1);
-
-    % add util path
-    addpath(genpath(fullfile(codefolder, 'util')));
-    addpath(genpath(fullfile(codefolder, 'NHPs')));
-
-    % add NexMatablFiles path
-    addpath(genpath(fullfile(codefolder, 'toolbox', 'NexMatlabFiles')))
-
-    % datafolder, pipelinefolder
-    [datafolder, ~, ~, ~] = exp_subfolders();
-    [codecorresfolder, ~] = code_corresfolder(codefilepath, true, false);
-
-    %% input setup
-    % animal
-    animal = animal_extract(codecorresfolder);
-
-    % Input dir:  preprocessed folder in root2
-    processedfolder_inroot = fullfile('H:', 'My Drive', 'NMRC_umn', 'Projects', 'FCAnalysis', 'exp',  'data', 'Animals', animal, 'Recording', 'Processed', 'DataDatabase');
-   
-    % master sheet: Kitty doesn't have SKT in normal
-    SKTfile_Moderate_master = fullfile(datafolder, 'Animals', animal, 'KittyModerateSKT.csv');
-    SKTfile_normal_master = fullfile(datafolder, 'Animals', animal, 'KittyNormalCOT.csv');
-    strformat_date_master = 'yyyymmdd'; % the format of date string in  SKTfile_master, e.g. '20170123'
-
-
-    % channel number of utah array, grayMatter, and dbs leads
-    nM1 = 96; nSTN = 8; nGP = 8;
-
-
-    % downsample
-    fs_new = 500;
-    
-    conds_cell = cond_cell_extract(animal);
-    
-    strformat_date_onedaypath = 'mmddyy'; % the format of date string in  savedaypath, e.g. '012317'
-
-    %% save setup
-    savefolder = codecorresfolder;
-    savefilename_prefix = [animal '_STKData_'];
-
-    strformat_date_save = 'yyyymmdd'; % the format of date string in saved filename, e.g. '20170123'
-
-
-    %% Starting Here
-
-    % extract master table
-    t_SKT_moderate = readtable(SKTfile_Moderate_master, 'Format','%s%u%u%s');
-    t_SKT_normal = readtable(SKTfile_normal_master, 'Format','%s%u%u%s');
-    t_SKT = [t_SKT_moderate; t_SKT_normal];
-
-
-    %%% add chn-area information T_chnsarea  %%%
-    T_chnsarea = chanInf_M1DBS(nM1, nSTN -1, nGP -1); % bipolar DBS
-
-
-    %%% extract all STK trials %%%
-    f = waitbar(0, 'Extracting all STK trials');
-    nrecords = height(t_SKT);
-
-    for i = 1:nrecords
-        % waitbar
-        waitbar(i / nrecords, f, ['Extracting trials in file ' num2str(i) '/' num2str(nrecords)]);
-
-        % date of exp, bktdt, condition
-        dateofexp = datenum(t_SKT.Date(i), strformat_date_master);
-        tdtbk = t_SKT.TDTBlock(i);
-        pdcond = t_SKT.Condition{i};
-        
-
-        if ~any(strcmp(pdcond, conds_cell)) % avoid tomild, tomoderate
-            continue;
-        end
-        
-        savefilename = [savefilename_prefix pdcond '_' datestr(dateofexp, strformat_date_save) '_bktdt' num2str(tdtbk) '.mat'];
-        if exist(fullfile(savefolder, savefilename), 'file') == 2
-            continue;
-        end
-         
-        % one day path
-        onedaypath = fullfile(processedfolder_inroot, [animal '_' datestr(dateofexp, strformat_date_onedaypath)]);
-        if ~exist(onedaypath, 'dir')
-            continue;
-        end
-
-        disp(['extracting ' onedaypath '-tdtbk' num2str(tdtbk)])
-        
-        % extract trials of lfp and MA data for particular date and tdt block number
-        if strcmpi(animal, 'Kitty') && strcmpi(pdcond, 'normal')
-            [lfptrial_cortical, lfptrial_dbs, fs_lfp, T_idxevent_lfp, fs_ma, T_idxevent_ma, smoothWspeed_trial, Wpos_smooth_trial, Wrist_smooth_trial, T_dbsChn] = ...
-                extractlfptrial_COT_Kitty(onedaypath, tdtbk);
-        else
-            [lfptrial_cortical, lfptrial_dbs, fs_lfp, T_idxevent_lfp, fs_ma, T_idxevent_ma, smoothWspeed_trial, Wpos_smooth_trial, Wrist_smooth_trial, T_dbsChn] = ...
-                extractlfptrial_(onedaypath, tdtbk);
-        end
-        
-
-        % skip this day if any is empty
-        if isempty(lfptrial_cortical) || isempty(lfptrial_dbs) || isempty(fs_lfp) || isempty(T_idxevent_lfp) || isempty(T_dbsChn)
-            continue;
-        end
-        
-
-        %%% extract the lfptrial_m1 marked with good channels %%%
-        lfptrial_m1 = lfptrial_cortical;
-
-        
-        %%% bipolar dbs %%%%
-        lfptrial_stn = diff(lfptrial_dbs(1:nSTN, :, :), [], 1);
-        lfptrial_gp = diff(lfptrial_dbs(nSTN+1:nSTN+nGP, :, :), [], 1);
-        lfptrial_dbs = cat(1, lfptrial_stn, lfptrial_gp);
-        clear lfptrial_stn lfptrial_gp
-        
-        
-        % concatenate the utah chns, and the bipolr dbs into lfptrial
-        lfpdata = cat(1, lfptrial_m1, lfptrial_dbs);
-
-        %%% down sample %%%
-        nchns = size(lfpdata, 1);
-        for chi = 1: nchns
-            tmp = squeeze(lfpdata(chi, :, :));
-            tmp = resample(tmp, round(fs_new), round(fs_lfp));
-            
-            if chi == 1
-                [s1, s2] = size(tmp);
-                lfpdown = zeros(nchns, s1, s2);
-            end
-            lfpdown(chi, :, :) = tmp;
-             
-            clear tmp
-        end
-        lfpdata = lfpdown;
-        T_idxevent_lfp{:, :} =  round(T_idxevent_lfp{:, :} * fs_new / fs_lfp);
-        fs_lfp = fs_new;
-        clear lfpdown
-
-
-
-        % save
-        savefilename = [savefilename_prefix pdcond '_' datestr(dateofexp, strformat_date_save) '_bktdt' num2str(tdtbk) '.mat'];
-        save(fullfile(savefolder, savefilename), 'lfpdata', 'fs_lfp', 'T_chnsarea', 'T_idxevent_lfp', 'fs_ma', 'T_idxevent_ma', ...
-            'smoothWspeed_trial', 'Wpos_smooth_trial', 'Wrist_smooth_trial');
-
-        clear outputfoldername dateofexp tdtbk onedaypath
-        clear lfptrial_cortical lfptrial_dbs fs_lfp T_idxevent_lfp T_dbsChn lfptrial_m1 
-        clear fs_ma T_idxevent_ma smoothWspeed_trial Wpos_smooth_trial Wrist_smooth_trial
-        clear lfpdata  pdcond savefilename
-    end
-    
-end
-
 function [lfptrial_cortical, lfptrial_dbs, fs_lfp, T_idxevent_lfp, fs_ma, T_idxevent_ma, smoothWspeed_trial, Wpos_smooth_trial, Wrist_smooth_trial, T_dbsChn] = ...
-    extractlfptrial_(onedaypath, tdtbk)
+    extractlfptrial_COT_Kitty(onedaypath, tdtbk)
     % extractlfptrial extract trials for LFP data
     %
     %  [lfptrial_cortical, lfptrial_dbs, chantbl_cortical, chantbl_dbs] =
@@ -195,9 +18,9 @@ function [lfptrial_cortical, lfptrial_dbs, fs_lfp, T_idxevent_lfp, fs_ma, T_idxe
     %   tdtblock: tdt block number
     %
     %  Used files:
-    %       lfpfile_utah  -   .\LFP\Block-3\Jo_CR1_DT1_020216_Block-3_LFPch*.nex
-    %       lfpfile_dbs   -   .\DBSLFP\Block-3\Jo_CR1_DT1_020216_Block-3_DBSLFP.nex.nex
-    %       mafile        -   .\Block-3\Jo_20160202_3_cleaned_MA_SingleTargetKluver_Analyze2.mat
+    %       lfpfile_utah  -   .\LFP\Block-3\KittyArrayDBSv2_DT1_101614_Block-3_LFPch*.nex
+    %       lfpfile_dbs   -   .\DBSLFP\Block-3\KittyArrayDBSv2_DT1_101614_Block-3_DBSLFP.nex
+    %       mafile        -   .\Block-3\Kitty20141016_1_clean_MA_COT_Analyze2.mat
     %
     %  Outputs:
     %   lfptrial_cortical: lfp trials of cortical/subcortical channels
@@ -236,8 +59,8 @@ function [lfptrial_cortical, lfptrial_dbs, fs_lfp, T_idxevent_lfp, fs_ma, T_idxe
     %% MA data
     % read the MA data
     mafolder = fullfile(onedaypath, ['Block-' num2str(tdtbk)]);
-    mafilestruct = dir(fullfile(mafolder, '*SingleTargetKluver_Analyze2.mat'));
-    
+    mafilestruct = dir(fullfile(mafolder, '*COT_Analyze2.mat'));
+
     if length(mafilestruct) ~= 1
         
         disp([mafolder 'has ' num2str(length(mafilestruct)) ' files, skip!'])
@@ -251,36 +74,52 @@ function [lfptrial_cortical, lfptrial_dbs, fs_lfp, T_idxevent_lfp, fs_ma, T_idxe
         return
     end
     
-    % load SingleTargetKluverMAData from  *SingleTargetKluver_Analyze2.mat
-    load(fullfile(mafolder, mafilestruct.name), 'SingleTargetKluverMAData');
+    % load COTData from  *SingleTargetKluver_Analyze2.mat
+    load(fullfile(mafolder, mafilestruct.name), 'COTData');
 
     % ma sample rate
-    fs_ma = SingleTargetKluverMAData.SR;
+    fs_ma = COTData.SR;
 
     % time indices for target onset, reach onset, touch screen, return and mouth
-    TargetTime = SingleTargetKluverMAData.TargetTime;
-    ReachTimeix = SingleTargetKluverMAData.ReachTimeix;
-    TouchTimeix = SingleTargetKluverMAData.TouchTimeix;
-    ReturnTimeix = SingleTargetKluverMAData.ReturnTimeix; 
-    MouthTimeix = SingleTargetKluverMAData.MouthTimeix;
-    [m, n] = size(TargetTime);
+    TargetTime_all = COTData.TargetTime;
+    ReachTimeix_all = COTData.ReachTimeix;
+    TouchTimeix_all = COTData.TouchTimeix;
+    ReturnTimeix_all = COTData.ReturnTimeix; 
+    MouthTimeix_all = COTData.MouthTimeix;
+    [m, n] = size(TargetTime_all);
     if m == 1 || n == 1
-        TargetTime = reshape(TargetTime, [m * n, 1]);
+        TargetTime_all = reshape(TargetTime_all, [m * n, 1]);
     end
-
-    timeixtbl_ma = [table(TargetTime) table(ReachTimeix) table(TouchTimeix) table(ReturnTimeix) table(MouthTimeix)];
-    clear TargetTime ReachTimeix TouchTimeix ReturnTimeix MouthTimeix
+    clear m n
     
+    % time for target 1
+    targi = 1;
+    TargetTime_targ = COTData.Target{targi}.TargetTime;
+    ReachTimeix_targ = COTData.Target{targi}.ReachTimeix;
+    TouchTimeix_targ = COTData.Target{targi}.TouchTimeix;
+    ReturnTimeix_targ = COTData.Target{targi}.ReturnTimeix; 
+    MouthTimeix_targ = COTData.Target{targi}.MouthTimeix;
+    
+    % mask for target 1
+    mask_targ = ismember(TargetTime_all, TargetTime_targ) & ismember(ReachTimeix_all, ReachTimeix_targ) & ...
+        ismember(TouchTimeix_all, TouchTimeix_targ) & ismember(ReturnTimeix_all, ReturnTimeix_targ) & ismember(MouthTimeix_all, MouthTimeix_targ);
+    
+
+    timeixtbl_ma = [table(TargetTime_all) table(ReachTimeix_all) table(TouchTimeix_all) table(ReturnTimeix_all) table(MouthTimeix_all)];
+    
+    clear TargetTime_all ReachTimeix_all TouchTimeix_all ReturnTimeix MouthTimeix_all
+    clear TargetTime_targ ReachTimeix_targ TouchTimeix_targ ReturnTimeix_targ MouthTimeix_targ
+
     % the tag of good reach trials
-    tag_goodreach = SingleTargetKluverMAData.goodix_reach;
+    mask_goodreach = COTData.goodix_reach;
     % the tag of good return trials
-    tag_goodreturn = SingleTargetKluverMAData.goodix_return;
+    mask_goodreturn = COTData.goodix_return;
 
     % extract indices of good trials (both have good reach and return)
-    idx_goodtrials = (tag_goodreach == 1) & (tag_goodreturn == 1);
+    mask_goodtrials = (mask_goodreach == 1) & (mask_goodreturn == 1);
 
     % if no good trials can be found
-    if isempty(idx_goodtrials)
+    if isempty(mask_goodtrials)
         disp(['no good trials are found in ' mafilestruct.name])
         
         lfptrial_cortical = []; lfptrial_dbs = [];
@@ -292,14 +131,21 @@ function [lfptrial_cortical, lfptrial_dbs, fs_lfp, T_idxevent_lfp, fs_ma, T_idxe
         return;
     end
 
-    % only remain the good trials
-    timeixtbl_ma = timeixtbl_ma(idx_goodtrials, :);
+    % only remain the good trials and one target
+    [m, n] = size(mask_goodtrials);
+    if m == 1 || n == 1
+        mask_goodtrials = reshape(mask_goodtrials, [m * n, 1]);
+    end
+    clear m n
+    
+    timeixtbl_ma = timeixtbl_ma(mask_goodtrials & mask_targ, :);
     clear idx_goodtrials tag_goodreach tag_goodreturn
     
     
     % varNames and varTypes for all return T_idxevent_ma, T_idxevent_lfp
     varNames_table = {'TargetTimeix', 'ReachTimeix', 'TouchTimeix', 'ReturnTimeix', 'MouthTimeix'};
     varTypes_table = {'double','double','double', 'double', 'double'};
+    timeixtbl_ma.Properties.VariableNames = varNames_table;
     
     % total n_trial and n_event
     [n_trial, n_events] = size(timeixtbl_ma);
@@ -312,9 +158,9 @@ function [lfptrial_cortical, lfptrial_dbs, fs_lfp, T_idxevent_lfp, fs_ma, T_idxe
     n_bef = round(t_bef * fs_ma); % n_bef: index MA number before target on
     n_aft = round(t_aft * fs_ma); % n_aft: index MA number after mouth
     
-    maxlen_ma = max(timeixtbl_ma.MouthTimeix - timeixtbl_ma.TargetTime) + 1;
-    idx_strs = timeixtbl_ma.TargetTime - n_bef; % start ma index for each trial n_trial * 1
-    idx_ends = timeixtbl_ma.TargetTime + (maxlen_ma -1) + n_aft; % end ma index for each trial n_trial * 1
+    maxlen_ma = max(timeixtbl_ma.MouthTimeix - timeixtbl_ma.TargetTimeix) + 1;
+    idx_strs = timeixtbl_ma.TargetTimeix - n_bef; % start ma index for each trial n_trial * 1
+    idx_ends = timeixtbl_ma.TargetTimeix + (maxlen_ma -1) + n_aft; % end ma index for each trial n_trial * 1
     n_temporal = maxlen_ma + n_bef + n_aft;
     
     % smoothWspeed_trial: ntemp * ntrial
@@ -323,9 +169,9 @@ function [lfptrial_cortical, lfptrial_dbs, fs_lfp, T_idxevent_lfp, fs_ma, T_idxe
     Wrist_smooth_trial = zeros(n_temporal, 3, n_trial);
     
     for triali = 1:n_trial
-        smoothWspeed_trial(:, triali) = SingleTargetKluverMAData.smoothWspeed(idx_strs(triali) : idx_ends(triali));
-        Wpos_smooth_trial(:, triali) = SingleTargetKluverMAData.Wpos_smooth(idx_strs(triali) : idx_ends(triali));
-        Wrist_smooth_trial(:, :, triali) = SingleTargetKluverMAData.Wrist_smooth(idx_strs(triali) : idx_ends(triali), :);
+        smoothWspeed_trial(:, triali) = COTData.smoothWspeed(idx_strs(triali) : idx_ends(triali));
+        Wpos_smooth_trial(:, triali) = COTData.Wpos_smooth(idx_strs(triali) : idx_ends(triali));
+        Wrist_smooth_trial(:, :, triali) = COTData.Wrist_smooth(idx_strs(triali) : idx_ends(triali), :);
     end
     T_idxevent_ma = table('Size', size(timeixtbl_ma), 'VariableTypes', varTypes_table, 'VariableNames',varNames_table);
     T_idxevent_ma{:, :} = timeixtbl_ma{:, :} - repmat(idx_strs, [1, n_events]);
@@ -388,12 +234,12 @@ function [lfptrial_cortical, lfptrial_dbs, fs_lfp, T_idxevent_lfp, fs_ma, T_idxe
             timeixtbl_lfpcortical{:, :} = round(timeixtbl_ma{:, :} / fs_ma * fs_lfpcortical);
 
             % initialize lfp_utah : chn_lfp * n_temporal * n_trial
-            maxlen = max(timeixtbl_lfpcortical.MouthTimeix - timeixtbl_lfpcortical.TargetTime) + 1; % maximum length across all trials (unit: ind)
+            maxlen = max(timeixtbl_lfpcortical.MouthTimeix - timeixtbl_lfpcortical.TargetTimeix) + 1; % maximum length across all trials (unit: ind)
             n_bef = round(t_bef * fs_lfpcortical); % n_bef: index number before target on
             n_aft = round(t_aft * fs_lfpcortical); % n_aft: index number after mouth
             n_temporal = maxlen + n_bef + n_aft;
-            idx_str = timeixtbl_lfpcortical.TargetTime - n_bef;
-            idx_end = timeixtbl_lfpcortical.TargetTime + (maxlen -1) + n_aft;
+            idx_str = timeixtbl_lfpcortical.TargetTimeix - n_bef;
+            idx_end = timeixtbl_lfpcortical.TargetTimeix + (maxlen -1) + n_aft;
             lfptrial_cortical = zeros(chn_lfp, n_temporal, n_trial);
 
             % idxtbl_lfptrialutah: the idx for events of target onset, reach onset, touch screen,
@@ -528,45 +374,4 @@ function [lfptrial_cortical, lfptrial_dbs, fs_lfp, T_idxevent_lfp, fs_ma, T_idxe
     clear varName
 
     clear convars filename idx_stn idx_gp
-end
-
-function [T_chnsarea] = chanInf_M1DBS(nM1, nSTN, nGP)
-    % add M1 and DBS channel together
-    %
-    %   Args:
-    %       nM1: the number of M1 channels
-    %       nstn, ngp: the number of stn and gp channels
-    %
-    %   Output:
-    %       T_chnsarea: table of M1 + DBS channel inf,
-    %                   (T_chnsarea.Properties.VariableNames:
-    %                   {'chni'}  {'brainarea'}    {'recordingchn'}    {'electype'}    {'notes'})
-
-    % initial the attitudes of chanarea table T_chnsarea:
-    % chni_vec, electype, brainareas, notes, recordingchn
-    chni_vec = uint8([1:nM1]');
-    electype = cell(nM1, 1);
-    brainareas = cell(nM1, 1);
-    notes = cell(nM1, 1);
-    recordingchn = uint8([1:nM1]');
-    electype(1:nM1, 1) = {'Gray Matter'}; % electype
-    brainareas(1:nM1, 1) = {'M1'}; % electype
-
-    % channel information table of M1
-    T_chnsarea = table;
-    T_chnsarea.chni = chni_vec;
-    T_chnsarea.brainarea = brainareas;
-    T_chnsarea.recordingchn = recordingchn;
-    T_chnsarea.electype = electype;
-    T_chnsarea.notes = notes;
-
-    % add DBS lead
-    for chi = 1:nSTN
-        T_chnsarea = [T_chnsarea; {nM1 + chi, 'STN', chi, 'DBS', ''}];
-    end
-
-    for chi = 1:nGP
-        T_chnsarea = [T_chnsarea; {nM1 + nSTN + chi, 'GP', chi, 'DBS', ''}];
-    end
-
 end

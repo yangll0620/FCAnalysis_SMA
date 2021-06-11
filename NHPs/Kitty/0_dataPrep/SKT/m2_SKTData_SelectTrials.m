@@ -93,7 +93,7 @@ if ~exist(savefolder_trials, 'dir')
     mkdir(savefolder_trials);
 end
 files = dir(fullfile(inputfolder, '*.mat'));
-filei = 6;
+filei = 1;
 nfiles = length(files);
 while(filei <=  nfiles)
     
