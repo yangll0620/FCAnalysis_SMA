@@ -102,13 +102,41 @@ if ~exist(savefolder_aveDay, 'dir')
 end
 
 
+close all
+files = dir(fullfile(inputfolder, '*.mat'));
+
 
 % input start file number or start with 1
-reply = input('Input start file number = ', 's');
+reply = input('Input start/end file (e.g.[20 30] or 20 for start) number = ', 's');
 if isempty(reply)
-    filei = 1;
+    filei = 1; 
+    nfiles = length(files);
 else
-    filei = str2num(reply);
+    % parse start file number
+    tmp = regexp(reply, '[*\d*', 'match');
+    if ~isempty(tmp)
+        startStr = tmp{1};
+        if contains(startStr, '[')
+            filei = str2num(startStr(2:end));
+        else
+            filei = str2num(startStr);
+        end
+        clear startStr
+    else
+        filei = 1; 
+    end
+    clear tmp
+    
+    % parse end file number
+    tmp = regexp(reply, '\d*]', 'match');
+    if ~isempty(tmp)
+        endStr = tmp{1};
+        nfiles = str2num(endStr(1:end-1));
+        clear endStr
+    else
+        nfiles = length(files);
+    end
+    clear tmp
 end
 clear reply
 
@@ -122,9 +150,6 @@ else
 end
 clear reply
 
-
-files = dir(fullfile(inputfolder, '*.mat'));
-nfiles = length(files);
 while(filei <=  nfiles)
     
     % load data, lfpdata: [nchns, ntemps, ntrials]
@@ -359,14 +384,22 @@ while(filei <=  nfiles)
     plot_spectrogram_acrossTrials(lfp_phase_trials, T_chnsarea, idxGroups, idxGroupNames, tdur_trial, fs_lfp, animal, pdcond, align2, showname)
     clear idxGroupNames
     
-    % Recheck today or Check the next day
-    reply = input(['Check the next day (y) or Recheck this day (n)[y]:'], 's');
-    if isempty(reply) || lower(reply) ~= 'n'
+    if ~strcmpi(autoSaveMode, 'y')
+        % Recheck today or Check the next day
+        reply = input(['Check the next day (y) or Recheck this day (n)[y]:'], 's');
+        if isempty(reply) || lower(reply) ~= 'n'
+            
+            saveas(gcf, oneday_spectrogram_img, imFormat);
+            
+            filei = filei + 1;
+        end
         
+    else
         saveas(gcf, oneday_spectrogram_img, imFormat);
-        
         filei = filei + 1;
     end
+    
+    
     close all
     
     
@@ -616,81 +649,155 @@ cb_height = 50;
 
 
 [nchns, ~, ntrials] = size(lfpdata);
+
+% ngs: total number of sub-figures 
 ngs = ceil(ntrials / subp_ntrials);
 
 fig = figure(); set(fig, 'PaperUnits', 'points',  'Position', [fig_left fig_bottom fig_width fig_height]);
 hcbs = zeros(ntrials, 1);
+
+% checkedAllGs: labels for marking whether all sub-figures are checked
 checkedAllGs = zeros(ngs, 1);
 
 
+%%% the first sub-figure (e.g triali = 1: subp_ntrials)
 gi = 0;
 clf(fig);
+% add btn_next button
 c_next = uicontrol(fig, 'Style','pushbutton', 'String', 'Next', 'Position', [pos_btn_next_left pos_btn_next_bottom btn_width btn_height]);
-c_next.Callback = @nextTrials;
+c_next.Callback = @btn_nextTrials;
 title(['gi = ' num2str(gi + 1) '/' num2str(ngs)])
+
 tri_str = 1;
 tri_end = subp_ntrials;
 plot_spectrogram()
 checkedAllGs(gi + 1) = 1;
 
-uiwait(fig)
 
+%%% autoSaveMode or not
+if strcmpi(autoSaveMode, 'y') % autoSaveMode
+    
+    nextFig_isLast = func_showNextTrials();
+    while(~nextFig_isLast)
+        % show next fig
+        nextFig_isLast = func_showNextTrials();
+    end
+    func_finish();
+else
+    uiwait(fig);
+end
 
-    function showNewTrials()
+    function btn_checkedThisFig(src, event)
+        for tri = tri_str: tri_end
+            set(hcbs(tri),'Value',1);
+             goodTrials(tri) = 1;
+        end
+    end
+
+    function btn_uncheckedThisFig(src, event)
+        for tri = tri_str: tri_end
+            set(hcbs(tri),'Value',0);
+            goodTrials(tri) = 0;
+        end
+        
+    end
+
+    function btn_checkedAll(src, event)
+        for tri = 1: ntrials
+            goodTrials(tri) = 1;
+        end
+        
+        for tri = tri_str: tri_end
+            set(hcbs(tri),'Value',1);
+        end
+    end
+
+    function btn_uncheckedAll(src, event)
+      
+        for tri = 1: ntrials
+            goodTrials(tri) = 0;
+        end
+        
+        for tri = tri_str: tri_end
+            set(hcbs(tri),'Value',0);
+        end
+    end
+
+    function nextFig_isLast = showNewTrials()
         clf(fig);
         
         if(gi < ngs-1)
             c_next = uicontrol(fig, 'Style','pushbutton', 'String', 'Next', 'Position', [pos_btn_next_left pos_btn_next_bottom btn_width btn_height]);
-            c_next.Callback = @nextTrials;
+            c_next.Callback = @btn_nextTrials;
         end
         
         if(gi > 0)
             c_prev = uicontrol(fig, 'Style','pushbutton', 'String', 'Previous', 'Position', [pos_btn_prev_left pos_btn_prev_bottom btn_width btn_height]);
-            c_prev.Callback = @prevTrials;
+            c_prev.Callback = @btn_prevTrials;
         end
         
         % start and end trial number for next graph
         tri_str = gi * subp_ntrials + 1;
         tri_end = (gi + 1) * subp_ntrials;
-        if tri_end > ntrials
+        nextFig_isLast = false;
+        if tri_end >= ntrials
             tri_end = ntrials;
+            nextFig_isLast = true;
         end
         plot_spectrogram()
         
         checkedAllGs(gi + 1) = 1;
         if all(checkedAllGs)
             c_Finish = uicontrol(fig, 'Style','pushbutton', 'String', 'Finish', 'Position', [pos_btn_finish_left pos_btn_finish_bottom btn_width btn_height]);
-            c_Finish.Callback = @finishCheck;
+            c_Finish.Callback = @btn_finish;
         end
         
     end
 
-    function finishCheck(src,event)
+
+    function nextFig_isLast = func_showNextTrials()
+        % save current figure and show next trials
+        
+        gi = mod(gi + 1, ngs);
+        
+        trials_spectrogram_img = fullfile(savefolder, [animal '_' groupname '_trials_spect_' pdcond '_' dateofexp_yyyymmdd '_' bkstr '_trial' num2str(tri_str) '-' num2str(tri_end)]);
+        saveas(gcf, trials_spectrogram_img, imFormat);
+        
+        nextFig_isLast = showNewTrials();
+    end
+    
+    function func_showPrevTrials()
+        % save current figure and show previous trials
+        
+        gi = mod(gi - 1, ngs);
+        
+        trials_spectrogram_img = fullfile(savefolder, [animal '_' groupname '_trials_spect_' pdcond '_' dateofexp_yyyymmdd '_' bkstr '_trial' num2str(tri_str) '-' num2str(tri_end)]);
+        saveas(gcf, trials_spectrogram_img, imFormat);
+        
+        showNewTrials();
+    end
+
+    function func_finish()
+        % save current figure and then close it
         finishedCheck = true;
         
         trials_spectrogram_img = fullfile(savefolder, [animal '_' groupname '_trials_spect_' pdcond '_' dateofexp_yyyymmdd '_' bkstr '_trial' num2str(tri_str) '-' num2str(tri_end)]);
         saveas(gcf, trials_spectrogram_img, imFormat);
         
         close(fig)
+    end
+
+    function btn_finish(src,event)
+        func_finish();
     end % finishCheck
 
-    function nextTrials(src,event)
-        gi = mod(gi + 1, ngs);
-        
-        trials_spectrogram_img = fullfile(savefolder, [animal '_' groupname '_trials_spect_' pdcond '_' dateofexp_yyyymmdd '_' bkstr '_trial' num2str(tri_str) '-' num2str(tri_end)]);
-        saveas(gcf, trials_spectrogram_img, imFormat);
-        
-        showNewTrials()
-    end % nextTrials
+    function btn_nextTrials(src,event)
+        func_showNextTrials();
+    end 
 
-    function prevTrials(src,event)
-        gi = mod(gi - 1, ngs);
-        
-        trials_spectrogram_img = fullfile(savefolder, [animal '_' groupname '_trials_spect_' pdcond '_' dateofexp_yyyymmdd '_' bkstr '_trial' num2str(tri_str) '-' num2str(tri_end)]);
-        saveas(gcf, trials_spectrogram_img, imFormat);
-        
-        showNewTrials()
-    end % prevTrials
+    function btn_prevTrials(src,event)
+        func_showPrevTrials();
+    end
 
     function box_value(hObj,event)
         % Called when boxes are used
@@ -708,6 +815,19 @@ uiwait(fig)
             [0.87 0.45 1 0.03],...
             'String', {showname}, ...
             'LineStyle', 'none', 'FontWeight', 'bold', 'FitBoxToText', 'off');
+        
+        % add checked this page and unChecked this page buttons
+        c_checkedThisFig = uicontrol(fig, 'Style','pushbutton','String','checked this page', 'Position', [1800 900 100 20]);
+        c_checkedThisFig.Callback = @btn_checkedThisFig;
+        c_unCheckedThisFig = uicontrol(fig, 'Style','pushbutton','String','unchecked this page', 'Position', [1800 870 100 20]);
+        c_unCheckedThisFig.Callback = @btn_uncheckedThisFig;
+        
+        % add checked this page and unChecked this page buttons
+        c_checkedAll = uicontrol(fig, 'Style','pushbutton','String','checked all', 'Position', [1800 800 100 20]);
+        c_checkedAll.Callback = @btn_checkedAll;
+        c_unCheckedAll = uicontrol(fig, 'Style','pushbutton','String','unchecked all', 'Position', [1800 770 100 20]);
+        c_unCheckedAll.Callback = @btn_uncheckedAll;
+        
         
         for tri = tri_str: tri_end
             coli = mod(tri,subp_ntrials);
