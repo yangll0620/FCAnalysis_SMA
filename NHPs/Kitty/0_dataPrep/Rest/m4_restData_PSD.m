@@ -16,33 +16,20 @@ clear idx
 
 % add util path
 addpath(genpath(fullfile(codefolder, 'util')));
+addpath(genpath(fullfile(codefolder, 'NHPs')));
 
 % the corresponding pipeline folder for this code
 [codecorresfolder, codecorresParentfolder] = code_corresfolder(codefilepath, true, false);
 
 %%  input setup
 
-% animal
-if ismac
-    % Code to run on Mac platform
-elseif isunix
-    % Code to run on Linux platform
-    
-    [fi, j] = regexp(codecorresfolder, ['NHPs', '/', '[A-Za-z]*']);
-elseif ispc
-    % Code to run on Windows platform
-    
-    [fi, j] = regexp(codecorresfolder, ['NHPs', '\\', '[A-Za-z]*']);
-else
-    disp('Platform not supported')
-end
-animal = codecorresfolder(fi + length('NHPs') + 1:j);
+animal = animal_extract(codecorresfolder);
 
 % pwelch psd estimate variable
 twin_pwelch = 2;
 
 % variables for plotting
-plotF_AOI = [5 40];
+plotF_AOI = [8 40];
 
 % input folder
 inputfolder = fullfile(codecorresParentfolder, 'm3_restData_rmChns_avgArea');
@@ -92,9 +79,7 @@ for i = 1:length(brainareas)
     
     
 end
-
-%%% combine %%%
-%close all
+close all
 
 end
 
@@ -322,8 +307,8 @@ title([animal ' Rest PSD in ' strrep(brainarea, '_', '-')])
 
 % save figure
 savename = fullfile(savefolder, [animal 'Rest_psd_' brainarea]);
-exportgraphics(gca,[savename '.tif'], 'Resolution', 300) 
-
+saveas(gcf, savename, 'png')
+close gcf
 
 clear psd_allsegs_normal  psd_allsegs_moderate
 clear psd_normal_FAOI  psd_moderate_FAOI

@@ -55,7 +55,7 @@ image_type = 'bmp';
 
 twin = 0.2;
 toverlap = 0.15;
-f_AOI = [8 50];
+f_AOI = [8 40];
 
 cond_cell = cond_cell_extract(animal);
 [t_minmax_reach_normal, t_minmax_return_normal, t_minmax_reach_mild, t_minmax_return_mild, t_minmax_reach_moderate, t_minmax_return_moderate] = ...

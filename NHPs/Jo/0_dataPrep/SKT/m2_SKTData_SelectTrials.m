@@ -142,7 +142,7 @@ clear reply
 
 
 % auto save without click
-reply = input('Auto save mode [y] or no [n] ', 's');
+reply = input('Auto save mode or no y/n [n] ', 's');
 if isempty(reply) || ~strcmpi(reply, 'y')
     autoSaveMode =  'n';
 else

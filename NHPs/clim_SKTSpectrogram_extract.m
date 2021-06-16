@@ -3,7 +3,7 @@ if strcmpi(animal,'jo')
 %     clim_Spectrogram_STN = [-130 -110];
 %     clim_Spectrogram_GP = [-130 -110];
 %     clim_Spectrogram_Others = [-120 -90];
-    clim_Spectrogram_STN = [-30 10];
+    clim_Spectrogram_STN = [-30 0];
     clim_Spectrogram_GP = [-30 10];
     clim_Spectrogram_Others = [-30 10];
 end

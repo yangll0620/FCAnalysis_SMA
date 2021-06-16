@@ -16,17 +16,20 @@ function m3_restData_PSDEachArea_extract()
 
     % add util path
     addpath(genpath(fullfile(codefolder, 'util')));
+    addpath(genpath(fullfile(codefolder, 'NHPs')));
 
     % the corresponding pipeline folder for this code
     [codecorresfolder, codecorresParentfolder] = code_corresfolder(codefilepath, true, false);
 
     %%  input setup
+    
+    animal = animal_extract(codecorresfolder);
 
     % pwelch psd estimate variable
     twin_pwelch = 2;
 
     % variables for plotting
-    plotF_AOI = [5 50];
+    plotF_AOI = [8 40];
     
     ylimits = [0 0.2];
 
@@ -76,11 +79,11 @@ function m3_restData_PSDEachArea_extract()
 
         if ~strcmp(brainarea, 'STN') &&~strcmp(brainarea, 'GP')
             % if not DBS case, psd_normal, psd_mild: nfs * nsegs
-            plotPSD_comp_1chn(psd_normal, psd_mild, psd_moderate, F_pxx, plotF_AOI, savefolder, brainarea, ylimits)
+            plotPSD_comp_1chn(psd_normal, psd_mild, psd_moderate, F_pxx, plotF_AOI, savefolder, brainarea, animal, ylimits)
 
         else
             % if DBS case, pxxs_allfiles.GP, pxxs.GP: nfs * nchns * nsegs
-            plotPSD_comp_multichns(psd_normal, psd_mild, psd_moderate, F_pxx, plotF_AOI, savefolder, brainarea, ylimits)
+            plotPSD_comp_multichns(psd_normal, psd_mild, psd_moderate, F_pxx, plotF_AOI, savefolder, brainarea, animal, ylimits)
         end
 
     end
@@ -88,7 +91,7 @@ function m3_restData_PSDEachArea_extract()
     %%% combine all figures into one %%%%
     close all
     brainarea = 'M1';
-    img_M1 = imread(fullfile(savefolder,['psd_' brainarea '.png']));
+    img_M1 = imread(fullfile(savefolder,[animal 'Rest_psd_' brainarea '.png']));
     
     imgs1 = [];
     imgs1 = cat(2, imgs1, img_M1);
@@ -109,28 +112,28 @@ function m3_restData_PSDEachArea_extract()
     
     brainarea = 'STN';
     for i = 1: 2
-        img = imread(fullfile(savefolder,['psd_' brainarea '_ch' num2str(i) '.png']));
+        img = imread(fullfile(savefolder,[animal 'Rest_psd_' brainarea '_ch' num2str(i) '.png']));
         imgs1 = cat(2, imgs1, img);
     end
     imgs2 = [];
     for i = 3: 6
-        img = imread(fullfile(savefolder,['psd_' brainarea '_ch' num2str(i) '.png']));
+        img = imread(fullfile(savefolder,[animal 'Rest_psd_' brainarea '_ch' num2str(i) '.png']));
         imgs2 = cat(2, imgs2, img);
     end
     imgs3 = [];
     for i = 7: 7
-        img = imread(fullfile(savefolder,['psd_' brainarea '_ch' num2str(i) '.png']));
+        img = imread(fullfile(savefolder,[animal 'Rest_psd_' brainarea '_ch' num2str(i) '.png']));
         imgs3 = cat(2, imgs3, img);
     end
     
     brainarea = 'GP';
     for i = 1: 3
-        img = imread(fullfile(savefolder,['psd_' brainarea '_ch' num2str(i) '.png']));
+        img = imread(fullfile(savefolder,[animal 'Rest_psd_' brainarea '_ch' num2str(i) '.png']));
         imgs3 = cat(2, imgs3, img);
     end
     imgs4 = [];
     for i = 4: 7
-        img = imread(fullfile(savefolder,['psd_' brainarea '_ch' num2str(i) '.png']));
+        img = imread(fullfile(savefolder,[animal 'Rest_psd_' brainarea '_ch' num2str(i) '.png']));
         imgs4 = cat(2, imgs4, img);
     end
     
@@ -300,7 +303,7 @@ function [pxxs, F_pxx] = pxx_eacharea_onefile(file, twin_pwelch)
 
 end
 
-function plotPSD_comp_1chn(psd_normal, psd_mild, psd_moderate, F_all, plotF_AOI, savefolder, brainarea, ylimits)
+function plotPSD_comp_1chn(psd_normal, psd_mild, psd_moderate, F_all, plotF_AOI, savefolder, brainarea, animal, ylimits)
     %%  plot the psd comparison of normal and mild
     %
     %   Inputs:
@@ -384,15 +387,16 @@ function plotPSD_comp_1chn(psd_normal, psd_mild, psd_moderate, F_all, plotF_AOI,
 
     xlim([min(F_AOI) max(F_AOI)])
     ylim(ylimits)
+    set(gca, 'Box', 'off')
 
     % legend
     legend([h1, h2, h3], {'normal', 'mild', 'moderate'})
 
     % title
-    title(['PSD in ' upper(brainarea)])
+    title([animal ' Rest PSD in ' strrep(brainarea, '_', '-')])
 
     % save figure
-    savename = fullfile(savefolder, ['psd_' brainarea]);
+    savename = fullfile(savefolder, [animal 'Rest_psd_' brainarea]);
     saveas(gcf, savename, 'png')
 
     clear psd_allsegs_normal psd_allsegs_mild psd_allsegs_moderate
@@ -402,7 +406,7 @@ function plotPSD_comp_1chn(psd_normal, psd_mild, psd_moderate, F_all, plotF_AOI,
     clear savename
 end
 
-function plotPSD_comp_multichns(psd_normal, psd_mild, psd_moderate, F_all, plotF_AOI, savefolder, brainarea, ylimtis)
+function plotPSD_comp_multichns(psd_normal, psd_mild, psd_moderate, F_all, plotF_AOI, savefolder, brainarea, animal, ylimtis)
     %%  plot the psd comparison of normal and mild
     %
     %   Inputs:
@@ -497,7 +501,8 @@ function plotPSD_comp_multichns(psd_normal, psd_mild, psd_moderate, F_all, plotF
 
         xlim([min(F_AOI) max(F_AOI)])
         ylim(ylimtis);
-
+        set(gca, 'Box', 'off')
+        
         % legend
         legend([h1, h2, h3], {'normal', 'mild', 'moderate'})
 
@@ -505,8 +510,9 @@ function plotPSD_comp_multichns(psd_normal, psd_mild, psd_moderate, F_all, plotF
         title(['PSD  in ' upper(brainarea) num2str(chni-1) '-' num2str(chni)])
 
         % save figure
-        savename = fullfile(savefolder, ['psd_' brainarea '_ch' num2str(chni)]);
+        savename = fullfile(savefolder, [animal 'Rest_psd_' brainarea '_ch' num2str(chni)]);
         saveas(gcf, savename, 'png')
+        close gcf
 
         clear psd_allsegs_normal psd_allsegs_mild psd_allsegs_moderate
         clear psd_normal_FAOI psd_mild_FAOI psd_moderate_FAOI
