@@ -1,5 +1,5 @@
-function m0_SKTData_extract()
-    %% extract the STK data 
+function m0_NormalCOTModerateSKTData_extract_Kitty()
+    %% extract the SKT Data (normal COT and moderate STK data for Kitty)
     %
     %	Inputs:
     %
@@ -45,11 +45,8 @@ function m0_SKTData_extract()
     folder_datadatabase = fullfile(server_NHP, animal, 'Recording', 'Processed', 'DataDatabase');
 
     % master sheet
-    xlsxfile_master = fullfile(datafolder, 'Animals', animal, [animal 'MasterDatabase.xlsx']);
-    strformat_date_master = 'mmddyy'; % the format of date string in master sheet, e.g '012317'
-
-    % different SKB labels in the master sheet
-    tasks_SKB = {'SKB', 'Single Target Kluver', 'Single target Kluver', 'Single target kluver', 'Stingle target Kluver', 'single target kluver'};
+    xlsxfile_master = fullfile(datafolder, 'Animals', animal, 'KittyNormalCOTModerateSKT.csv');
+    strformat_date_master = 'yyyymmdd'; % the format of date string in master sheet, e.g '20141013'
 
 
     % channel number of utah array, grayMatter, and dbs leads
@@ -64,7 +61,7 @@ function m0_SKTData_extract()
 
     %% save setup
     savefolder = correspipelinefolder;
-    savefilename_prefix = [animal '_STKData_'];
+    savefilename_prefix = animal;
 
     strformat_date_save = 'yyyymmdd'; % the format of date string in saved filename, e.g. '20170123'
 
@@ -72,34 +69,24 @@ function m0_SKTData_extract()
     %% Starting Here
 
     % extract master table
-    t_master = readtable(xlsxfile_master);
-
-    % find the row indices for task_SKB, idx_rows: 0 for not task_SKB, 1 for task_SKB
-    idx_rows = cellfun(@(x) ~isempty(find(strcmp(x, tasks_SKB))), t_master.BriefDescription);
-
-    % table for rows marked SKB labels with only OutputFolderName and TDTBlock columns
-    t_SKT = t_master(idx_rows, {'OutputFolderName', 'TDTBlock'});
-
-    % convert Table Variables from Cell Arrays of Character Vectors to string/double Arrays
-    t_SKT.OutputFolderName = string(t_SKT.OutputFolderName);
-    t_SKT.TDTBlock = double(t_SKT.TDTBlock);
+    opts = detectImportOptions(xlsxfile_master);
+    opts = setvartype(opts, {'Date'}, 'string');
+    t_datebks = readtable(xlsxfile_master, opts);
 
     %%% add chn-area information T_chnsarea  %%%
     T_chnsarea = chanInf_M1DBS(nM1, nSTN -1, nGP -1); % bipolar DBS
 
 
-    %%% extract all STK trials %%%
+    %%% extract all STK/COT trials %%%
     f = waitbar(0, 'Extracting all STK trials');
-    nrecords = height(t_SKT);
-
+    nrecords = height(t_datebks);
     for i = 1:nrecords
         % waitbar
         waitbar(i / nrecords, f, ['Extracting trials in file ' num2str(i) '/' num2str(nrecords)]);
 
         % date of exp, bktdt
-        outputfoldername = split(t_SKT.OutputFolderName(i), '_');
-        dateofexp = datenum(outputfoldername{end}, strformat_date_master);
-        tdtbk = t_SKT.TDTBlock(i);
+        dateofexp = datenum(t_datebks.Date(i), strformat_date_master);
+        tdtbk = t_datebks.TDTBlock(i);
         
 
         % get the pd conditioon for the date of experiment
@@ -107,85 +94,95 @@ function m0_SKTData_extract()
         
 
         if ~any(strcmp(pdcond, conds_cell)) % avoid tomild, tomoderate
-            
-            clear outputfoldername dateofexp tdtbk
-            clear pdcond
-            
+            clear dateofexp tdtbk pdcond
             continue;
         end
         
         
         savefilename = [savefilename_prefix pdcond '_' datestr(dateofexp, strformat_date_save) '_bktdt' num2str(tdtbk) '.mat'];
         if exist(fullfile(savefolder, savefilename), 'file') == 2
-            clear outputfoldername dateofexp tdtbk
-            clear pdcond savefilename
-            
+            clear dateofexp tdtbk pdcond savefilename
             continue;
         end
          
         % one day path
         onedaypath = fullfile(folder_datadatabase, [animal '_' datestr(dateofexp, 'mmddyy')]);
         if ~exist(onedaypath, 'dir')
-            clear outputfoldername dateofexp tdtbk
-            clear pdcond savefilename onedaypath
+            clear dateofexp tdtbk pdcond savefilename onedaypath
             continue;
         end
 
         disp(['extracting ' onedaypath '-tdtbk' num2str(tdtbk)])
-
+        
         % extract trials of lfp data for particular date and tdt block number
-        [lfptrial_cortical, lfptrial_dbs, fs_lfp, T_idxevent_lfp, fs_ma, T_idxevent_ma, smoothWspeed_trial, Wpos_smooth_trial, Wrist_smooth_trial, T_dbsChn] = ...
-            extractlfptrial_(onedaypath, tdtbk);
-
+        if strcmp(pdcond, 'normal')
+            [lfptrial_cortical, lfptrial_dbs, mask_goodreach, mask_goodreturn, fs_lfp, T_idxevent_lfp, fs_ma, T_idxevent_ma, smoothWspeed_trial, Wpos_smooth_trial, Wrist_smooth_trial, T_dbsChn] = ...
+                extractlfptrial_seg_normalCOT_Kitty(onedaypath, tdtbk);
+        end
+        if strcmp(pdcond, 'moderate')
+            [lfptrial_cortical, lfptrial_dbs, mask_goodreach, mask_goodreturn, fs_lfp, T_idxevent_lfp, fs_ma, T_idxevent_ma, smoothWspeed_trial, Wpos_smooth_trial, Wrist_smooth_trial, T_dbsChn] = ...
+                extractlfptrial_seg(onedaypath, tdtbk);
+        end
+        
+        
         % skip this day if any is empty
         if isempty(lfptrial_cortical) || isempty(lfptrial_dbs) || isempty(fs_lfp) || isempty(T_idxevent_lfp) || isempty(T_dbsChn)
             clear outputfoldername dateofexp tdtbk
             clear pdcond savefilename onedaypath
-            clear lfptrial_cortical lfptrial_dbs fs_lfp T_idxevent_lfp
+            clear lfptrial_cortical lfptrial_dbs fs_lfp T_idxevent_lfp mask_goodreach mask_goodreturn
             clear fs_ma T_idxevent_ma smoothWspeed_trial Wpos_smooth_trial Wrist_smooth_trial T_dbsChn
             
             continue;
         end
         
-
-        %%% extract the lfptrial_m1 marked with good channels %%%
-        lfptrial_m1 = lfptrial_cortical;
-
-        %%% bipolar dbs %%%%
-        lfptrial_stn = diff(lfptrial_dbs(1:nSTN, :, :), [], 1);
-        lfptrial_gp = diff(lfptrial_dbs(nSTN+1:nSTN+nGP, :, :), [], 1);
-        lfptrial_dbs = cat(1, lfptrial_stn, lfptrial_gp);
-        clear lfptrial_stn lfptrial_gp
         
+        %%% extract the lfptrial_m1 marked with good channels %%%
+        lfptrial_cortical = lfptrial_cortical;
+        
+        %%% bipolar dbs %%%%
+        for tri = 1 : length(lfptrial_dbs)
+            lfp_1trial_dbs = lfptrial_dbs{tri};
+            lfptrial_stn = diff(lfp_1trial_dbs(:, 1:nSTN), [], 2);
+            lfptrial_gp = diff(lfp_1trial_dbs(:, nSTN + 1:end), [], 2);
+            lfp_1trial_dbs = cat(2, lfptrial_stn, lfptrial_gp);
+            lfptrial_dbs{tri} = lfp_1trial_dbs;
+            clear lfp_1trial_dbs lfptrial_stn lfptrial_gp
+        end
+        clear tri
         
          % concatenate the utah chns, and the dbs chns into lfptrial
-        lfpdata = cat(1, lfptrial_m1, lfptrial_dbs);
-        clear lfptrial_m1 lfptrial_dbs
+         lfpdata = cell(length(lfptrial_dbs), 1);
+         for tri = 1 : length(lfptrial_dbs)
+             lfpdata{tri} = cat(2, lfptrial_cortical{tri}, lfptrial_dbs{tri});
+         end
         
-
+        clear lfptrial_cortical lfptrial_dbs
+        
+        
         %%% down sample %%%
-        nchns = size(lfpdata, 1);
-        for chi = 1: nchns
-            tmp = squeeze(lfpdata(chi, :, :));
-            tmp = resample(tmp, round(fs_new), round(fs_lfp));
+        for tri = 1 : length(lfpdata)
+            lfpdata_1trial = lfpdata{tri};
             
-            if chi == 1
-                [s1, s2] = size(tmp);
-                lfpdown = zeros(nchns, s1, s2);
+            nchns = size(lfpdata_1trial, 2);
+            for chi = 1 : nchns
+                tmp = lfpdata_1trial(:, chi);
+                tmp = resample(tmp, round(fs_new), round(fs_lfp));
+                if chi == 1
+                    lfpdown = zeros(nchns, length(tmp));
+                end
+                lfpdown(chi, :) = tmp;
             end
-            lfpdown(chi, :, :) = tmp;
-             
-            clear tmp
+            lfpdata{tri} = lfpdown;
+            clear lfpdata_1trial lfpdown nchns
         end
-        lfpdata = lfpdown;
         T_idxevent_lfp{:, :} =  round(T_idxevent_lfp{:, :} * fs_new / fs_lfp);
         fs_lfp = fs_new;
         clear lfpdown nchns chi
         
         
-        % save
+         % save
         save(fullfile(savefolder, savefilename), 'lfpdata', 'fs_lfp', 'T_chnsarea', 'T_idxevent_lfp', 'fs_ma', 'T_idxevent_ma', ...
-            'smoothWspeed_trial', 'Wpos_smooth_trial', 'Wrist_smooth_trial');
+            'smoothWspeed_trial', 'Wpos_smooth_trial', 'Wrist_smooth_trial', 'mask_goodreach', 'mask_goodreturn');
         
         
         clear outputfoldername dateofexp tdtbk
@@ -193,11 +190,9 @@ function m0_SKTData_extract()
         clear lfptrial_cortical lfptrial_dbs fs_lfp T_idxevent_lfp
         clear fs_ma T_idxevent_ma smoothWspeed_trial Wpos_smooth_trial Wrist_smooth_trial T_dbsChn
         clear lfpdata
+
     end
-
 end
-
-
 
 function [T_chnsarea] = chanInf_M1DBS(nM1, nSTN, nGP)
     % add M1 and DBS channel together

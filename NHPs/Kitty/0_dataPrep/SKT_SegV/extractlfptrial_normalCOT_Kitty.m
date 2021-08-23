@@ -1,5 +1,5 @@
 function [lfptrial_cortical, lfptrial_dbs, fs_lfp, T_idxevent_lfp, fs_ma, T_idxevent_ma, smoothWspeed_trial, Wpos_smooth_trial, Wrist_smooth_trial, T_dbsChn] = ...
-    extractlfptrial_COT_Kitty(onedaypath, tdtbk)
+    extractlfptrial_normalCOT_Kitty(onedaypath, tdtbk)
     % extractlfptrial extract trials for LFP data
     %
     %  [lfptrial_cortical, lfptrial_dbs, chantbl_cortical, chantbl_dbs] =
@@ -179,6 +179,32 @@ function [lfptrial_cortical, lfptrial_dbs, fs_lfp, T_idxevent_lfp, fs_ma, T_idxe
     
     
     
+    %% *_TDTwParadigm file for GoCue
+    paradigmfilestruct = dir(fullfile(mafolder, '*COT_TDTwParadigm.mat'));
+    if length(paradigmfilestruct) ~= 1
+        
+        disp([mafolder 'has ' num2str(length(paradigmfilestruct)) ' files, skip!'])
+        
+        lfptrial_cortical = []; lfptrial_dbs = [];
+        fs_lfp = []; T_idxevent_lfp = [];
+        fs_ma = []; T_idxevent_ma = [];
+        smoothWspeed_trial = []; Wpos_smooth_trial = []; Wrist_smooth_trial = [];
+        T_dbsChn = [];
+        
+        return
+    end
+    
+    % load COTData from  *_TDTwParadigm.mat
+    load(fullfile(mafolder, paradigmfilestruct.name), 'paradigm_data');
+    GoCue_TDT_ix = paradigm_data.TDTTrialInfo.GoCue_TDT_ix;
+    [m, n] = size(GoCue_TDT_ix);
+    if m == 1 || n == 1
+        GoCue_TDT_ix = reshape(GoCue_TDT_ix, [m * n, 1]);
+    end
+    clear m n
+    GoCue_TDT_ix = GoCue_TDT_ix(mask_goodtrials & mask_targ, :);
+    
+    
     %% LFP data
     % read each channel data in  LFP data to lfpdata (initialized when is the 1st channel)
     folder_cortical = fullfile(onedaypath, 'LFP', ['Block-' num2str(tdtbk)]);
@@ -228,6 +254,10 @@ function [lfptrial_cortical, lfptrial_dbs, fs_lfp, T_idxevent_lfp, fs_ma, T_idxe
 
         if i == 1% first channel
             fs_lfpcortical = nexlfp_cortical.contvars{i_lfp}.ADFrequency;
+            
+            % add GoCueIndex for T_idxevent_ma, timeixtbl_ma 
+            fs_TDT = nexlfp_cortical.freq; % used for GoCue_TDT_ix
+            GoCueTimeix = round(GoCue_TDT_ix / fs_TDT * fs_ma);
 
             % the time index in the LFP neural data based on MA data
             timeixtbl_lfpcortical = timeixtbl_ma;

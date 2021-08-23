@@ -300,6 +300,8 @@ function [pxxs, F_pxx] = pxx_eacharea_onefile(file, twin_pwelch)
 
         clear brainarea mask_area segi
     end
+    
+    close all
 
 end
 
@@ -396,7 +398,7 @@ function plotPSD_comp_1chn(psd_normal, psd_mild, psd_moderate, F_all, plotF_AOI,
     title([animal ' Rest PSD in ' strrep(brainarea, '_', '-')])
 
     % save figure
-    savename = fullfile(savefolder, [animal 'Rest_psd_' brainarea]);
+    savename = fullfile(savefolder, [animal 'Rest_psd_' strrep(brainarea, '_', '-')]);
     saveas(gcf, savename, 'png')
 
     clear psd_allsegs_normal psd_allsegs_mild psd_allsegs_moderate
@@ -507,10 +509,10 @@ function plotPSD_comp_multichns(psd_normal, psd_mild, psd_moderate, F_all, plotF
         legend([h1, h2, h3], {'normal', 'mild', 'moderate'})
 
         % title
-        title(['PSD  in ' upper(brainarea) num2str(chni-1) '-' num2str(chni)])
+        title(['PSD  in ' lower(brainarea) num2str(chni-1) '-' num2str(chni)])
 
         % save figure
-        savename = fullfile(savefolder, [animal 'Rest_psd_' brainarea '_ch' num2str(chni)]);
+        savename = fullfile(savefolder, [animal 'Rest_psd_' lower(brainarea) num2str(chni-1) '-' num2str(chni)]);
         saveas(gcf, savename, 'png')
         close gcf
 

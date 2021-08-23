@@ -1,4 +1,4 @@
-function m1_SKTData_timeStatiscal()
+function m2_SKTData_timeStatiscal()
 
 
 %% extract the corresponding pipeline folder for this code

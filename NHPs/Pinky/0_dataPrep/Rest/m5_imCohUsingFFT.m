@@ -182,6 +182,7 @@ for ci = 1 : length(cond_cell)
     figure;
     set(gcf, 'PaperUnits', 'points',  'Position', [fig_left fig_bottom fig_width fig_height]);
     imagesc(showData)
+    colormap(jet)
     set(gca, 'Position', [0.09 0.05 0.9 0.9])
     [npairs, nf] = size(showData);
     xticks([1:nf])

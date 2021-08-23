@@ -45,13 +45,13 @@ inputfolder = fullfile(codecorresParentfolder, 'm3_restData_rmChns_avgArea');
 
 fig_left = 50;
 fig_bottom = 50;
-fig_width = 1200;
-fig_height = 600;
+fig_width = 1000;
+fig_height = 500;
 
 
 twin = 0.2;
 toverlap = 0.15;
-f_AOI = [8 50];
+f_AOI = [8 40];
 
 cond_cell = cond_cell_extract(animal);
 image_type = 'bmp';
@@ -182,12 +182,13 @@ for ci = 1 : length(cond_cell)
     figure;
     set(gcf, 'PaperUnits', 'points',  'Position', [fig_left fig_bottom fig_width fig_height]);
     imagesc(showData, [0 1]);
-    set(gca, 'Position', [0.09 0.05 0.9 0.9])
+    colormap(jet);
+    set(gca, 'Position', [0.1 0.05 0.88 0.9])
     [npairs, nf] = size(showData);
     xticks([1:nf])
     xticklabels(round(f_selected,2))
     yticks([1:npairs]);
-    set(gca,'YTickLabel',chnPairNames_show,'fontsize',12,'FontWeight','bold')
+    set(gca,'YTickLabel',chnPairNames_show,'fontsize',12)
     xlabel('freqs')
     title([ animal ' connectivity -'  pdcond ' in Rest'])
     colorbar
@@ -351,7 +352,7 @@ for ci = 1 : length(cond_cell)
     clear chnPairNames f_selected iCoh_pair
 end
 yticks([1:npairs])
-set(gca,'YTickLabel',chnPairNames_show,'fontsize',12,'FontWeight','bold','Position', [0.09 0.05 0.9 0.9])
+set(gca,'YTickLabel',chnPairNames_show,'fontsize',12, 'Position', [0.1 0.05 0.88 0.9])
 set(gca, 'YDir','reverse')
 xticks(f_selected_show)
 xticklabels(round(f_selected_show,2) )
@@ -362,5 +363,5 @@ title([ animal 'Peak connectivity in Rest'])
 
 % save png
 saveas(gcf, fullfile(savefolder,[animal '_peakFC' '.' image_type]), image_type);
-
+close gcf
 end

@@ -19,20 +19,7 @@ addpath(genpath(fullfile(codefolder,'NHPs')));
 %% global variables
 
 % animal
-if ismac
-    % Code to run on Mac platform
-elseif isunix
-    % Code to run on Linux platform
-    
-    [fi, j] = regexp(codecorresfolder, ['NHPs', '/', '[A-Za-z]*']);
-elseif ispc
-    % Code to run on Windows platform
-    
-    [fi, j] = regexp(codecorresfolder, ['NHPs', '\\', '[A-Za-z]*']);
-else
-    disp('Platform not supported')
-end
-animal = codecorresfolder(fi + length('NHPs') + 1:j);
+animal = animal_extract(codecorresfolder);
 
 %% save setup
 savefolder = codecorresfolder;
@@ -48,22 +35,23 @@ fig_bottom = 50;
 fig_width = 1200;
 fig_height = 600;
 
-EventPhases = {'preMove'; 'Reach'; 'Return'};
+EventPhases = {'preMove'; 'Reach'; 'Return';'beforeReach'};
 
-image_type = 'bmp';
+image_type = 'tif';
 
 
 twin = 0.2;
 toverlap = 0.15;
-f_AOI = [8 50];
+f_AOI = [8 40];
 
+
+%% Code start here
 cond_cell = cond_cell_extract(animal);
 [t_minmax_reach_normal, t_minmax_return_normal, t_minmax_reach_mild, t_minmax_return_mild, t_minmax_reach_moderate, t_minmax_return_moderate] = ...
     goodSKTTrials_reachReturn_tcritiria(animal);
 if strcmpi(animal, 'bug')
     tdur_trial_normal = [-0.5 0.5];
     tdur_trial_mild = [-0.5 0.5];
-    tdur_trial_moderate = [-0.5 0.5];
 end
 if strcmpi(animal, 'jo')
     tdur_trial_normal = [-0.5 0.5];
@@ -83,6 +71,13 @@ if strcmpi(animal, 'pinky')
     tdur_trial_moderate = [-0.5 0.5];
 end
 
+
+
+unwanted_DBS = unwanted_DBS_extract(animal);
+noisy_chns = noisy_chns_extract(animal);
+removed_chns = [unwanted_DBS noisy_chns];
+clear unwanted_DBS noisy_chns
+
 for ei = 1: length(EventPhases)
     event = EventPhases{ei};
     if strcmpi(event, 'preMove')
@@ -98,9 +93,26 @@ for ei = 1: length(EventPhases)
         t_AOI = [0 0.2];
     end
     
+    if strcmpi(event, 'beforeReach')
+        align2 = SKTEvent.Reach;
+        t_AOI = [-0.2 0];
+    end
+    
     
     for ci = 1 : length(cond_cell)
         pdcond = cond_cell{ci};
+        
+        if strcmpi(event, 'preMove')
+            if strcmpi(animal, 'Kitty') && strcmpi(pdcond, 'normal')
+                align2 = SKTEvent.ReachOnset;
+                t_AOI = [-0.2 0];
+            else
+                align2 = SKTEvent.TargetOnset;
+                t_AOI = [-0.2 0];
+            end
+        end
+        
+        
         savefile_prefix = fullfile(savefolder, [animal '_' pdcond '_' event '_align2' char(align2)]);
         
         if ~exist([savefile_prefix, '.mat'])
@@ -237,10 +249,10 @@ for ei = 1: length(EventPhases)
         end
         
         
-        
+        removedChns_mask = cellfun(@(x) contains(x, removed_chns), chnPairNames);
         M1DBS_mask = cellfun(@(x) contains(x, 'M1-stn') || contains(x, 'M1-gp'), chnPairNames);
         STN2GP_mask = cellfun(@(x) contains(x, 'stn') && contains(x, 'gp'), chnPairNames); 
-        usedChnPairsMask = M1DBS_mask | STN2GP_mask;
+        usedChnPairsMask = (M1DBS_mask | STN2GP_mask) & ~removedChns_mask;
         clear M1DBS_mask STN2GP_mask
         
         showData = abs(iCoh_1time(usedChnPairsMask, :));
@@ -250,14 +262,16 @@ for ei = 1: length(EventPhases)
         figure;
         set(gcf, 'PaperUnits', 'points',  'Position', [fig_left fig_bottom fig_width fig_height]);
         imagesc(showData)
-        set(gca, 'Position', [0.09 0.05 0.9 0.9])
+        colormap(jet)
+        set(gca, 'Position', [0.09 0.05 0.9 0.88])
         [npairs, nf] = size(showData);
         xticks([1:nf])
         xticklabels(round(f_selected,2))
         yticks([1:npairs]);
         set(gca,'YTickLabel',chnPairNames_show,'fontsize',12,'FontWeight','bold')
         xlabel('freqs')
-        title([animal '-'  pdcond '-'  event '['  num2str(t_AOI(1)) ' ' num2str(t_AOI(2))   ']s,' 'align2 = ' char(align2) 'ntrials = ' num2str(ntrials)])
+        title([animal '-'  pdcond '-'  event '['  num2str(t_AOI(1)) ' ' num2str(t_AOI(2))   ']s,' 'align2 = ' char(align2) 'ntrials = ' num2str(ntrials)], ...
+            'FontSize', 15, 'FontWeight', 'normal')
         set(gca,'CLim', [0 1])
         colorbar
         
@@ -305,27 +319,11 @@ for ei = 1: length(EventPhases)
         clear savefile_prefix
     end
     
-    
-    % combined all pdconds
-    images_combined = [];
-    for ci = 1 : length(cond_cell)
-        pdcond = cond_cell{ci};
-        try
-            image = imread(fullfile(savefolder, [animal '_' event '_' pdcond '_align2' char(align2) '.' image_type]));
-            [m, n, c] =  size(image);
-        catch
-            if exist('m', 'var')
-                image = zeros(m,n,c) + 255;
-            end
-        end
-        
-        images_combined = cat(2, images_combined, image);
-        imwrite(images_combined,fullfile(savefolder, [animal '_conn_combined_' event '_align2' char(align2) '.' image_type]))
-    end
-    
-    
+       
     clear t_AOI align2 event
 end
+
+
 
 
 %%%-------  plot Peak ---------%

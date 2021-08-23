@@ -26,6 +26,8 @@ function m1_restData_cleaned_extract()
 
     % add util path
     addpath(genpath(fullfile(codefolder, 'util')));
+    addpath(genpath(fullfile(codefolder, 'NHPs')));
+
 
     % the corresponding pipeline folder for this code
     [codecorresfolder, codecorresParentfolder] = code_corresfolder(codefilepath, true, false);
@@ -34,7 +36,7 @@ function m1_restData_cleaned_extract()
     [datafolder, ~, ~, ~] = exp_subfolders();
 
     %% global parameter
-    animal = 'Jo';
+    animal = animal_extract(codecorresfolder);
 
     % to be removed channels in m1, from Ying
     m1array_to_remove = [10 7; 10 8; 10 9; 10 10];
@@ -42,10 +44,10 @@ function m1_restData_cleaned_extract()
     %% input setup
 
     % input folder: root2 in server
-    folder_processed_root2 = fullfile('/home/lingling/root2/Animals', animal, 'Recording/Processed/DataDatabase');
+    folder_processed_root2 = fullfile('W:', 'root2', 'Animals', animal, 'Recording', 'Processed', 'DataDatabase');
 
     % threshold used by Ying to extract cleaned resting data
-    configFile = fullfile(datafolder, 'config_m1lf_fromYing.mat');
+    configFile = fullfile(datafolder, 'Animals', 'config_m1lf_fromYing.mat');
 
     % dateBlock File
     dateBlocksXLSFile = fullfile(codecorresParentfolder, 'm0_restData_dateBlockYingUsed', [animal 'dateBlocksYingUsed_rest.xlsx']);

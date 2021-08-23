@@ -67,14 +67,14 @@ for filei = 1 : nfiles
         % select trials based on reach and return duration
         t_reach = (T_idxevent_lfp{tri, coli_reach} - T_idxevent_lfp{tri, coli_reachonset}) / fs_lfp;
         t_return = (T_idxevent_lfp{tri, coli_mouth} - T_idxevent_lfp{tri, coli_returnonset}) / fs_lfp;
-        if t_reach < t_minmax_reach(1) || t_reach > t_minmax_reach(2)
+        if t_reach < t_minmax_reach(1) 
             clear t_reach
             continue
         end
-        if t_return < t_minmax_return(1) || t_reach > t_minmax_return(2)
-            clear t_return
-            continue
-        end
+%         if t_return < t_minmax_return(1) || t_reach > t_minmax_return(2)
+%             clear t_return
+%             continue
+%         end
         
         
         % extract trial with t_dur

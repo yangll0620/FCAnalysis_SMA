@@ -161,7 +161,7 @@ else
 end
 
 twin = 0.2;
-toverlap = 0.15;
+toverlap = 0.18;
 f_AOI = [8 40];
 t_AOI = [-0.5 0.5];
 
@@ -303,7 +303,7 @@ for idxGi = 1 : length(idxGroups)
             set(ax_sep,'YDir','normal', 'CLim', clim)
         end
         set(ax_sep, 'Position', [0.09 0.15 0.8 0.79])
-        title(ax_sep, [pdcond ':' brainarea]);
+        title(ax_sep, [animal ' ' pdcond ':' brainarea ', ntrials = ' num2str(ntrials)]);
         savefile_sep = fullfile(savefolder, [animal '_sep_' pdcond '_' brainarea]);
         saveas(fig_sep, savefile_sep, savefig_format);
         close(fig_sep)

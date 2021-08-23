@@ -1,4 +1,4 @@
-function m2_SKTData_SelectTrials()
+function m2_SKTData_SelectTrials2()
 %  plot spectrogram of each trial and manually select trials
 %
 
@@ -156,15 +156,6 @@ while(filei <=  nfiles)
     filename = files(filei).name;
     load(fullfile(files(filei).folder, filename), 'lfpdata', 'fs_lfp', 'T_chnsarea', 'T_idxevent_lfp', ...
         'fs_ma', 'T_idxevent_ma', 'smoothWspeed_trial', 'Wpos_smooth_trial', 'Wrist_smooth_trial');
-    
-    ntrials = size(T_idxevent_lfp, 1);
-    if ntrials == 1
-        
-        clear('lfpdata', 'fs_lfp', 'T_chnsarea', 'T_idxevent_lfp', ...
-            'fs_ma', 'T_idxevent_ma', 'smoothWspeed_trial', 'Wpos_smooth_trial', 'Wrist_smooth_trial');
-        filei = filei + 1;
-        continue;
-    end
     
     %%% zscore the lfp data   
     [nchns, ~, ~] = size(lfpdata);
@@ -817,21 +808,6 @@ end
         goodTrials(idx) =  get(hObj,'Value');
     end
 
-    function checkbox_showMAThreshold(hObj, event)
-        showMAThreshold = get(hObj, 'Value');
-        
-
-        if showMAThreshold 
-            for tri = tri_str : tri_end
-                set(findobj('Tag', ['MAThreshold-tri= ' num2str(tri)]), 'Visible', 'on');
-            end
-        else
-            for tri = tri_str : tri_end
-                set(findobj('Tag', ['MAThreshold-tri= ' num2str(tri)]), 'Visible', 'off');
-            end
-        end
-    end
-
     function plot_spectrogram()
         % plot lfpdata_1group of all the channels: nchns * ntemp * ntrial
        
@@ -852,10 +828,6 @@ end
         c_unCheckedAll = uicontrol(fig, 'Style','pushbutton','String','unchecked all', 'Position', [1800 770 100 20]);
         c_unCheckedAll.Callback = @btn_uncheckedAll;
         
-        
-        % add checkbox for showing/not showing ma threshold = 30 line
-        cbx_showMAThreshold = uicontrol('Style','checkbox','Value', 0, 'Position', [1800 400 100 20], 'String', 'Show Threshold = 30');
-        cbx_showMAThreshold.Callback = @checkbox_showMAThreshold;
         
         for tri = tri_str: tri_end
             coli = mod(tri,subp_ntrials);
@@ -988,16 +960,16 @@ end
                     subplot('Position', [subp_left_ma, subp_bottom_ma, subp_width_ma, subp_height_ma])                    
                     
                     
-                    
                     % plot ma data
+%                     ma_WSpeed = zscore(ma_WSpeed); ma_WSpeed = ma_WSpeed - ma_WSpeed(1);
+%                     ma_W_X = zscore(ma_W_X); ma_W_X  = ma_W_X - ma_W_X(1);
+%                     ma_W_Y = zscore(ma_W_Y); ma_W_Y  = ma_W_Y - ma_W_Y(1);
+%                     ma_W_Z = zscore(ma_W_Z); ma_W_Z  = ma_W_Z - ma_W_Z(1);
                     plot(times_plot_ma, ma_WSpeed, 'b'); hold on
                     plot(times_plot_ma, ma_W_X, 'r', times_plot_ma, ma_W_Y, 'g', times_plot_ma, ma_W_Z, 'k');
                     set(gca, 'XLim', spect_xlim);
                     xticks([])
                     clear  ma_WSpeed ma_W_X ma_W_Y ma_W_Z
-                    
-                    % plot MA threshold = 30
-                    plot(xlim, [30 30], 'c--', 'Visible', 'off', 'Tag', ['MAThreshold-tri= ' num2str(tri)]);
                     
                     % plot event lines
                     for eventi = 1 : width(T_idxevent_ma)

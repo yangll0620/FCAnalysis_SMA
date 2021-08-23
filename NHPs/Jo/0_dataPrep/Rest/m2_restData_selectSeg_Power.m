@@ -24,6 +24,7 @@ function m2_restData_selectSeg_Power()
 
     % add util path
     addpath(genpath(fullfile(codefolder, 'util')));
+    addpath(genpath(fullfile(codefolder, 'NHPs')));
 
     % the corresponding pipeline folder for this code
     [codecorresfolder, codecorresParentfolder] = code_corresfolder(codefilepath, true, false);
@@ -31,20 +32,7 @@ function m2_restData_selectSeg_Power()
     %% global parameters
     
     % animal
-    if ismac
-        % Code to run on Mac platform
-    elseif isunix
-        % Code to run on Linux platform
-        
-        [fi, j] = regexp(codecorresfolder, ['NHPs', '/', '[A-Za-z]*']);
-    elseif ispc
-        % Code to run on Windows platform
-        
-        [fi, j] = regexp(codecorresfolder, ['NHPs', '\\', '[A-Za-z]*']);
-    else
-        disp('Platform not supported')
-    end
-    animal = codecorresfolder(fi + length('NHPs') + 1:j);
+    animal = animal_extract(codecorresfolder);
 
     %% input setup
     inputfolder = fullfile(codecorresParentfolder, 'm1_restData_cleaned_extract');
@@ -54,6 +42,8 @@ function m2_restData_selectSeg_Power()
     freqs_roi = [0 50];
 
     fs_new = 500;
+    
+    imFormat = 'tif';
 
     %% save setup
     savefolder = codecorresfolder;
@@ -63,9 +53,19 @@ function m2_restData_selectSeg_Power()
     % segment check
     files = dir(fullfile(inputfolder, '*.mat'));
     nfiles = length(files);
+    
+    savefolder_segs = fullfile(savefolder, 'segs');
+    if ~exist(savefolder_segs, 'dir')
+        mkdir(savefolder_segs);
+    end
 
     for fi = 1:nfiles
         file = fullfile(files(fi).folder, files(fi).name);
+        
+        tmp = strsplit(files(fi).name, '.');
+        filename = tmp{1};
+        filename = strrep(filename, '_', '-');
+        clear tmp
 
         load(file, 'fs', 'data_segments')
 
@@ -103,14 +103,18 @@ function m2_restData_selectSeg_Power()
             subplot(4, 4, 1); plot(F_m1, pxx_m1); legend('m1'); xlim(freqs_roi);
 
             for chi = 1:size(lfp_diffstn, 2)
-                subplot(4, 4, chi + 1); plot(F_stn, pxx_stn(:, chi)); legend(['stn - ' num2str(chi)]);
+                subplot(4, 4, chi + 1); plot(F_stn, pxx_stn(:, chi)); legend(['stn' num2str(chi-1) '-' num2str(chi)]);
                 xlim(freqs_roi);
             end
 
             for chi = 1:size(lfp_diffgp, 2)
-                subplot(4, 4, chi + 8); plot(F_gp, pxx_gp(:, chi)); legend(['gp - ' num2str(chi)]);
+                subplot(4, 4, chi + 8); plot(F_gp, pxx_gp(:, chi)); legend(['gp' num2str(chi-1) '-' num2str(chi)]);
                 xlim(freqs_roi);
             end
+            
+            segname = [filename '-seg' num2str(segi)];
+            annotation(gcf, 'textbox', [0.75, 0.2 0.2 0.05], 'String', {segname}, 'LineStyle','none');
+
 
             % manualy check the good('y') and the bad (n) segment
             reply = input(['segi=' num2str(segi) '/' num2str(nsegs) ', remain this seg? y/n [y]:'], 's');
@@ -121,10 +125,16 @@ function m2_restData_selectSeg_Power()
 
             reply = lower(reply);
 
+            marked = '';
             if reply == 'n'
                 segsBad = [segsBad;segi];
-
+                marked = 'N';
             end
+            
+            % save segi figure
+            oneseg_psd_img = fullfile(savefolder_segs, segname);
+            annotation(gcf, 'textbox', [0.75, 0.15 0.2 0.05], 'String', {marked}, 'LineStyle','none');
+            saveas(gcf, oneseg_psd_img, imFormat);
 
             %%% bipolar stn and gp %%%%
             lfp_stn = lfp_diffstn;
@@ -152,7 +162,7 @@ function m2_restData_selectSeg_Power()
             close all
             clear lfp_m1 lfp_meanm1 pxx_m1 F_m1
             clear lfp_stn lfp_diffstn pxx_stn F_stn lfp_gp lfp_diffgp pxx_gp F_gp
-            clear reply
+            clear reply oneseg_psd_img
 
         end
 
@@ -169,7 +179,7 @@ function m2_restData_selectSeg_Power()
         savefile = fullfile(savefolder, files(fi).name);
         save(savefile, 'fs', 'data_segments', 'T_chnsarea');
 
-        clear file fs data_segments
+        clear file fs data_segments filename
         clear nwin noverlap segi nsegs
         clear T_chnsarea savefile
 

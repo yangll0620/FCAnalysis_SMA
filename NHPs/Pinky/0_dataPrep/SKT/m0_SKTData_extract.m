@@ -42,18 +42,18 @@ function m0_SKTData_extract()
     animal = animal_extract();
 
     % Input dir:  preprocessed folder in root2
-    processedfolder_inroot2 = fullfile('H:', 'My Drive', 'NMRC_umn', 'Projects', 'FCAnalysis', 'exp', 'data',animal, 'Recording', 'Processed', 'DataDatabase');
+    processedfolder_inroot2 = fullfile('W:', 'root2', 'Animals',animal, 'Recording', 'Processed', 'DataDatabase');
 
+    
     % master sheet
-    xlsxfile_master = fullfile(datafolder, animal, [animal 'MasterDatabase.xlsx']);
+    xlsxfile_master = fullfile(datafolder, 'Animals', animal, [animal 'MasterDatabase.xlsx']);
     strformat_date_master = 'mmddyy'; % the format of date string in master sheet, e.g '012317'
 
     % different SKB labels in the master sheet
-    tasks_SKB = {'SKB', 'Single', 'Single KB', 'Single Kluver', 'Single Target', 'Single Target Kluver', 'Single-Target Kluver', ...
-                'Single-target Kluver', 'single', 'single Kluver', 'single-target Kluver'};
+    tasks_SKB = tasks_SKB_descriptions_extract();
 
     % good M1 channels stored file
-    matfile_m1chns = fullfile(datafolder, animal, 'chans_m1_remain.mat');
+    matfile_m1chns = fullfile(datafolder, 'Animals', animal, 'config_m1lf_fromYing.mat');
 
     % gray matter chn-area information file
     filename_GMChnsarea = [animal '_GMChnAreaInf.csv'];

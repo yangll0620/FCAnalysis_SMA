@@ -3,16 +3,16 @@ if strcmpi(animal,'jo')
 %     clim_Spectrogram_STN = [-130 -110];
 %     clim_Spectrogram_GP = [-130 -110];
 %     clim_Spectrogram_Others = [-120 -90];
-    clim_Spectrogram_STN = [-30 0];
-    clim_Spectrogram_GP = [-30 10];
-    clim_Spectrogram_Others = [-30 10];
+    clim_Spectrogram_STN = [-30 -15];
+    clim_Spectrogram_GP = [-30 -15];
+    clim_Spectrogram_Others = [-30 -10];
 end
 if strcmpi(animal,'kitty')
     %clim_Spectrogram_STN = [-130 -100];
     %clim_Spectrogram_GP = [-130 -100];
-    clim_Spectrogram_STN = [-40 10];
-    clim_Spectrogram_GP = [-40 10];
-    clim_Spectrogram_Others = [-40 10];
+    clim_Spectrogram_STN = [-40 0];
+    clim_Spectrogram_GP = [-50 0];
+    clim_Spectrogram_Others = [-40 -10];
 end
 if strcmpi(animal,'bug')
     clim_Spectrogram_STN = [-130 -90];
@@ -20,9 +20,9 @@ if strcmpi(animal,'bug')
     clim_Spectrogram_Others = [-130 -90];
 end
 if strcmpi(animal,'pinky')
-    clim_Spectrogram_STN = [-140 -125];
-    clim_Spectrogram_GP = [-140 -120];
-    clim_Spectrogram_Others = [-130 -100];
+    clim_Spectrogram_STN = [-35 -15];
+    clim_Spectrogram_GP = [-35 -15];
+    clim_Spectrogram_Others = [-35 -15];
 end
 
 end

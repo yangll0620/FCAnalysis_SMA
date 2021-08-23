@@ -19,20 +19,7 @@ addpath(genpath(fullfile(codefolder,'NHPs')));
 %% global variables
 
 % animal
-if ismac
-    % Code to run on Mac platform
-elseif isunix
-    % Code to run on Linux platform
-    
-    [fi, j] = regexp(codecorresfolder, ['NHPs', '/', '[A-Za-z]*']);
-elseif ispc
-    % Code to run on Windows platform
-    
-    [fi, j] = regexp(codecorresfolder, ['NHPs', '\\', '[A-Za-z]*']);
-else
-    disp('Platform not supported')
-end
-animal = codecorresfolder(fi + length('NHPs') + 1:j);
+animal = animal_extract(codecorresfolder);
 
 %% save setup
 savefolder = codecorresfolder;
@@ -51,10 +38,15 @@ fig_height = 600;
 
 twin = 0.2;
 toverlap = 0.15;
-f_AOI = [8 50];
+f_AOI = [8 40];
 
 cond_cell = cond_cell_extract(animal);
 image_type = 'bmp';
+
+unwanted_DBS = unwanted_DBS_extract(animal);
+noisy_chns = noisy_chns_extract(animal);
+removed_chns = [unwanted_DBS noisy_chns];
+clear unwanted_DBS noisy_chns
 
 for ci = 1 : length(cond_cell)
     pdcond = cond_cell{ci};
@@ -169,10 +161,10 @@ for ci = 1 : length(cond_cell)
         load([savefile_prefix '.mat'], 'iCoh_pair', 'f_selected',  'chnPairNames')
     end
     
-    
+    removedChns_mask = cellfun(@(x) contains(x, removed_chns), chnPairNames);
     M1DBS_mask = cellfun(@(x) contains(x, 'M1-stn') || contains(x, 'M1-gp'), chnPairNames);
     STN2GP_mask = cellfun(@(x) contains(x, 'stn') && contains(x, 'gp'), chnPairNames);
-    usedChnPairsMask = M1DBS_mask | STN2GP_mask;
+    usedChnPairsMask = (M1DBS_mask | STN2GP_mask) & ~removedChns_mask;
     clear M1DBS_mask STN2GP_mask
     
     showData = abs(iCoh_pair(usedChnPairsMask, :));
