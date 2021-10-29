@@ -1,4 +1,4 @@
-function m5_imCohUsingFFT_EventPhase()
+function m5_imAmpCohUsingFFT_EventPhase()
 %% folders generate
 % the full path and the name of code file without suffix
 codefilepath = mfilename('fullpath');
