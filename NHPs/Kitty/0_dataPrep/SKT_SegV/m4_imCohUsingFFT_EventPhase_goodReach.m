@@ -1,4 +1,4 @@
-function m5_imCohUsingFFT_EventPhase()
+function m4_imCohUsingFFT_EventPhase_goodReach()
 %% folders generate
 % the full path and the name of code file without suffix
 codefilepath = mfilename('fullpath');
@@ -28,7 +28,7 @@ savefolder = codecorresfolder;
 %%  input setup
 
 % input folder: extracted raw rest data with grayMatter
-inputfolder = fullfile(codecorresParentfolder, 'm2_SKTData_SelectTrials');
+inputfolder = fullfile(codecorresParentfolder, 'm2_segSKTData_SelectTrials_goodReach');
 
 fig_left = 50;
 fig_bottom = 50;
@@ -54,9 +54,9 @@ if strcmpi(animal, 'bug')
     tdur_trial_mild = [-0.5 0.5];
 end
 if strcmpi(animal, 'jo')
-    tdur_trial_normal = [-1 0.5];
-    tdur_trial_mild = [-1 0.5];
-    tdur_trial_moderate = [-1 0.5];
+    tdur_trial_normal = [-0.5 0.5];
+    tdur_trial_mild = [-0.5 0.5];
+    tdur_trial_moderate = [-0.5 0.5];
     
 end
 
@@ -102,7 +102,6 @@ for ei = 1: length(EventPhases)
         t_AOI = [-0.2 0];
     end
     
-    
     for ci = 1 : length(cond_cell)
         pdcond = cond_cell{ci};
         align2name = char(align2);
@@ -135,7 +134,6 @@ for ei = 1: length(EventPhases)
             align2name = 'Touch';
         end
         
-        
         savefile_prefix = fullfile(savefolder, [animal '_' pdcond '_' event '_align2' align2name]);
         
         if ~exist([savefile_prefix, '.mat'])
@@ -163,7 +161,7 @@ for ei = 1: length(EventPhases)
                 continue;
             end
             
-            [lfptrials, fs, T_chnsarea] = lfp_goodTrials_align2(files, align2, tdur_trial, t_minmax_reach, t_minmax_return);
+            [lfptrials, fs, T_chnsarea] = lfpseg_selectedTrials_align2(files, align2, tdur_trial, t_minmax_reach);
             
             [nchns, ~, ntrials] = size(lfptrials);
             
@@ -329,7 +327,7 @@ for ei = 1: length(EventPhases)
         end
         
         % save image
-        saveas(gcf, fullfile(savefolder, [animal '_' event '_' pdcond '_align2' char(align2) '.' image_type]), image_type);
+        saveas(gcf, fullfile(savefolder, [animal '_' event '_' pdcond '_align2' align2name '.' image_type]), image_type);
         close all
         
         
@@ -340,9 +338,9 @@ for ei = 1: length(EventPhases)
         clear nf chnPairNames iCoh_1time ci
         clear M1DBS_mask STN2GP_mask usedChnPairsMask showData npairs
         clear savefile_prefix
+        clear align2name  
     end
-    
-       
+   
     clear t_AOI align2 event
 end
 

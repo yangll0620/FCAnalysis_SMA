@@ -116,6 +116,8 @@ function m0_SKTData_extract()
     n = height(t_SKT);
 
     for i = 1:n
+        disp(['Extracting trials in file ' num2str(i) '/' num2str(n)]);
+        
         % waitbar
         waitbar(i / n, f, ['Extracting trials in file ' num2str(i) '/' num2str(n)]);
 

@@ -1,5 +1,5 @@
-function [lfptrials, fs_lfp, T_chnsarea, idxGroups, idxGroupNames] = lfp_goodTrials_align2(files, align2, tdur_trial, t_minmax_reach, t_minmax_return)
-% extract lfp data respect to targetonset, reachonset, reach and returnonset separately
+function [lfptrials, fs_lfp, T_chnsarea, idxGroups, idxGroupNames] = lfpseg_selectedTrials_align2(files, align2, tdur_trial, t_minmax_reach)
+% extract lfp seg data respect to targetonset, reachonset, reach and returnonset separately
 
 % 
 %         Args:
@@ -7,7 +7,7 @@ function [lfptrials, fs_lfp, T_chnsarea, idxGroups, idxGroupNames] = lfp_goodTri
 % 
 %             tdur_trial: the duration of extracted trials respected to event(e.g. [-0.5 0.6])
 %             
-%             t_minmax_reach, t_minmax_return : min and max reach/return (s) for selecting trials (e.g [0.5 1])
+%             t_minmax_reach : min and max reach/return (s) for selecting trials (e.g [0.5 1])
 % 
 %         return:
 %             lfptrials: nchns * ntemp * ntrials
@@ -17,17 +17,7 @@ function [lfptrials, fs_lfp, T_chnsarea, idxGroups, idxGroupNames] = lfp_goodTri
 %             fs:
 
 
-if nargin < 5
-    t_minmax_return = [0 inf];
-end
-if nargin < 4
-    t_minmax_reach = [0 inf];
-end
-
-
 coli_align2 = uint32(align2);
-
-
 
 coli_reachonset = uint32(SKTEvent.ReachOnset);
 coli_reach = uint32(SKTEvent.Reach);
@@ -42,10 +32,10 @@ for filei = 1 : nfiles
     
     % load data, lfpdata: [nchns, ntemps, ntrials]
     filename = files(filei).name;
-    load(fullfile(files(filei).folder, filename), 'lfpdata', 'T_idxevent_lfp', 'goodTrials');
+    load(fullfile(files(filei).folder, filename), 'lfpdata', 'T_idxevent_lfp', 'selectedTrials');
     if filei == 1
-        load(fullfile(files(filei).folder, filename), 'idxGroups', 'tbl_goodTrialsMarks');
-        idxGroupNames = tbl_goodTrialsMarks.Properties.VariableNames;
+        load(fullfile(files(filei).folder, filename), 'idxGroups', 'tbl_selectedTrialsMarks');
+        idxGroupNames = tbl_selectedTrialsMarks.Properties.VariableNames;
         clear tbl_goodTrialsMarks
     end
     
@@ -55,38 +45,33 @@ for filei = 1 : nfiles
     end
     
     
-    
-    ntrials = size(lfpdata, 3);
+    ntrials = length(lfpdata);
     for tri = 1: ntrials
         
         % ignore trials marked with 0
-        if ~goodTrials(tri)
+        if ~selectedTrials(tri)
             continue
         end
         
         % select trials based on reach and return duration
         t_reach = (T_idxevent_lfp{tri, coli_reach} - T_idxevent_lfp{tri, coli_reachonset}) / fs_lfp;
-        t_return = (T_idxevent_lfp{tri, coli_mouth} - T_idxevent_lfp{tri, coli_returnonset}) / fs_lfp;
         if t_reach < t_minmax_reach(1) 
             clear t_reach
             continue
         end
-%         if t_return < t_minmax_return(1) || t_reach > t_minmax_return(2)
-%             clear t_return
-%             continue
-%         end
         
         
         % extract trial with t_dur
         idxdur = round(tdur_trial * fs_lfp) + T_idxevent_lfp{tri, coli_align2};
-        if idxdur(1) ==  0
+        lfp_1trial = lfpdata{tri};
+        if idxdur(1) == 0
             idxdur(1) = 1;
         end
-        lfp_phase_1trial = lfpdata(:, idxdur(1):idxdur(2), tri);
+        lfp_phase_1trial = lfp_1trial(:, idxdur(1):idxdur(2));
            
         lfptrials = cat(3, lfptrials, lfp_phase_1trial);
         
-        clear t_reach t_return idxdur lfp_phase_1trial
+        clear t_reach idxdur lfp_phase_1trial lfp_1trial
     end
 end
 end

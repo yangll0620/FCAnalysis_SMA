@@ -156,13 +156,42 @@ function [lfptrial_cortical, lfptrial_dbs, mask_goodreach, mask_goodreturn, fs_l
     
     % load COTData from  *_TDTwParadigm.mat
     load(fullfile(mafolder, paradigmfilestruct.name), 'paradigm_data');
+    StartTrial_TDT_ix = paradigm_data.TDTTrialInfo.StartTrial_TDT_ix;
     GoCue_TDT_ix = paradigm_data.TDTTrialInfo.GoCue_TDT_ix;
+    ReachStart_TDT_ix = paradigm_data.TDTTrialInfo.ReachStart_TDT_ix;
+    ReachEnd_TDT_ix = paradigm_data.TDTTrialInfo.ReachEnd_TDT_ix;
+    EndTrial_TDT_ix = paradigm_data.TDTTrialInfo.EndTrial_TDT_ix;
+    
+    [m, n] = size(StartTrial_TDT_ix);
+    if m == 1 || n == 1
+        StartTrial_TDT_ix = reshape(StartTrial_TDT_ix, [m * n, 1]);
+    end
     [m, n] = size(GoCue_TDT_ix);
     if m == 1 || n == 1
         GoCue_TDT_ix = reshape(GoCue_TDT_ix, [m * n, 1]);
     end
+    [m, n] = size(ReachStart_TDT_ix);
+    if m == 1 || n == 1
+        ReachStart_TDT_ix = reshape(ReachStart_TDT_ix, [m * n, 1]);
+    end
+    [m, n] = size(ReachEnd_TDT_ix);
+    if m == 1 || n == 1
+        ReachEnd_TDT_ix = reshape(ReachEnd_TDT_ix, [m * n, 1]);
+    end
+    [m, n] = size(EndTrial_TDT_ix);
+    if m == 1 || n == 1
+        EndTrial_TDT_ix = reshape(EndTrial_TDT_ix, [m * n, 1]);
+    end
     clear m n
     
+    mask_targ0 = (paradigm_data.TDTTrialInfo.PositionIndex == 0);
+    StartTrial_TDT_ix = StartTrial_TDT_ix(mask_targ0);
+    GoCue_TDT_ix = GoCue_TDT_ix(mask_targ0);
+    ReachStart_TDT_ix = ReachStart_TDT_ix(mask_targ0);
+    ReachEnd_TDT_ix = ReachEnd_TDT_ix(mask_targ0);
+    EndTrial_TDT_ix = EndTrial_TDT_ix(mask_targ0);
+    clear mask_targ0
+
     
     %% LFP data
     % read each channel data in  LFP data to lfpdata (initialized when is the 1st channel)
@@ -215,7 +244,14 @@ function [lfptrial_cortical, lfptrial_dbs, mask_goodreach, mask_goodreturn, fs_l
             
             % add GoCueIndex for T_idxevent_ma, timeixtbl_ma 
             fs_TDT = nexlfp_cortical.freq; % used for GoCue_TDT_ix
-            GoCueTimeix = round(GoCue_TDT_ix / fs_TDT * fs_ma);
+            
+            StartTrialix = round(StartTrial_TDT_ix / fs_TDT * fs_ma);
+            GoCueix = round(GoCue_TDT_ix / fs_TDT * fs_ma);
+            ReachStartix = round(ReachStart_TDT_ix / fs_TDT * fs_ma);
+            ReachEndix = round(ReachEnd_TDT_ix / fs_TDT * fs_ma);
+            EndTrialix = round(EndTrial_TDT_ix / fs_TDT * fs_ma);
+            
+            tbl_maFromTDTix = table(StartTrialix, GoCueix, ReachStartix, ReachEndix, EndTrialix);
 
             % the time index in the LFP neural data based on MA data
             tbl_lfpTimeix = tbl_maTimeix;

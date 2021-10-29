@@ -174,6 +174,8 @@ for ei = 1: length(EventPhases)
                     lfptrialsj = squeeze(lfptrials(chnj, :, :));
                     
                     cross_density_sum = 0;
+                    densityX_sum = 0;
+                    densityY_sum = 0;
                     for triali = 1: ntrials
                         x = lfptrialsi(: , triali);
                         y = lfptrialsj(: , triali);
@@ -192,55 +194,87 @@ for ei = 1: length(EventPhases)
                         
                         phix = angle(Sx(idx_f, idx_t));
                         phiy = angle(Sy(idx_f, idx_t));
-                        cross_density_sum = cross_density_sum + exp(1i * (phix - phiy));
+                        ampx = abs(Sx(idx_f, idx_t));
+                        ampy = abs(Sy(idx_f, idx_t));
+                        cross_density_sum = cross_density_sum + ampx .* ampy .* exp(1i * (phix - phiy));
+                        densityX_sum = densityX_sum + ampx .* ampx;
+                        densityY_sum = densityY_sum + ampy .* ampy;
                         
                         clear x y Sx fx tx Sy
                         clear phix phiy
-                        
+                        clear ampx ampy
                     end
                     
                     if chni == 1 && chnj == chni + 1
                         [nf, nt] = size(cross_density_sum);
                         cross_densitys = zeros(nchns, nchns, nf, nt);
+                        densitysX = zeros(nchns, nchns, nf, nt);
+                        densitysY = zeros(nchns, nchns, nf, nt);
                         clear nf nt
                     end
                     cross_densitys(chni, chnj, :, :) = cross_density_sum / ntrials; % cross_densitys: nchns * nchns * nf  * nt
                     cross_densitys(chnj, chni, :, :) = cross_densitys(chni, chnj, :, :);
                     
+                    densitysX(chni, chnj, :, :) = densityX_sum / ntrials; % cross_densitys: nchns * nchns * nf  * nt
+                    densitysX(chnj, chni, :, :) = densitysX(chni, chnj, :, :);
+                    
+                    densitysY(chni, chnj, :, :) = densityY_sum / ntrials; % cross_densitys: nchns * nchns * nf  * nt
+                    densitysY(chnj, chni, :, :) = densitysY(chni, chnj, :, :);
+                    
                     
                     clear cross_density_sum lfptrialsj
+                    clear densityX_sum densityY_sum
                 end
                 
                 clear lfptrialsi
             end
-            iCoh = imag(cross_densitys);
+            iCoh = imag(cross_densitys ./ sqrt(densitysX .* densitysY));
             iCoh_acrossTime = mean(iCoh, 4);
             
-            lfp1 = squeeze(lfptrials(1, :, :));
-            lfp2 = squeeze(lfptrials(10, :, :));
-            [mus, stds] = psedo_SKTLFP_Test_acrossTime(lfp1, lfp2, 100, fs, twin, toverlap, f_AOI, t_AOI - tdur_trial(1));
-            clear lfp1 lfp2
+            
+            for chni = 1 : nchns-1
+                lfp1 = squeeze(lfptrials(chni, :, :));
+                for chnj = chni + 1: nchns
+                    lfp2 = squeeze(lfptrials(chnj, :, :));
+                    
+                    [mus, stds] = psedo_SKTLFP_Test_acrossTime(lfp1, lfp2, 100, fs, twin, toverlap, f_AOI, t_AOI - tdur_trial(1));
+                    
+                    if chni == 1 && chnj == chni + 1
+                        nf = length(mus);
+                        mus_allchns = zeros(nchns, nchns, nf);
+                        stds_allchns = zeros(nchns, nchns, nf);
+                        clear nf 
+                    end
+                    
+                    mus_allchns(chni, chnj, :) = mus;
+                    mus_allchns(chnj, chni, :) = mus_allchns(chni, chnj, :);
+                    stds_allchns(chni, chnj, :) = stds;
+                    stds_allchns(chnj, chni, :) = stds_allchns(chni, chnj, :);
+                    
+                    clear lfp2 mus stds
+                end
+                clear lfp1
+            end
             
             
             % pvalues using permutation test
             [nchns, ~, nf] = size(iCoh_acrossTime);
             pvals = zeros(size(iCoh_acrossTime));
             for fi = 1 : nf
-                
-                mu = mus(fi,1);
-                std = stds(fi, 1);
-                pd = makedist('Normal','mu',mu,'sigma',std);
-                
                 for chni = 1: nchns -1
                     for chnj = chni : nchns
+                        mu = mus_allchns(chni, chnj, fi);
+                        std = stds_allchns(chni, chnj, fi);
+                        pd = makedist('Normal','mu',mu,'sigma',std);
+                        
                         x = iCoh_acrossTime(chni, chnj, fi);
                         pvals(chni, chnj, fi) = (1 - cdf(pd,abs(x)));
                         pvals(chnj, chni, fi) = pvals(chni, chnj, fi);
+                        
                         clear x
+                        clear mu std pd
                     end
                 end
-                
-                clear mu std pd
             end
             % Benjamini & Hochberg (1995) procedure for controlling the false discovery rate (FDR)
             [h, crit_p, adj_ci_cvrg, adj_p]=fdr_bh(pvals);

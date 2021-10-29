@@ -35,7 +35,7 @@ fig_bottom = 50;
 fig_width = 1200;
 fig_height = 600;
 
-EventPhases = {'preMove'; 'Reach'; 'Return';'beforeReach'};
+EventPhases = {'preMove'; 'Anticipated';'earlyReach'; 'Return';'lateReach'};
 
 image_type = 'tif';
 
@@ -54,15 +54,15 @@ if strcmpi(animal, 'bug')
     tdur_trial_mild = [-0.5 0.5];
 end
 if strcmpi(animal, 'jo')
-    tdur_trial_normal = [-0.5 0.5];
-    tdur_trial_mild = [-0.5 0.5];
-    tdur_trial_moderate = [-0.5 0.5];
+    tdur_trial_normal = [-1 0.5];
+    tdur_trial_mild = [-1 0.5];
+    tdur_trial_moderate = [-1 0.5];
     
 end
 
 if strcmpi(animal, 'kitty') % Kitty not have mild
-    tdur_trial_normal = [-0.5 0.5];
-    tdur_trial_moderate = [-0.5 0.5];
+    tdur_trial_normal = [-1 0.5];
+    tdur_trial_moderate = [-1 0.5];
 end
 
 if strcmpi(animal, 'pinky')
@@ -82,9 +82,13 @@ for ei = 1: length(EventPhases)
     event = EventPhases{ei};
     if strcmpi(event, 'preMove')
         align2 = SKTEvent.TargetOnset;
+        t_AOI = [-1 -0.8];
+    end
+    if strcmpi(event, 'Anticipated')
+        align2 = SKTEvent.TargetOnset;
         t_AOI = [-0.2 0];
     end
-    if strcmpi(event, 'Reach')
+    if strcmpi(event, 'earlyReach')
         align2 = SKTEvent.ReachOnset;
         t_AOI = [0 0.2];
     end
@@ -93,7 +97,7 @@ for ei = 1: length(EventPhases)
         t_AOI = [0 0.2];
     end
     
-    if strcmpi(event, 'beforeReach')
+    if strcmpi(event, 'lateReach')
         align2 = SKTEvent.Reach;
         t_AOI = [-0.2 0];
     end
@@ -101,19 +105,38 @@ for ei = 1: length(EventPhases)
     
     for ci = 1 : length(cond_cell)
         pdcond = cond_cell{ci};
+        align2name = char(align2);
         
         if strcmpi(event, 'preMove')
             if strcmpi(animal, 'Kitty') && strcmpi(pdcond, 'normal')
-                align2 = SKTEvent.ReachOnset;
-                t_AOI = [-0.2 0];
+                align2 = SKTEvent.TargetOnset;
+                t_AOI = [0.2 0.4];
+                align2name = 'StartTrial';
             else
                 align2 = SKTEvent.TargetOnset;
-                t_AOI = [-0.2 0];
+                t_AOI = [-0.8 -0.6];
+                align2name = char(align2);
             end
         end
         
+        if strcmpi(event, 'Anticipated')
+            if strcmpi(animal, 'Kitty') && strcmpi(pdcond, 'normal')
+                align2 = SKTEvent.ReachOnset;
+                t_AOI = [-0.2 0];
+                align2name = char(align2);
+            else
+                align2 = SKTEvent.TargetOnset;
+                t_AOI = [-0.2 0];
+                align2name = char(align2);
+            end
+        end
         
-        savefile_prefix = fullfile(savefolder, [animal '_' pdcond '_' event '_align2' char(align2)]);
+        if strcmpi(align2, 'Reach')
+            align2name = 'Touch';
+        end
+        
+        
+        savefile_prefix = fullfile(savefolder, [animal '_' pdcond '_' event '_align2' align2name]);
         
         if ~exist([savefile_prefix, '.mat'])
             if strcmp(pdcond, 'normal')
@@ -270,7 +293,7 @@ for ei = 1: length(EventPhases)
         yticks([1:npairs]);
         set(gca,'YTickLabel',chnPairNames_show,'fontsize',12,'FontWeight','bold')
         xlabel('freqs')
-        title([animal '-'  pdcond '-'  event '['  num2str(t_AOI(1)) ' ' num2str(t_AOI(2))   ']s,' 'align2 = ' char(align2) 'ntrials = ' num2str(ntrials)], ...
+        title([animal '-'  pdcond '-'  event '['  num2str(t_AOI(1)) ' ' num2str(t_AOI(2))   ']s,' 'align2 = ' align2name ', ntrials = ' num2str(ntrials)], ...
             'FontSize', 15, 'FontWeight', 'normal')
         set(gca,'CLim', [0 1])
         colorbar

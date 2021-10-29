@@ -1,4 +1,4 @@
-function [lfptrials, fs_lfp, T_chnsarea, idxGroups, idxGroupNames] = lfp_goodTrials_align2(files, align2, tdur_trial, t_minmax_reach, t_minmax_return)
+function [lfptrials_larger, lfptrials_lower, fs_lfp, T_chnsarea, idxGroups, idxGroupNames] = lfp_goodTrials_align2_sepReaction(files, align2, tdur_trial, t_minmax_reach, t_minmax_return, reactionThre)
 % extract lfp data respect to targetonset, reachonset, reach and returnonset separately
 
 % 
@@ -16,6 +16,9 @@ function [lfptrials, fs_lfp, T_chnsarea, idxGroups, idxGroupNames] = lfp_goodTri
 % 
 %             fs:
 
+if nargin < 6
+    reactionThre = 1;
+end
 
 if nargin < 5
     t_minmax_return = [0 inf];
@@ -28,7 +31,7 @@ end
 coli_align2 = uint32(align2);
 
 
-
+coli_targetonset = uint32(SKTEvent.TargetOnset);
 coli_reachonset = uint32(SKTEvent.ReachOnset);
 coli_reach = uint32(SKTEvent.Reach);
 coli_returnonset = uint32(SKTEvent.ReturnOnset);
@@ -37,7 +40,8 @@ coli_mouth = uint32(SKTEvent.Mouth);
 load(fullfile(files(1).folder, files(1).name),  'fs_lfp', 'T_chnsarea');
 
 nfiles = length(files);
-lfptrials = [];
+lfptrials_larger = [];
+lfptrials_lower = [];
 for filei = 1 : nfiles
     
     % load data, lfpdata: [nchns, ntemps, ntrials]
@@ -54,8 +58,6 @@ for filei = 1 : nfiles
         continue;
     end
     
-    
-    
     ntrials = size(lfpdata, 3);
     for tri = 1: ntrials
         
@@ -65,6 +67,7 @@ for filei = 1 : nfiles
         end
         
         % select trials based on reach and return duration
+        t_reaction = (T_idxevent_lfp{tri, coli_reachonset} - T_idxevent_lfp{tri, coli_targetonset}) / fs_lfp;
         t_reach = (T_idxevent_lfp{tri, coli_reach} - T_idxevent_lfp{tri, coli_reachonset}) / fs_lfp;
         t_return = (T_idxevent_lfp{tri, coli_mouth} - T_idxevent_lfp{tri, coli_returnonset}) / fs_lfp;
         if t_reach < t_minmax_reach(1) 
@@ -79,12 +82,14 @@ for filei = 1 : nfiles
         
         % extract trial with t_dur
         idxdur = round(tdur_trial * fs_lfp) + T_idxevent_lfp{tri, coli_align2};
-        if idxdur(1) ==  0
-            idxdur(1) = 1;
-        end
         lfp_phase_1trial = lfpdata(:, idxdur(1):idxdur(2), tri);
-           
-        lfptrials = cat(3, lfptrials, lfp_phase_1trial);
+        
+        if t_reaction >= reactionThre
+            lfptrials_larger = cat(3, lfptrials_larger, lfp_phase_1trial);
+        else
+            
+            lfptrials_lower = cat(3, lfptrials_lower, lfp_phase_1trial);
+        end
         
         clear t_reach t_return idxdur lfp_phase_1trial
     end
