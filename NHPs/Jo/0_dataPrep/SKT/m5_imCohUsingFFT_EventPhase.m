@@ -138,6 +138,7 @@ for ei = 1: length(EventPhases)
         
         savefile_prefix = fullfile(savefolder, [animal '_' pdcond '_' event '_align2' align2name]);
         
+        % calculate or load ciCOH 
         if ~exist([savefile_prefix, '.mat'])
             if strcmp(pdcond, 'normal')
                 t_minmax_reach = t_minmax_reach_normal;
@@ -281,7 +282,7 @@ for ei = 1: length(EventPhases)
         showData = abs(iCoh_1time(usedChnPairsMask, :));
         chnPairNames_show = chnPairNames(usedChnPairsMask);
         
-        % plot
+        % plot ciCOH spectrogram
         figure;
         set(gcf, 'PaperUnits', 'points',  'Position', [fig_left fig_bottom fig_width fig_height]);
         imagesc(showData)
