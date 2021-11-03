@@ -1,9 +1,7 @@
 function animal = animal_extract(codecorresfolder)
 
 % animal
-if ismac
-    % Code to run on Mac platform
-elseif isunix
+if isunix
     % Code to run on Linux platform
     
     [fi, j] = regexp(codecorresfolder, ['NHPs', '/', '[A-Za-z]*']);

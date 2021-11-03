@@ -66,8 +66,10 @@ for filei = 1 : nfiles
         lfp_1trial = lfpdata{tri};
         if idxdur(1) == 0
             idxdur(1) = 1;
+        else
+            idxdur(1) = idxdur(1) + 1;
         end
-        lfp_phase_1trial = lfp_1trial(:, idxdur(1) + 1:idxdur(2));
+        lfp_phase_1trial = lfp_1trial(:,idxdur(1) :idxdur(2));
            
         lfptrials = cat(3, lfptrials, lfp_phase_1trial);
         

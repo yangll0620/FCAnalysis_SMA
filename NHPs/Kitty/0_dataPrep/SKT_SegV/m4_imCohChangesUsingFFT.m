@@ -83,13 +83,15 @@ noisy_chns = noisy_chns_extract(animal);
 removed_chns = [unwanted_DBS noisy_chns];
 clear unwanted_DBS noisy_chns
 
+disp(animal);
+
 tic
 [t_minmax_reach_normal, ~, t_minmax_reach_mild, ~, t_minmax_reach_moderate, ~] = goodSKTTrials_reachReturn_tcritiria(animal);
-for ci = 2 : length(cond_cell)
+for ci = 1 : length(cond_cell)
     pdcond = cond_cell{ci};
     disp(pdcond);
     % each event Phase
-    for ei = 2: length(EventPhases)
+    for ei = 3: length(EventPhases)
         event = EventPhases{ei};
         disp(event)
         [align2, t_AOI, align2name] = SKTEventPhase_align2_tAOI_extract(event, animal, pdcond);
@@ -114,7 +116,7 @@ for ci = 2 : length(cond_cell)
             
             [nchns, ~, ntrials] = size(lfptrials);
             
-            if ei == 1 % deal with  Rest data once
+            if ~exist('iCoh_rest', 'var') % deal with  Rest data once
                 disp('seg2ShortSegments-imCohRest_FFT_NormalizedAMP');
                 files_Rest = dir(fullfile(inputfolder_Rest, ['*_' pdcond '_*.mat']));
                 [lfpdata_rest, fs_rest, T_chnsarea_rest]= seg2ShortSegments(files_Rest, tdur_trial(2) - tdur_trial(1));
