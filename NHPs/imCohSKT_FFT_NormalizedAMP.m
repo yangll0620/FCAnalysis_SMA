@@ -11,7 +11,7 @@ function [iCoh_acrossTime, f_selected] = imCohSKT_FFT_NormalizedAMP(lfpdata, twi
 %       tdur_trial: time duration for used trial data, i.e tdur_trial = [-0.5 0.5]
 %
 %   Outputs:
-%       iCoh_acrossTime: imaginery coherence
+%       iCoh_acrossTime: imaginery coherence nchns * nchns * nf
 
 
 
@@ -36,7 +36,7 @@ for chni = 1 : nchns-1
                 times = tx + tdur_trial(1);
                 idx_f = (freqs>=f_AOI(1) &  freqs<=f_AOI(2));
                 idx_t = (times>=t_AOI(1) &  times<=t_AOI(2));
-                f_selected = round(freqs(idx_f), 3);
+                f_selected = round(freqs(idx_f), 2);
                 clear freqs times
             end
             

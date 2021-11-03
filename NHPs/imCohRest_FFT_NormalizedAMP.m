@@ -10,6 +10,10 @@ function [iCoh, f_selected] = imCohRest_FFT_NormalizedAMP(lfpsegdata, twin, tove
 %       fs: sample rate
 %
 %       twin, toverlap: time duration to calculate ciCOH, i.e. twin = 0.2; toverlap = 0.15;
+%
+%   Output
+%       iCoh: nchns * nchns * nf
+%       f_selected: nf * 1
 
 nsegs = size(lfpsegdata, 3);
 for segi = 1 : nsegs
