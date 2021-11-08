@@ -27,13 +27,11 @@ savefolder = codecorresfolder;
 
 %%  input setup
 inputfolder_SKT = fullfile(codecorresParentfolder, 'm2_segSKTData_SelectTrials_goodReach');
-% input folder: extracted raw rest data with grayMatter
-% switch lower(animal)
-%     case 'jo'
-%         inputfolder_SKT = fullfile(codecorresParentfolder, 'm2_SKTData_SelectTrials');
-%     case 'kitty'
-%         inputfolder_SKT = fullfile(codecorresParentfolder, 'm2_segSKTData_SelectTrials_goodReach');
-% end
+files = dir(fullfile(inputfolder_SKT, ['*.mat']));
+if(isempty(files))
+    inputfolder_SKT = fullfile(codecorresParentfolder, 'm2_SKTData_SelectTrials');
+end
+
 
 [pathstr,~,~] = fileparts( codecorresParentfolder );
 inputfolder_Rest = fullfile(pathstr, 'Rest', 'm3_restData_rmChns_avgArea');
@@ -54,8 +52,6 @@ image_type = 'tif';
 
 shuffleN_psedoTest = 100;
 
-color_separate = 'k';
-
 if strcmpi(animal, 'bug')
     tdur_trial_normal = [-0.5 0.5];
     tdur_trial_mild = [-0.5 0.5];
@@ -73,9 +69,9 @@ if strcmpi(animal, 'kitty') % Kitty not have mild
 end
 
 if strcmpi(animal, 'pinky')
-    tdur_trial_normal = [-0.5 0.5];
-    tdur_trial_mild = [-0.5 0.5];
-    tdur_trial_moderate = [-0.5 0.5];
+    tdur_trial_normal = [-1 0.5];
+    tdur_trial_mild = [-1 0.5];
+    tdur_trial_moderate = [-1 0.5];
 end
 
 
@@ -90,10 +86,10 @@ clear unwanted_DBS noisy_chns
 
 tic
 [t_minmax_reach_normal, ~, t_minmax_reach_mild, ~, t_minmax_reach_moderate, ~] = goodSKTTrials_reachReturn_tcritiria(animal);
-for ci = 1 : length(cond_cell)
+for ci = 2 : length(cond_cell)
     pdcond = cond_cell{ci};
     % each event Phase
-    for ei = 1: length(EventPhases)
+    for ei = 4: length(EventPhases)
         event = EventPhases{ei};
         disp([animal '-' pdcond '-' event])
         [align2, t_AOI, align2name] = SKTEventPhase_align2_tAOI_extract(event, animal, pdcond);
@@ -112,8 +108,14 @@ for ci = 1 : length(cond_cell)
                     tdur_trial = tdur_trial_moderate;
             end
             
-            files = dir(fullfile(inputfolder_SKT, ['*_' pdcond '_*.mat']));
-            [lfptrials, fs_SKT, T_chnsarea_SKT] = lfpseg_selectedTrials_align2(files, align2, tdur_trial, t_minmax_reach);
+            files = dir(fullfile(inputfolder_SKT, ['*_' pdcond '_*.mat']));       
+            switch lower(animal)
+                case 'pinky'
+                    [lfptrials, fs_SKT, T_chnsarea_SKT] = lfp_goodTrials_align2(files, align2, tdur_trial, t_minmax_reach);
+                otherwise
+                    [lfptrials, fs_SKT, T_chnsarea_SKT] = lfpseg_selectedTrials_align2(files, align2, tdur_trial, t_minmax_reach);
+            end
+                   
             
             [nchns, ~, ntrials] = size(lfptrials);
             
@@ -297,7 +299,7 @@ for ci = 1 : length(cond_cell)
             end
             
             if ~strcmp(chnPair_prev, '') && ~strcmp(chnPair_prev, chnPair) % a new site pairs
-                hold on; plot(gca, xlim, [(ci + ci -1)/2 (ci + ci -1)/2], [color_separate '--'])
+                hold on; plot(gca, xlim, [(ci + ci -1)/2 (ci + ci -1)/2], 'w--')
                 % Create line
             end
             chnPair_prev = chnPair;

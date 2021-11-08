@@ -38,7 +38,7 @@ inputfolder_SKT = fullfile(codecorresParentfolder, 'm2_segSKTData_SelectTrials_g
 [pathstr,~,~] = fileparts( codecorresParentfolder );
 inputfolder_Rest = fullfile(pathstr, 'Rest', 'm3_restData_rmChns_avgArea');
 
-EventPhases = {'preMove'; 'Anticipated';'earlyReach'; 'Return';'lateReach'};
+EventPhases = {'preMove'; 'Anticipated';'earlyReach'; 'lateReach'};
 
 twin = 0.2;
 toverlap = 0.15;
@@ -50,16 +50,20 @@ fig_bottom = 50;
 fig_width = 1200;
 fig_height = 600;
 
-shuffleN_psedoTest = 500;
+image_type = 'tif';
+
+shuffleN_psedoTest = 100;
+
+color_separate = 'k';
 
 if strcmpi(animal, 'bug')
     tdur_trial_normal = [-0.5 0.5];
     tdur_trial_mild = [-0.5 0.5];
 end
 if strcmpi(animal, 'jo')
-    tdur_trial_normal = [-0.5 0.5];
-    tdur_trial_mild = [-0.5 0.5];
-    tdur_trial_moderate = [-0.5 0.5];
+    tdur_trial_normal = [-1 0.5];
+    tdur_trial_mild = [-1 0.5];
+    tdur_trial_moderate = [-1 0.5];
     
 end
 
@@ -83,21 +87,18 @@ noisy_chns = noisy_chns_extract(animal);
 removed_chns = [unwanted_DBS noisy_chns];
 clear unwanted_DBS noisy_chns
 
-disp(animal);
 
 tic
 [t_minmax_reach_normal, ~, t_minmax_reach_mild, ~, t_minmax_reach_moderate, ~] = goodSKTTrials_reachReturn_tcritiria(animal);
 for ci = 1 : length(cond_cell)
     pdcond = cond_cell{ci};
-    disp(pdcond);
     % each event Phase
-    for ei = 3: length(EventPhases)
+    for ei = 1: length(EventPhases)
         event = EventPhases{ei};
-        disp(event)
+        disp([animal '-' pdcond '-' event])
         [align2, t_AOI, align2name] = SKTEventPhase_align2_tAOI_extract(event, animal, pdcond);
         
-        savefile = fullfile(savefolder, [animal '_' pdcond '_' event '_align2' char(align2) '.mat']);
-        
+        savefile = fullfile(savefolder, [animal '_shuffle' num2str(shuffleN_psedoTest) '_' pdcond '_' event '_align2' char(align2) '.mat']);
         if ~exist(savefile)
             switch lower(pdcond)
                 case 'normal'
@@ -159,7 +160,10 @@ for ci = 1 : length(cond_cell)
             lfp_combined = cat(3, lfpdata_rest, lfptrials);
             ntotal = size(lfp_combined, 3);
             for si = 1 : shuffleN_psedoTest
-                disp(['pesdo test ' num2str(si)])
+                if(mod(si, 10) == 0)
+                    disp(['pesdo test ' num2str(si)])
+                    toc
+                end
                 randomSKTInds =  randsample(ntotal,ntrials);
                 randomRestInds= arrayfun(@(x) any(randomSKTInds==x),[1: ntotal]);
                 psedolfp_SKT = lfp_combined(:, :, randomSKTInds);
@@ -175,7 +179,6 @@ for ci = 1 : length(cond_cell)
                 
                 clear randomSKTInds randomRestInds psedolfp_SKT psedoiCoh_rest
                 clear psedoiCoh_SKT psedoiCoh_rest
-                toc
             end
             
             % fit a normal distribution to psedoiCohChanges for each chni-chnj pair
@@ -294,7 +297,7 @@ for ci = 1 : length(cond_cell)
             end
             
             if ~strcmp(chnPair_prev, '') && ~strcmp(chnPair_prev, chnPair) % a new site pairs
-                hold on; plot(gca, xlim, [(ci + ci -1)/2 (ci + ci -1)/2], 'w--')
+                hold on; plot(gca, xlim, [(ci + ci -1)/2 (ci + ci -1)/2], [color_separate '--'])
                 % Create line
             end
             chnPair_prev = chnPair;
@@ -303,7 +306,7 @@ for ci = 1 : length(cond_cell)
         end
         
         % save image
-        saveas(gcf, fullfile(savefolder, [animal ' FCChanges_' event '_' pdcond '_align2' char(align2) '.' image_type]), image_type);
+        saveas(gcf, fullfile(savefolder, [animal ' FCChanges_shuffle' num2str(shuffleN_psedoTest) '_' event '_' pdcond '_align2' char(align2) '.' image_type]), image_type);
         close all
     end
 end

@@ -1,4 +1,4 @@
-function [lfptrials, fs_lfp, T_chnsarea, idxGroups, idxGroupNames] = lfp_goodTrials_align2(files, align2, tdur_trial, t_minmax_reach, t_minmax_return)
+function [lfptrials, fs_lfp, T_chnsarea, idxGroups, idxGroupNames] = lfp_goodTrials_align2(files, align2, tdur_trial, t_minmax_reach)
 % extract lfp data respect to targetonset, reachonset, reach and returnonset separately
 
 % 
@@ -16,13 +16,6 @@ function [lfptrials, fs_lfp, T_chnsarea, idxGroups, idxGroupNames] = lfp_goodTri
 % 
 %             fs:
 
-
-if nargin < 5
-    t_minmax_return = [0 inf];
-end
-if nargin < 4
-    t_minmax_reach = [0 inf];
-end
 
 
 coli_align2 = uint32(align2);
@@ -79,11 +72,11 @@ for filei = 1 : nfiles
         
         % extract trial with t_dur
         idxdur = round(tdur_trial * fs_lfp) + T_idxevent_lfp{tri, coli_align2};
-        if idxdur(1) ==  0
-            idxdur(1) = 1;
-        end
+        
+        idxdur(1) = idxdur(1) + 1;
         lfp_phase_1trial = lfpdata(:, idxdur(1):idxdur(2), tri);
-           
+       
+        
         lfptrials = cat(3, lfptrials, lfp_phase_1trial);
         
         clear t_reach t_return idxdur lfp_phase_1trial
