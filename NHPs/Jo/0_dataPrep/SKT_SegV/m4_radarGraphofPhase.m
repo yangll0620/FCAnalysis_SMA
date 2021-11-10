@@ -24,6 +24,7 @@ animal = animal_extract(codecorresfolder);
 %% save setup
 savefolder = codecorresfolder;
 
+presentName = 'trialPhaseDiff';
 
 %%  input setup
 inputfolder_SKT = fullfile(codecorresParentfolder, 'm2_segSKTData_SelectTrials_goodReach');
@@ -52,6 +53,12 @@ fig_height = 600;
 
 image_type = 'tif';
 
+% plot setup
+ylimvec = [-pi pi];
+ytickvec = [-pi: pi/2 : pi];
+yticklabelvec = {'-\pi', '-\pi/2', '0', '\pi/2', '\pi'};
+xlabelname = 'trial number';
+ylabelname = 'phase difference (radian)';
 
 color_separate = 'k';
 
@@ -89,8 +96,13 @@ clear unwanted_DBS noisy_chns
 
 tic
 [t_minmax_reach_normal, ~, t_minmax_reach_mild, ~, t_minmax_reach_moderate, ~] = goodSKTTrials_reachReturn_tcritiria(animal);
-for ci = 1 : length(cond_cell)
+for ci = 2 : length(cond_cell)
     pdcond = cond_cell{ci};
+    subsavefolder = fullfile(savefolder, pdcond);
+    if ~exist(subsavefolder, 'dir')
+        mkdir(subsavefolder);
+    end
+    
     % each event Phase
     for ei = 1: length(EventPhases)
         event = EventPhases{ei};
@@ -153,7 +165,7 @@ for ci = 1 : length(cond_cell)
             
             
             % save data
-            save(savefile, 'deltaPhis_trialsFlat', 'f_selected', 'T_chnsarea_SKT', 'chnPairNames')
+            save(savefile, 'deltaPhis_trialsFlat', 'f_selected',  'chnPairNames')
             
             clear t_minmax_reach tdur_trial
             clear lfptrials fs_SKT T_chnsarea_SKT iCoh_trial f_selected_trial
@@ -164,7 +176,8 @@ for ci = 1 : length(cond_cell)
             clear iCohChanges_trialsFlat f_selected  T_chnsarea chnPairNames 
         end
         
-        load(savefile, 'deltaPhis_trialsFlat', 'f_selected',  'T_chnsarea_SKT', 'chnPairNames');
+        % deltaPhis_trialsFlat: nchnPairs * nfs * ntrials
+        load(savefile, 'deltaPhis_trialsFlat', 'f_selected', 'chnPairNames');
         
         removedChns_mask = cellfun(@(x) contains(x, removed_chns), chnPairNames);
         M1DBS_mask = cellfun(@(x) contains(x, 'M1-stn') || contains(x, 'M1-gp'), chnPairNames);
@@ -172,51 +185,103 @@ for ci = 1 : length(cond_cell)
         usedChnPairsMask = (M1DBS_mask | STN2GP_mask) & ~removedChns_mask;
         clear M1DBS_mask STN2GP_mask
         
-    end
-end
-
-
-function [lfpdata, fs, T_chnsarea]= seg2ShortSegments(files, twin)
-lfpdata = [];
-for fi = 1: length(files)
-    loadfilename = files(fi).name;
-    load(fullfile(files(fi).folder, loadfilename), 'data_segments', 'fs', 'T_chnsarea');
-    
-    nwin = round(twin * fs);
-    for segi = 1 : length(data_segments)
-        seglfp = data_segments(segi).lfp;
+        showData = deltaPhis_trialsFlat(usedChnPairsMask, :, :); 
+        chnPairNames_show = chnPairNames(usedChnPairsMask);
         
-        len = size(seglfp, 2);
-        shortSegn = floor(len / nwin);
-        for shortsegi = 1 : shortSegn
-            stri = (shortsegi - 1)* nwin + 1;
-            endi = shortsegi * nwin;
-            lfpdata = cat(3, lfpdata, seglfp(:, stri : endi));
-            clear stri endi
+        % plot & save
+        [nchnPairs, nfs, ntrials] = size(showData); % showData: nchnPairs * nfs * ntrials
+        xlimvec = [1 ntrials + 1];
+        for chnPairi = 1 : nchnPairs
+            chnPairName = chnPairNames_show{chnPairi};
+            for nfi = 1 : nfs
+                x = squeeze(showData(chnPairi, nfi, :));
+                f = f_selected(nfi);
+                
+                figure;
+                set(gcf, 'PaperUnits', 'points',  'Position', [fig_left fig_bottom fig_width fig_height]);
+                set(gca, 'Position', [0.09 0.05 0.9 0.85])
+                
+                plot(x, '.')
+                set(gca, 'XLim', xlimvec, 'YLim', ylimvec, 'YTick', ytickvec, 'YTickLabel', yticklabelvec);
+                xlabel(xlabelname)
+                ylabel(ylabelname)
+
+                titlename = [animal '-'  pdcond '-'  event ' Trial Phase Differences of ' ...
+                    chnPairName ' at ' num2str(f) 'Hz'];
+                title(titlename, 'FontSize', 15, 'FontWeight', 'normal')
+                
+                % subtitle
+                titleH = get(gca, 'title');
+                titlePos = get(titleH, 'Position');
+                set(titleH, 'Position', [round(titlePos(1)), titlePos(2)+ 0.3]); 
+                subtitlename = [event '['  num2str(t_AOI(1)) ' ' num2str(t_AOI(2))   ']s, align2 = ' char(align2) ', ntrials = ' num2str(ntrials)];
+                subtitlepos = [round(titlePos(1)), titlePos(2)];
+                text(subtitlepos(1), subtitlepos(2), subtitlename, 'FontSize', 12);
+                
+                % save
+                savefile =  fullfile(subsavefolder, [animal presentName '_pair' chnPairName '_' num2str(round(f))  'Hz_' event '_' pdcond '_align2' char(align2) '.' image_type]);
+                saveas(gcf,savefile, image_type);
+                
+                close all
+                
+                clear x f titlename 
+                clear titleH titlePos subtitlename subtitlepos
+                clear savefile
+               
+            end
+            
+            clear chnPairName
         end
-        clear seglfp len shortSegn shortsegi
+
+        
     end
     
-    if ~exist('fs_unit', 'var')
-        fs_unit = fs;
-    else
-        if(fs_unit ~=fs)
-            dis(['fs_unit ~=fs for file ' loadfilename])
-        end
-    end
-    
-    if ~exist('T_chnsarea_unit', 'var')
-        T_chnsarea_unit = T_chnsarea;
-    else
-        if(~isequal(T_chnsarea_unit, T_chnsarea))
-            dis(['T_chnsarea_unit ~= T_chnsarea for file ' loadfilename])
-        end
-    end
-    
-    clear nwin segi
-    clear('data_segments', 'fs', 'T_chnsarea')
-    clear loadfilename
-    
+    clear subsavefolder
 end
-fs = fs_unit;
-T_chnsarea = T_chnsarea_unit;
+
+
+function [deltaPhis, f_selected] = deltaPhi_eachTrial(lfptrialsi, lfptrialsj, fs, twin, toverlap, f_AOI, t_AOI, tdur_trial)
+%
+%   Input:
+%       lfptrialsi, lfptrialsj: lfp data for channel i and j (ntemp * ntrials)
+%
+%       f_AOI, t_AOI: frequencies and time duration of interest, i.e. f_AOI
+%       = [8 40], t_AOI = [-0.2 0]
+%
+%       twin, toverlap: time duration to calculate ciCOH, i.e. twin = 0.2; toverlap = 0.15;
+%
+%       tdur_trial: time duration for used trial data, i.e tdur_trial = [-0.5 0.5]
+%
+%   Outputs:
+%       deltaPhis: deltaPhi for each trial (nfs  * ntrials)
+
+deltaPhis = [];
+[~, ntrials] = size(lfptrialsi);
+nwin = twin * fs;
+noverlap = (toverlap * fs);
+for triali = 1: ntrials
+    x = lfptrialsi(: , triali);
+    y = lfptrialsj(: , triali);
+    
+    [Sx, fx, tx, ~] = spectrogram(x, nwin, noverlap,[],fs); % Sx: nf * nt
+    [Sy, ~, ~, ~] = spectrogram(y, nwin, noverlap,[],fs); % Sy: nf * nt
+    
+    if triali == 1
+        freqs = fx;
+        times = tx + tdur_trial(1);
+        idx_f = (freqs>=f_AOI(1) &  freqs<=f_AOI(2));
+        idx_t = (times>=t_AOI(1) &  times<=t_AOI(2));
+        f_selected = round(freqs(idx_f), 2);
+        clear freqs times
+    end
+    
+    phix = angle(Sx(idx_f, idx_t));
+    phiy = angle(Sy(idx_f, idx_t));
+    deltaPhi = mean(phix - phiy, 2);
+    deltaPhis = cat(2, deltaPhis, deltaPhi);
+    
+    
+    clear x y Sx fx tx Sy
+    clear phix phiy deltaPhi
+    clear ampx ampy
+end
