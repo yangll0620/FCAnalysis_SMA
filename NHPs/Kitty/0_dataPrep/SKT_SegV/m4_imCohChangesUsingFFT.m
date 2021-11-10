@@ -52,7 +52,7 @@ fig_height = 600;
 
 image_type = 'tif';
 
-shuffleN_psedoTest = 100;
+shuffleN_psedoTest = 500;
 
 color_separate = 'k';
 

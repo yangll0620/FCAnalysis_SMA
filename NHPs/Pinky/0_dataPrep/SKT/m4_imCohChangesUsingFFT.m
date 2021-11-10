@@ -50,7 +50,7 @@ fig_height = 600;
 
 image_type = 'tif';
 
-shuffleN_psedoTest = 100;
+shuffleN_psedoTest = 500;
 
 if strcmpi(animal, 'bug')
     tdur_trial_normal = [-0.5 0.5];
@@ -86,10 +86,10 @@ clear unwanted_DBS noisy_chns
 
 tic
 [t_minmax_reach_normal, ~, t_minmax_reach_mild, ~, t_minmax_reach_moderate, ~] = goodSKTTrials_reachReturn_tcritiria(animal);
-for ci = 2 : length(cond_cell)
+for ci = 1 : length(cond_cell)
     pdcond = cond_cell{ci};
     % each event Phase
-    for ei = 4: length(EventPhases)
+    for ei = 1: length(EventPhases)
         event = EventPhases{ei};
         disp([animal '-' pdcond '-' event])
         [align2, t_AOI, align2name] = SKTEventPhase_align2_tAOI_extract(event, animal, pdcond);
