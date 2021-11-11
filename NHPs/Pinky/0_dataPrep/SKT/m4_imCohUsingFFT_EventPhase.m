@@ -30,8 +30,6 @@ savefolder = codecorresfolder;
 % input folder: extracted raw rest data with grayMatter
 inputfolder = fullfile(codecorresParentfolder, 'm2_SKTData_SelectTrials');
 
-[pathstr,~,~] = fileparts( codecorresParentfolder );
-inputfolder_Rest = fullfile(pathstr, 'Rest', 'm3_restData_rmChns_avgArea');
 
 fig_left = 50;
 fig_bottom = 50;
@@ -84,61 +82,12 @@ clear unwanted_DBS noisy_chns notInterested_chns
 
 for ei = 1: length(EventPhases)
     event = EventPhases{ei};
-    if strcmpi(event, 'preMove')
-        align2 = SKTEvent.TargetOnset;
-        t_AOI = [-0.8 -0.6];
-    end
-    if strcmpi(event, 'Anticipated')
-        align2 = SKTEvent.TargetOnset;
-        t_AOI = [-0.2 0];
-    end
-    if strcmpi(event, 'earlyReach')
-        align2 = SKTEvent.ReachOnset;
-        t_AOI = [0 0.2];
-    end
-    if strcmpi(event, 'Return')
-        align2 = SKTEvent.ReturnOnset;
-        t_AOI = [0 0.2];
-    end
     
-    if strcmpi(event, 'lateReach')
-        align2 = SKTEvent.Reach;
-        t_AOI = [-0.2 0];
-    end
     
-
     % SKT phase
     for ci = 1 : length(cond_cell)
         pdcond = cond_cell{ci};
-        align2name = char(align2);
-        
-        if strcmpi(event, 'preMove')
-            if strcmpi(animal, 'Kitty') && strcmpi(pdcond, 'normal')
-                align2 = SKTEvent.TargetOnset;
-                t_AOI = [0.2 0.4];
-                align2name = 'StartTrial';
-            else
-                align2 = SKTEvent.TargetOnset;
-                t_AOI = [-0.8 -0.6];
-                align2name = char(align2);
-            end
-        end
-        
-        if strcmpi(event, 'Anticipated')
-            if strcmpi(animal, 'Kitty') && strcmpi(pdcond, 'normal')
-                align2 = SKTEvent.ReachOnset;
-                t_AOI = [-0.2 0];
-                align2name = char(align2);
-            else
-                align2 = SKTEvent.TargetOnset;
-                t_AOI = [-0.2 0];
-                align2name = char(align2);
-            end
-        end
-        
-        if strcmpi(align2, 'Reach')
-            align2name = 'Touch';
-        end
+        [align2, t_AOI, align2name] = SKTEventPhase_align2_tAOI_extract(event, animal, pdcond);
         
         
         savefile_prefix = fullfile(savefolder, [animal '_' pdcond ]);
