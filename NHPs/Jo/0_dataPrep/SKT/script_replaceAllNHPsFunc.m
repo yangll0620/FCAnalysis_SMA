@@ -1,4 +1,4 @@
-str = input('input function name: ','s'); 
+str = input('input function name (without m): ','s'); 
 filename = [str '.m'];
 
 % Code starting here

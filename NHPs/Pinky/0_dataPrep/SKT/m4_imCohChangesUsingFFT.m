@@ -120,7 +120,7 @@ for ci = 1 : length(cond_cell)
             [nchns, ~, ntrials] = size(lfptrials);
             
             if ~exist('iCoh_rest', 'var') % deal with  Rest data once
-                disp('seg2ShortSegments-imCohRest_FFT_NormalizedAMP');
+                disp(['iCoh_rest Calculate in ' pdcond]);
                 files_Rest = dir(fullfile(inputfolder_Rest, ['*_' pdcond '_*.mat']));
                 [lfpdata_rest, fs_rest, T_chnsarea_rest]= seg2ShortSegments(files_Rest, tdur_trial(2) - tdur_trial(1));
                 

@@ -1,4 +1,4 @@
-function m4_radarGraphofPhase()
+function m5_radarGraphofPhase()
 %% folders generate
 % the full path and the name of code file without suffix
 codefilepath = mfilename('fullpath');
@@ -27,14 +27,19 @@ savefolder = codecorresfolder;
 presentName = 'trialPhaseDiff';
 
 %%  input setup
-inputfolder_SKT = fullfile(codecorresParentfolder, 'm2_segSKTData_SelectTrials_goodReach');
-% input folder: extracted raw rest data with grayMatter
-% switch lower(animal)
-%     case 'jo'
-%         inputfolder_SKT = fullfile(codecorresParentfolder, 'm2_SKTData_SelectTrials');
-%     case 'kitty'
-%         inputfolder_SKT = fullfile(codecorresParentfolder, 'm2_segSKTData_SelectTrials_goodReach');
-% end
+segVFolder = false;
+if contains(codefilepath, 'SKT_SegV')
+    segVFolder = true;
+end
+
+if(segVFolder)
+    inputfolder_SKTlfp = fullfile(codecorresParentfolder, 'm2_segSKTData_SelectTrials_goodReach');
+else
+    inputfolder_SKTlfp = fullfile(codecorresParentfolder, 'm2_SKTData_SelectTrials');
+end
+inputfolder_SKTiCoh = fullfile(codecorresParentfolder, 'm4_imCohUsingFFT_EventPhase');
+
+
 
 [pathstr,~,~] = fileparts( codecorresParentfolder );
 inputfolder_Rest = fullfile(pathstr, 'Rest', 'm3_restData_rmChns_avgArea');
@@ -48,17 +53,14 @@ f_AOI = [8 40];
 
 fig_left = 50;
 fig_bottom = 50;
-fig_width = 1200;
-fig_height = 600;
+fig_width = 800;
+fig_height = 800;
 
 image_type = 'tif';
 
 % plot setup
-ylimvec = [-pi pi];
-ytickvec = [-pi: pi/2 : pi];
-yticklabelvec = {'-\pi', '-\pi/2', '0', '\pi/2', '\pi'};
-xlabelname = 'trial number';
-ylabelname = 'phase difference (radian)';
+xlabelname = 'cos \Delta\Phi';
+ylabelname = 'sin \Delta\Phi';
 
 color_separate = 'k';
 
@@ -96,7 +98,7 @@ clear unwanted_DBS noisy_chns
 
 tic
 [t_minmax_reach_normal, ~, t_minmax_reach_mild, ~, t_minmax_reach_moderate, ~] = goodSKTTrials_reachReturn_tcritiria(animal);
-for ci = 2 : length(cond_cell)
+for ci = 1 : length(cond_cell)
     pdcond = cond_cell{ci};
     subsavefolder = fullfile(savefolder, pdcond);
     if ~exist(subsavefolder, 'dir')
@@ -109,7 +111,7 @@ for ci = 2 : length(cond_cell)
         disp([animal '-' pdcond '-' event])
         [align2, t_AOI, align2name] = SKTEventPhase_align2_tAOI_extract(event, animal, pdcond);
         
-        savefile = fullfile(savefolder, [animal  '_' pdcond '_' event '_align2' char(align2) '.mat']);
+        savefile = fullfile(savefolder, [animal  '_' pdcond '_' event '_align2' align2name '.mat']);
         if ~exist(savefile)
             switch lower(pdcond)
                 case 'normal'
@@ -123,8 +125,12 @@ for ci = 2 : length(cond_cell)
                     tdur_trial = tdur_trial_moderate;
             end
             
-            files = dir(fullfile(inputfolder_SKT, ['*_' pdcond '_*.mat']));
-            [lfptrials, fs_SKT, T_chnsarea_SKT] = lfpseg_selectedTrials_align2(files, align2, tdur_trial, t_minmax_reach);
+            files = dir(fullfile(inputfolder_SKTlfp, ['*_' pdcond '_*.mat']));
+            if segVFolder
+                [lfptrials, fs_SKT, T_chnsarea_SKT] = lfpseg_selectedTrials_align2(files, align2, tdur_trial, t_minmax_reach);
+            else
+                [lfptrials, fs_SKT, T_chnsarea_SKT] = lfp_goodTrials_align2(files, align2, tdur_trial, t_minmax_reach);
+            end
             
             [nchns, ~, ntrials] = size(lfptrials);
            
@@ -133,15 +139,17 @@ for ci = 2 : length(cond_cell)
                 lfptrialsi = squeeze(lfptrials(chni, :, :)); 
                 for chnj = chni + 1 : nchns
                     lfptrialsj = squeeze(lfptrials(chnj, :, :));
-                    [deltaPhis, f_selected] = deltaPhi_eachTrial(lfptrialsi, lfptrialsj, fs_SKT, twin, toverlap, f_AOI, t_AOI, tdur_trial);
+                    [deltaPhis, deltaAmps, f_selected] = deltaPhi_eachTrial(lfptrialsi, lfptrialsj, fs_SKT, twin, toverlap, f_AOI, t_AOI, tdur_trial);
                     
                     if ~exist('deltaPhis_allchns', 'var')
                         nfs = size(deltaPhis, 1);
                         deltaPhis_allchns = zeros(nchns, nchns, nfs, ntrials);
+                        deltaAmps_allchns = zeros(nchns, nchns, nfs, ntrials);
                         clear nfs
                     end
                     deltaPhis_allchns(chni, chnj, :, :) = deltaPhis;
-                    clear deltaPhis lfptrialsj
+                    deltaAmps_allchns(chni, chnj, :, :) = deltaAmps;
+                    clear deltaPhis deltaAmps lfptrialsj
                 end
                 clear lfptrialsi
             end
@@ -152,6 +160,7 @@ for ci = 2 : length(cond_cell)
             chnPairNames = {};
             nfs = size(deltaPhis_allchns, 3);
             deltaPhis_trialsFlat = zeros(nchns * (nchns -1)/2, nfs, ntrials);
+            deltaAmps_trialsFlat = zeros(nchns * (nchns -1)/2, nfs, ntrials);
             ci = 0;
             for chni = 1 : nchns -1
                 for chnj = chni + 1  : nchns
@@ -159,13 +168,14 @@ for ci = 2 : length(cond_cell)
                     
                     ci = ci + 1;
                     deltaPhis_trialsFlat(ci, :, :) = deltaPhis_allchns(chni, chnj, :, :);
+                    deltaAmps_trialsFlat(ci, :, :) = deltaAmps_allchns(chni, chnj, :, :);
                 end
             end
-            clear nfs ci deltaPhis_allchns
+            clear nfs ci deltaPhis_allchns deltaAmps_allchns
             
             
             % save data
-            save(savefile, 'deltaPhis_trialsFlat', 'f_selected',  'chnPairNames')
+            save(savefile, 'deltaPhis_trialsFlat', 'deltaAmps_trialsFlat', 'f_selected',  'chnPairNames')
             
             clear t_minmax_reach tdur_trial
             clear lfptrials fs_SKT T_chnsarea_SKT iCoh_trial f_selected_trial
@@ -177,7 +187,16 @@ for ci = 2 : length(cond_cell)
         end
         
         % deltaPhis_trialsFlat: nchnPairs * nfs * ntrials
-        load(savefile, 'deltaPhis_trialsFlat', 'f_selected', 'chnPairNames');
+        load(savefile, 'deltaPhis_trialsFlat', 'deltaAmps_trialsFlat', 'f_selected', 'chnPairNames');
+        ntrials = size(deltaPhis_trialsFlat, 3);
+        % SKTiCoh
+        vars_SKTiCoh = load(fullfile(inputfolder_SKTiCoh, [animal '_' pdcond '_' event '_align2' align2name '.mat']));
+        if(~(isequal(round(vars_SKTiCoh.f_selected,2), round(f_selected,2))  && vars_SKTiCoh.ntrials == ntrials))
+            disp('not equal in SKTiCoh for f_selected or ntrials')
+            continue;
+        end
+        iCohSKT = vars_SKTiCoh.iCoh_1time;
+        clear vars_SKTiCoh
         
         removedChns_mask = cellfun(@(x) contains(x, removed_chns), chnPairNames);
         M1DBS_mask = cellfun(@(x) contains(x, 'M1-stn') || contains(x, 'M1-gp'), chnPairNames);
@@ -187,39 +206,59 @@ for ci = 2 : length(cond_cell)
         
         showData = deltaPhis_trialsFlat(usedChnPairsMask, :, :); 
         chnPairNames_show = chnPairNames(usedChnPairsMask);
+        iCohSKT_show = iCohSKT(usedChnPairsMask, :);
         
         % plot & save
-        [nchnPairs, nfs, ntrials] = size(showData); % showData: nchnPairs * nfs * ntrials
-        xlimvec = [1 ntrials + 1];
+        [nchnPairs, nfs, ~] = size(showData); % showData: nchnPairs * nfs * ntrials
         for chnPairi = 1 : nchnPairs
             chnPairName = chnPairNames_show{chnPairi};
             for nfi = 1 : nfs
-                x = squeeze(showData(chnPairi, nfi, :));
+                phitmp = squeeze(showData(chnPairi, nfi, :));
+                x = cos(phitmp);
+                y = sin(phitmp);
                 f = f_selected(nfi);
                 
                 figure;
                 set(gcf, 'PaperUnits', 'points',  'Position', [fig_left fig_bottom fig_width fig_height]);
-                set(gca, 'Position', [0.09 0.05 0.9 0.85])
-                
-                plot(x, '.')
-                set(gca, 'XLim', xlimvec, 'YLim', ylimvec, 'YTick', ytickvec, 'YTickLabel', yticklabelvec);
+                set(gca, 'Position', [0.05 0.05 0.85 0.85])
+                               
+                plot(x, y, '.')
+                set(gca, 'XLim', [-1.05 1.05], 'YLim', [-1.05 1.05], 'XTick', [], 'YTick', []);
+                set(gca, 'XAxisLocation', 'origin', 'YAxisLocation', 'origin');
                 xlabel(xlabelname)
                 ylabel(ylabelname)
+                
 
                 titlename = [animal '-'  pdcond '-'  event ' Trial Phase Differences of ' ...
-                    chnPairName ' at ' num2str(f) 'Hz'];
+                    chnPairName ' at ' num2str(round(f)) 'Hz'];
                 title(titlename, 'FontSize', 15, 'FontWeight', 'normal')
                 
                 % subtitle
                 titleH = get(gca, 'title');
                 titlePos = get(titleH, 'Position');
-                set(titleH, 'Position', [round(titlePos(1)), titlePos(2)+ 0.3]); 
+                set(titleH, 'Position', [titlePos(1), titlePos(2) + 0.1]); 
                 subtitlename = [event '['  num2str(t_AOI(1)) ' ' num2str(t_AOI(2))   ']s, align2 = ' char(align2) ', ntrials = ' num2str(ntrials)];
-                subtitlepos = [round(titlePos(1)), titlePos(2)];
+                subtitlepos = [-0.5, titlePos(2) + 0.05];
                 text(subtitlepos(1), subtitlepos(2), subtitlename, 'FontSize', 12);
                 
+                
+                % plot icoh if sig
+                sig = false;
+                icoh = abs(iCohSKT_show(chnPairi, nfi));
+                if(icoh > 0)
+                    sig = true;
+                end
+                if sig
+                    text(0.8, 0.9, ['icoh = ' num2str(round(icoh, 2)) '*'], 'FontSize', 12);
+                end
+                clear icoh
+                
                 % save
-                savefile =  fullfile(subsavefolder, [animal presentName '_pair' chnPairName '_' num2str(round(f))  'Hz_' event '_' pdcond '_align2' char(align2) '.' image_type]);
+                sigstr = '';
+                if sig
+                    sigstr = '_sig';
+                end
+                savefile =  fullfile(subsavefolder, [animal presentName '_pair' chnPairName '_' num2str(round(f))  'Hz_' event '_' pdcond '_align2' char(align2) sigstr '.' image_type]);
                 saveas(gcf,savefile, image_type);
                 
                 close all
@@ -231,16 +270,18 @@ for ci = 2 : length(cond_cell)
             end
             
             clear chnPairName
-        end
-
-        
+        end 
     end
     
     clear subsavefolder
 end
 
+% copy code to savefolder
+status = copyfile([codefilepath '.m'], fullfile(savefolder, [codefilepath '.m']));
+disp(['copied code status = ' num2str(status)])
 
-function [deltaPhis, f_selected] = deltaPhi_eachTrial(lfptrialsi, lfptrialsj, fs, twin, toverlap, f_AOI, t_AOI, tdur_trial)
+
+function [deltaPhis, deltaAmps, f_selected] = deltaPhi_eachTrial(lfptrialsi, lfptrialsj, fs, twin, toverlap, f_AOI, t_AOI, tdur_trial)
 %
 %   Input:
 %       lfptrialsi, lfptrialsj: lfp data for channel i and j (ntemp * ntrials)
@@ -256,6 +297,7 @@ function [deltaPhis, f_selected] = deltaPhi_eachTrial(lfptrialsi, lfptrialsj, fs
 %       deltaPhis: deltaPhi for each trial (nfs  * ntrials)
 
 deltaPhis = [];
+deltaAmps = [];
 [~, ntrials] = size(lfptrialsi);
 nwin = twin * fs;
 noverlap = (toverlap * fs);
@@ -277,11 +319,15 @@ for triali = 1: ntrials
     
     phix = angle(Sx(idx_f, idx_t));
     phiy = angle(Sy(idx_f, idx_t));
+    ampx = abs(Sx(idx_f, idx_t));
+    ampy = abs(Sy(idx_f, idx_t));
     deltaPhi = mean(phix - phiy, 2);
+    deltaAmp = mean(ampx ./ ampy, 2);
     deltaPhis = cat(2, deltaPhis, deltaPhi);
+    deltaAmps = cat(2, deltaAmps, deltaAmp);
     
     
     clear x y Sx fx tx Sy
     clear phix phiy deltaPhi
-    clear ampx ampy
+    clear ampx ampy deltaAmp
 end

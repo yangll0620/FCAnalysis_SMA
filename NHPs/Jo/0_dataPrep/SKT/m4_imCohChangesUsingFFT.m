@@ -27,13 +27,11 @@ savefolder = codecorresfolder;
 
 %%  input setup
 inputfolder_SKT = fullfile(codecorresParentfolder, 'm2_segSKTData_SelectTrials_goodReach');
-% input folder: extracted raw rest data with grayMatter
-% switch lower(animal)
-%     case 'jo'
-%         inputfolder_SKT = fullfile(codecorresParentfolder, 'm2_SKTData_SelectTrials');
-%     case 'kitty'
-%         inputfolder_SKT = fullfile(codecorresParentfolder, 'm2_segSKTData_SelectTrials_goodReach');
-% end
+files = dir(fullfile(inputfolder_SKT, ['*.mat']));
+if(isempty(files))
+    inputfolder_SKT = fullfile(codecorresParentfolder, 'm2_SKTData_SelectTrials');
+end
+
 
 [pathstr,~,~] = fileparts( codecorresParentfolder );
 inputfolder_Rest = fullfile(pathstr, 'Rest', 'm3_restData_rmChns_avgArea');
@@ -52,30 +50,28 @@ fig_height = 600;
 
 image_type = 'tif';
 
-shuffleN_psedoTest = 500;
-
-color_separate = 'k';
+shuffleN_psedoTest = 100;
 
 if strcmpi(animal, 'bug')
-    tdur_trial_normal = [-0.5 0.5];
-    tdur_trial_mild = [-0.5 0.5];
+    tdur_trial_normal = [-1 1];
+    tdur_trial_mild = [-1 1];
 end
 if strcmpi(animal, 'jo')
-    tdur_trial_normal = [-1 0.5];
-    tdur_trial_mild = [-1 0.5];
-    tdur_trial_moderate = [-1 0.5];
+    tdur_trial_normal = [-1 1];
+    tdur_trial_mild = [-1 1];
+    tdur_trial_moderate = [-1 1];
     
 end
 
 if strcmpi(animal, 'kitty') % Kitty not have mild
-    tdur_trial_normal = [-1 0.5];
-    tdur_trial_moderate = [-1 0.5];
+    tdur_trial_normal = [-1 1];
+    tdur_trial_moderate = [-1 1];
 end
 
 if strcmpi(animal, 'pinky')
-    tdur_trial_normal = [-0.5 0.5];
-    tdur_trial_mild = [-0.5 0.5];
-    tdur_trial_moderate = [-0.5 0.5];
+    tdur_trial_normal = [-1 1];
+    tdur_trial_mild = [-1 1];
+    tdur_trial_moderate = [-1 1];
 end
 
 
@@ -112,8 +108,16 @@ for ci = 1 : length(cond_cell)
                     tdur_trial = tdur_trial_moderate;
             end
             
-            files = dir(fullfile(inputfolder_SKT, ['*_' pdcond '_*.mat']));
-            [lfptrials, fs_SKT, T_chnsarea_SKT] = lfpseg_selectedTrials_align2(files, align2, tdur_trial, t_minmax_reach);
+            files = dir(fullfile(inputfolder_SKT, ['*_' pdcond '_*.mat']));       
+            switch lower(animal)
+                case 'pinky'
+                    [lfptrials, fs_SKT, T_chnsarea_SKT] = lfp_goodTrials_align2(files, align2, tdur_trial, t_minmax_reach);
+                case 'jo'
+                    [lfptrials, fs_SKT, T_chnsarea_SKT] = lfp_goodTrials_align2(files, align2, tdur_trial, t_minmax_reach);
+                otherwise
+                    [lfptrials, fs_SKT, T_chnsarea_SKT] = lfpseg_selectedTrials_align2(files, align2, tdur_trial, t_minmax_reach);
+            end
+                   
             
             [nchns, ~, ntrials] = size(lfptrials);
             
@@ -137,6 +141,23 @@ for ci = 1 : length(cond_cell)
                 toc
             end
             
+            if ~isequal(T_chnsarea_rest.brainarea, T_chnsarea_SKT.brainarea)
+                if(all(contains(T_chnsarea_rest.brainarea, T_chnsarea_SKT.brainarea))) % all rest chn in SKT, delete chn in SKT
+                    mask_inRest = contains(T_chnsarea_SKT.brainarea, T_chnsarea_rest.brainarea);
+                    T_chnsarea_SKT = T_chnsarea_SKT(mask_inRest, :);
+                    lfptrials = lfptrials(mask_inRest, : , :);
+                    nchns = size(lfptrials, 1);
+                    disp(['delete chn in T_chnsarea_SKT ' pdcond ' ' event ])
+                end
+                
+                % check again
+                if( ~isequal(T_chnsarea_rest.brainarea, T_chnsarea_SKT.brainarea))
+                    disp(['T_chnsarea_rest ~= T_chnsarea_SKT ' pdcond ' ' event ])
+                    continue;
+                end
+            end
+            
+            % cacluate iCoh_trial: nchns * nchns * nf
             [iCoh_trial, f_selected_trial] = imCohSKT_FFT_NormalizedAMP(lfptrials, twin, toverlap, fs_SKT, f_AOI, t_AOI, tdur_trial);
             
             % check consistent between trial and rest for f_selected and T_chnsarea
@@ -144,10 +165,7 @@ for ci = 1 : length(cond_cell)
                 disp(['f_selected_trial ~= f_selected_rest ' pdcond ' ' event])
                 continue;
             end
-            if ~isequal(T_chnsarea_rest.brainarea, T_chnsarea_SKT.brainarea)
-                disp(['T_chnsarea_rest ~= T_chnsarea_SKT ' pdcond ' ' event ])
-                continue;
-            end
+            
             f_selected = f_selected_trial;
             T_chnsarea = T_chnsarea_SKT;
             
@@ -297,7 +315,7 @@ for ci = 1 : length(cond_cell)
             end
             
             if ~strcmp(chnPair_prev, '') && ~strcmp(chnPair_prev, chnPair) % a new site pairs
-                hold on; plot(gca, xlim, [(ci + ci -1)/2 (ci + ci -1)/2], [color_separate '--'])
+                hold on; plot(gca, xlim, [(ci + ci -1)/2 (ci + ci -1)/2], 'w--')
                 % Create line
             end
             chnPair_prev = chnPair;
@@ -311,7 +329,9 @@ for ci = 1 : length(cond_cell)
     end
 end
 
-copyMFile2savefolder();
+% copy code to savefolder
+status = copyfile([codefilepath '.m'], fullfile(savefolder, [codefilepath '.m']));
+disp(['copied code status = ' num2str(status)])
 
 
 function [lfpdata, fs, T_chnsarea]= seg2ShortSegments(files, twin)
