@@ -307,5 +307,6 @@ for ei = 1: length(EventPhases)
 end
 
 %% copy code to savefolder
-status = copyfile(fullfile(pwd, [codefilepath '.m']), fullfile(savefolder, [codefilepath '.m']));
+[~, codefilename]= fileparts(codefilepath);
+status = copyfile([codefilepath '.m'], fullfile(savefolder, [codefilename '.m']));
 disp(['copied code status = ' num2str(status)])
