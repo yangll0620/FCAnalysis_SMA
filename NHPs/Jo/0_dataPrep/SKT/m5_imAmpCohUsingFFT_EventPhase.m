@@ -35,8 +35,6 @@ fig_bottom = 50;
 fig_width = 1200;
 fig_height = 600;
 
-EventPhases = {'preMove'; 'Anticipated';'earlyReach'; 'Return';'lateReach'};
-
 image_type = 'tif';
 
 
@@ -47,6 +45,7 @@ f_AOI = [8 40];
 
 %% Code start here
 cond_cell = cond_cell_extract(animal);
+EventPhases = SKT_eventPhases_extract();
 [t_minmax_reach_normal, t_minmax_return_normal, t_minmax_reach_mild, t_minmax_return_mild, t_minmax_reach_moderate, t_minmax_return_moderate] = ...
     goodSKTTrials_reachReturn_tcritiria(animal);
 if strcmpi(animal, 'bug')

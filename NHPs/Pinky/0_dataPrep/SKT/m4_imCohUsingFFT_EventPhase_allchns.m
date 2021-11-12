@@ -1,4 +1,4 @@
-function m5_imCohUsingFFT_EventPhase()
+function m4_imCohUsingFFT_EventPhase()
 %% folders generate
 % the full path and the name of code file without suffix
 codefilepath = mfilename('fullpath');
@@ -120,36 +120,44 @@ for ei = 1: length(EventPhases)
             
             [lfptrials, fs, T_chnsarea] = lfp_goodTrials_align2(files, align2, tdur_trial, t_minmax_reach);
             
-            [~, ~, ntrials] = size(lfptrials);
+            [nchns, ~, ntrials] = size(lfptrials);
             
             % calculate imaginary of Coherency
             [iCoh_acrossTime, f_selected] = imCohSKT_FFT_NormalizedAMP(lfptrials, twin, toverlap, fs, f_AOI, t_AOI, tdur_trial);
             
-            lfp1 = squeeze(lfptrials(1, :, :));
-            lfp2 = squeeze(lfptrials(10, :, :));
-            [mus, stds] = psedo_SKTLFP_Test_acrossTime(lfp1, lfp2, 100, fs, twin, toverlap, f_AOI, t_AOI - tdur_trial(1));
-            clear lfp1 lfp2
+            nf = size(iCoh_acrossTime, 3);
+            mus = zeros(nchns, nchns, nf);
+            stds = zeros(nchns, nchns, nf);
+            for chni = 1 : nchns -1
+                lfp1 = squeeze(lfptrials(chni, :, :));
+                for chnj = chni + 1 : nchns
+                    lfp2 = squeeze(lfptrials(chnj, :, :));
+                    [mu1d, std1d] = psedo_SKTLFP_Test_acrossTime(lfp1, lfp2, 100, fs, twin, toverlap, f_AOI, t_AOI - tdur_trial(1));
+                    mus(chni, chnj, :) = mu1d;
+                    stds(chni, chnj, :) = std1d;
+                    clear lfp2 mu1d std1d
+                end
+                clear lfp1
+            end
             
             
             % pvalues using permutation test
             [nchns, ~, nf] = size(iCoh_acrossTime);
             pvals = zeros(size(iCoh_acrossTime));
             for fi = 1 : nf
-                
-                mu = mus(fi,1);
-                std = stds(fi, 1);
-                pd = makedist('Normal','mu',mu,'sigma',std);
-                
                 for chni = 1: nchns -1
-                    for chnj = chni : nchns
+                    for chnj = chni + 1 : nchns
+                        mu1 = mus(chni, chnj, fi);
+                        std1 = stds(chni, chnj, fi);
+                        pd = makedist('Normal','mu',mu1,'sigma',std1);
+                        
                         x = iCoh_acrossTime(chni, chnj, fi);
                         pvals(chni, chnj, fi) = (1 - cdf(pd,abs(x)));
                         pvals(chnj, chni, fi) = pvals(chni, chnj, fi);
                         clear x
+                        clear mu std pd
                     end
                 end
-                
-                clear mu std pd
             end
             % Benjamini & Hochberg (1995) procedure for controlling the false discovery rate (FDR)
             [h, crit_p, adj_ci_cvrg, adj_p]=fdr_bh(pvals);

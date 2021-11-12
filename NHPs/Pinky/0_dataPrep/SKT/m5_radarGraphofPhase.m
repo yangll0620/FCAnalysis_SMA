@@ -2,6 +2,7 @@ function m5_radarGraphofPhase()
 %% folders generate
 % the full path and the name of code file without suffix
 codefilepath = mfilename('fullpath');
+[~, codefilename]= fileparts(codefilepath);
 
 % find the codefolder
 idx = strfind(codefilepath, 'code');
@@ -64,31 +65,10 @@ ylabelname = 'sin \Delta\Phi';
 
 color_separate = 'k';
 
-if strcmpi(animal, 'bug')
-    tdur_trial_normal = [-0.5 0.5];
-    tdur_trial_mild = [-0.5 0.5];
-end
-if strcmpi(animal, 'jo')
-    tdur_trial_normal = [-1 0.5];
-    tdur_trial_mild = [-1 0.5];
-    tdur_trial_moderate = [-1 0.5];
-    
-end
-
-if strcmpi(animal, 'kitty') % Kitty not have mild
-    tdur_trial_normal = [-1 0.5];
-    tdur_trial_moderate = [-1 0.5];
-end
-
-if strcmpi(animal, 'pinky')
-    tdur_trial_normal = [-0.5 0.5];
-    tdur_trial_mild = [-0.5 0.5];
-    tdur_trial_moderate = [-0.5 0.5];
-end
-
 
 %% Code Start Here
 cond_cell = cond_cell_extract(animal);
+[tdur_trial_normal, tdur_trial_mild, tdur_trial_moderate] = SKT_tdur_extact(animal);
 
 unwanted_DBS = unwanted_DBS_extract(animal);
 noisy_chns = noisy_chns_extract(animal);
@@ -98,7 +78,7 @@ clear unwanted_DBS noisy_chns
 
 tic
 [t_minmax_reach_normal, ~, t_minmax_reach_mild, ~, t_minmax_reach_moderate, ~] = goodSKTTrials_reachReturn_tcritiria(animal);
-for ci = 1 : length(cond_cell)
+for ci = 2 : length(cond_cell)
     pdcond = cond_cell{ci};
     subsavefolder = fullfile(savefolder, pdcond);
     if ~exist(subsavefolder, 'dir')
@@ -108,7 +88,7 @@ for ci = 1 : length(cond_cell)
     % each event Phase
     for ei = 1: length(EventPhases)
         event = EventPhases{ei};
-        disp([animal '-' pdcond '-' event])
+        disp([codefilename ': ' animal '-' pdcond '-' event])
         [align2, t_AOI, align2name] = SKTEventPhase_align2_tAOI_extract(event, animal, pdcond);
         
         savefile = fullfile(savefolder, [animal  '_' pdcond '_' event '_align2' align2name '.mat']);
@@ -276,8 +256,8 @@ for ci = 1 : length(cond_cell)
     clear subsavefolder
 end
 
-% copy code to savefolder
-status = copyfile([codefilepath '.m'], fullfile(savefolder, [codefilepath '.m']));
+%% copy code to savefolder
+status = copyfile([codefilepath '.m'], fullfile(savefolder, [codefilename '.m']));
 disp(['copied code status = ' num2str(status)])
 
 

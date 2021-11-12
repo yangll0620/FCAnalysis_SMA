@@ -277,8 +277,9 @@ for ci = 1 : length(cond_cell)
     clear subsavefolder
 end
 
-% copy code to savefolder
-status = copyfile([codefilepath '.m'], fullfile(savefolder, [codefilepath '.m']));
+%% copy code to savefolder
+[~, codefilename]= fileparts(codefilepath);
+status = copyfile([codefilepath '.m'], fullfile(savefolder, [codefilename '.m']));
 disp(['copied code status = ' num2str(status)])
 
 

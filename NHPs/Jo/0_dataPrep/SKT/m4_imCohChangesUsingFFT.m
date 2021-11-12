@@ -24,6 +24,7 @@ animal = animal_extract(codecorresfolder);
 %% save setup
 savefolder = codecorresfolder;
 
+copyfile2folder(codefilepath, savefolder)
 
 %%  input setup
 inputfolder_SKT = fullfile(codecorresParentfolder, 'm2_segSKTData_SelectTrials_goodReach');
@@ -52,27 +53,7 @@ image_type = 'tif';
 
 shuffleN_psedoTest = 100;
 
-if strcmpi(animal, 'bug')
-    tdur_trial_normal = [-1 1];
-    tdur_trial_mild = [-1 1];
-end
-if strcmpi(animal, 'jo')
-    tdur_trial_normal = [-1 1];
-    tdur_trial_mild = [-1 1];
-    tdur_trial_moderate = [-1 1];
-    
-end
-
-if strcmpi(animal, 'kitty') % Kitty not have mild
-    tdur_trial_normal = [-1 1];
-    tdur_trial_moderate = [-1 1];
-end
-
-if strcmpi(animal, 'pinky')
-    tdur_trial_normal = [-1 1];
-    tdur_trial_mild = [-1 1];
-    tdur_trial_moderate = [-1 1];
-end
+[tdur_trial_normal, tdur_trial_mild, tdur_trial_moderate] = SKT_tdur_extact(animal);
 
 
 %% Code Start Here
@@ -329,9 +310,6 @@ for ci = 1 : length(cond_cell)
     end
 end
 
-% copy code to savefolder
-status = copyfile([codefilepath '.m'], fullfile(savefolder, [codefilepath '.m']));
-disp(['copied code status = ' num2str(status)])
 
 
 function [lfpdata, fs, T_chnsarea]= seg2ShortSegments(files, twin)

@@ -1,4 +1,4 @@
-function [align2, t_AOI, align2name] = SKTEventPhase_align2_tAOI_extract(event, animal, pdcond)
+function [align2, t_AOI, align2name] = SKT_EventPhase_align2_tAOI_extract(event, animal, pdcond)
 
 if strcmpi(event, 'preMove')
     align2 = SKTEvent.TargetOnset;
