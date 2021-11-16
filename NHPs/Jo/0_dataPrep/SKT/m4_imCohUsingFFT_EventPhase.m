@@ -27,6 +27,8 @@ savefolder = codecorresfolder;
 
 copyfile2folder(codefilepath, savefolder);
 
+ciCohPhasefile_prefix = 'ciCohPhasefile';
+
 %%  input setup
 
 % input folder: extracted raw rest data with grayMatter
@@ -61,39 +63,88 @@ notAOI_chns = notInterested_chns_extract(animal);
 removed_chns = [unwanted_DBS noisy_chns notAOI_chns];
 clear unwanted_DBS noisy_chns
 
-
-
-
-
 for ei = 1: length(EventPhases)
     event = EventPhases{ei};
     for ci = 1 : length(cond_cell)
         pdcond = cond_cell{ci};
         [align2, t_AOI, align2name] = SKT_EventPhase_align2_tAOI_extract(event, animal, pdcond);
         
-        files = dir(fullfile(inputfolder, ['*_' pdcond '_*.mat']));
-        if isempty(files)
-            disp('files is empty!')
-            continue;
+        ciCohPhasefile = fullfile(savefolder, [ciCohPhasefile_prefix  '_' pdcond '_' event '_align2' align2name '.mat']);
+        if(~exist(ciCohPhasefile, 'file'))
+            eval(['t_minmax_reach = t_minmax_reach_' pdcond ';']);
+            [deltaphis_allChnsTrials, ciCoh, T_chnsarea, ntrials, f_selected]= ciCoh_trialDeltaPhi( inputfolder, pdcond, align2, t_AOI, f_AOI, t_minmax_reach);
+            save(ciCohPhasefile, 'deltaphis_allChnsTrials', 'ciCoh', 'T_chnsarea', 'ntrials', 'f_selected');
+            clear('deltaphis_allChnsTrials', 'ciCoh', 'T_chnsarea', 'ntrials', 'f_selected');
+            clear t_minmax_reach
         end
+        load(ciCohPhasefile, 'deltaphis_allChnsTrials', 'ciCoh', 'T_chnsarea', 'ntrials', 'f_selected');
         
-        eval(['t_minmax_reach = t_minmax_reach_' pdcond ';'])
-        eval(['t_minmax_return = t_minmax_return_' pdcond ';'])
         
-        [lfptrials, fs, T_chnsarea] = lfp_goodTrials_align2(files, align2, [t_AOI(1) t_AOI(2)], t_minmax_reach);
-        
-        [ciCoh_NoAmp, f_selected] = ciCohSKT_FFT_NoAmp(lfptrials, fs, f_AOI);
-        
-        nchns = size(lfptrials,1);
-        phis_allchns = [];
-        amps_allchns = [];
-        for chni = 1: nchns - 1
-            for chnj = chni + 1 : nchns
-                [phis, amps, ~] = phaseAmp_SKTPerTrial_FFT(lfptrials, fs, f_AOI);
-            end
-        end
+        clear pdcond align2 t_AOI align2name ciCohPhasefile
+        clear('deltaphis_allChnsTrials', 'ciCoh', 'T_chnsarea', 'ntrials', 'f_selected');
     end
 end
 
 
+
+% Histogram chart in polar coordinatescollapse
+maxV = max(ciCoh(ciCoh >0));
+[chi_maxV, chj_maxV, freqi_maxV] = ind2sub(size(ciCoh), find(ciCoh == maxV));
+minV = min(ciCoh(ciCoh >0));
+[chi_minV, chj_minV, freqi_minV] = ind2sub(size(ciCoh), find(ciCoh == minV));
+deltaPhases_maxV = squeeze(deltaphis_allchns(chi_maxV, chj_maxV, freqi_maxV, :));
+deltaPhases_minV = squeeze(deltaphis_allchns(chi_minV, chj_minV, freqi_minV, :));
+clear minV chi_minV chj_minV freqi_minV
+clear maxV chi_maxV chj_maxV freqi_maxV
+
+nbins = 5;
+figure
+polarhistogram(deltaPhases_maxV,nbins);
+figure
+polarhistogram(deltaPhases_minV,nbins);
+
+
+function [deltaphis_allChnsTrials, ciCoh, T_chnsarea, ntrials, f_selected]= ciCoh_trialDeltaPhi( inputfolder, pdcond, align2, t_AOI, f_AOI, t_minmax_reach)
+%
+%
+%   
+%   Output:
+%       deltaphis_allChnsTrials: nchns * nchns * nf * ntrials
+%       ciCoh:  nchns * nchns * nf
+%       f_selected: nf * 1
+%       T_chnsarea: nchns * 5
+
+
+files = dir(fullfile(inputfolder, ['*_' pdcond '_*.mat']));
+if isempty(files)
+    disp('files is empty!')
+    deltaphis_allChnsTrials = [];
+    ciCoh = [];
+    T_chnsarea = [];
+    ntrials = [];
+    f_selected = [];
+    
+    return;
+end
+
+[lfptrials, fs, T_chnsarea] = lfp_goodTrials_align2(files, align2, [t_AOI(1) t_AOI(2)], t_minmax_reach);
+
+% extract ciCoh
+[ciCoh, f_selected] = ciCohSKT_FFT_NoAmp(lfptrials, fs, f_AOI);
+
+% extract deltaphis for all chns and trials
+[nchns, ~, ntrials] = size(lfptrials);
+nf = length(f_selected);
+deltaphis_allChnsTrials = zeros(nchns, nchns, nf, ntrials);
+for chni = 1: nchns - 1
+    lfptriali = squeeze(lfptrials(chni, :, :));
+    [phisi, ~, ~] = phaseAmp_SKTPerTrial_FFT(lfptriali, fs, f_AOI);
+    for chnj = chni + 1 : nchns
+        lfptrialj = squeeze(lfptrials(chnj, :, :));
+        [phisj, ~, ~] = phaseAmp_SKTPerTrial_FFT(lfptrialj, fs, f_AOI);
+        deltaphis_allChnsTrials(chni, chnj, :, :) = phisi - phisj;
+        clear lfptrialj phisj
+    end
+    clear lfptriali phisi
+end
 

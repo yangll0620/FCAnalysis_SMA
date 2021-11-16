@@ -9,7 +9,7 @@ function [ciCoh_NoAmp, f_selected] = ciCohSKT_FFT_NoAmp(lfpdata, fs, f_AOI)
 %       f_AOI: frequencies duration of interest, i.e. f_AOI = [8 40]
 %
 %   Outputs:
-%       ciCoh_NoAmp: absolute imaginery coherence nchns * nchns * nf
+%       ciCoh_NoAmp: absolute imaginery coherence nchns * nchns * nf, Upper triangle
 
 
 nchns = size(lfpdata, 1);
@@ -36,16 +36,13 @@ nf = size(phis_allchns, 2);
 ciCoh_NoAmp = zeros(nchns, nchns, nf);
 for chni = 1: nchns -1
     phii = squeeze(phis_allchns(chni, :, :));
-    ciCoh_NoAmp(chni, chni, :) = ones(size(nf, 1));
     for chnj = chni + 1 : nchns
         phij = squeeze(phis_allchns(chnj, :, :));
         
         deltaphi = phii - phij;
         coh = mean(exp(1i * deltaphi), 2);
         ciCoh_NoAmp(chni, chnj, :) = abs(imag(coh) ./ sqrt((1 - real(coh).^2)));
-        
-        ciCoh_NoAmp(chnj, chni, :) = ciCoh_NoAmp(chni, chnj, :);
-        
+
         clear phij deltaphi
     end
     clear phii ampi Gii
