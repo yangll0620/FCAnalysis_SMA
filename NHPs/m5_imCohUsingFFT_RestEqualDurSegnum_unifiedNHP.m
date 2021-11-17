@@ -58,9 +58,18 @@ shuffleN_psedoTest = 500;
 %% Code start here
 cond_cell = cond_cell_extract(animal);
 
+unwanted_DBS = unwanted_DBS_extract(animal);
+noisy_chns = noisy_chns_extract(animal);
+notAOI_chns = notInterested_chns_extract(animal);
+removed_chns = [unwanted_DBS noisy_chns notAOI_chns];
+clear unwanted_DBS noisy_chns
+
 for ci = 1 : length(cond_cell)
     pdcond = cond_cell{ci};
-    
+    subpdsavefolder = fullfile(savefolder, pdcond);
+    if ~exist(subpdsavefolder, 'dir')
+        mkdir(subpdsavefolder);
+    end
     
     % load(and extract) ciCohPhasefile
     ciCohPhasefile = fullfile(savefolder, [ciCohPhasefile_prefix  '_' pdcond  '.mat']);
