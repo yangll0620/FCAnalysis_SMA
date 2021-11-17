@@ -1,4 +1,4 @@
-function [ciCoh_NoAmp, f_selected] = ciCohSKT_FFT_NoAmp(lfpdata, fs, f_AOI)
+function [ciCoh_NoAmp, f_selected] = ciCohSKTAllchns_FFT_NoAmp(lfpdata, fs, f_AOI)
 %
 %   ref: https://yll0620.medium.com/functional-connectivity-measurement-16423fee3581 
 %      treat ntemp as stationary time series, i.e. twin = ntemp, toverlap = 0
