@@ -96,6 +96,10 @@ for ei = 1: length(EventPhases)
             else
                 [lfptrials, fs, T_chnsarea] = lfp_goodTrials_align2(files, align2, [t_AOI(1) t_AOI(2)], t_minmax_reach); % lfptrials: nchns * ntemp * ntrials
             end
+            % remove unused chns
+            removedChns_mask = cellfun(@(x) contains(x, removed_chns), T_chnsarea.brainarea);
+            lfptrials = lfptrials(~removedChns_mask, :, :);
+            T_chnsarea = T_chnsarea(~removedChns_mask, :);
             
             %  extract and save deltaphis_allChnsTrials and cicoh
             [deltaphis_allChnsTrials, ciCoh, f_selected]= ciCoh_trialDeltaPhi(lfptrials, fs, f_AOI);
@@ -120,6 +124,10 @@ for ei = 1: length(EventPhases)
             else
                 [lfptrials, fs, T_chnsarea] = lfp_goodTrials_align2(files, align2, [t_AOI(1) t_AOI(2)], t_minmax_reach); % lfptrials: nchns * ntemp * ntrials
             end
+            % remove unused chns
+            removedChns_mask = cellfun(@(x) contains(x, removed_chns), T_chnsarea.brainarea);
+            lfptrials = lfptrials(~removedChns_mask, :, :);
+            T_chnsarea = T_chnsarea(~removedChns_mask, :);
             
             psedociCoh_extract_save(shuffleN_psedoTest, lfptrials, fs, f_AOI, ciCohPhasefile);
             load(ciCohPhasefile, 'psedociCohs');
@@ -135,6 +143,11 @@ for ei = 1: length(EventPhases)
             else
                 [lfptrials, fs, T_chnsarea] = lfp_goodTrials_align2(files, align2, [t_AOI(1) t_AOI(2)], t_minmax_reach); % lfptrials: nchns * ntemp * ntrials
             end
+            
+            % remove unused chns
+            removedChns_mask = cellfun(@(x) contains(x, removed_chns), T_chnsarea.brainarea);
+            lfptrials = lfptrials(~removedChns_mask, :, :);
+            T_chnsarea = T_chnsarea(~removedChns_mask, :);
             
             psedociCoh_extract_save(shuffleN_psedoTest, lfptrials, fs, f_AOI, ciCohPhasefile);
             load(ciCohPhasefile, 'psedociCohs');
