@@ -40,7 +40,7 @@ NHPCodefilepath = fullfile(codefolder, 'NHPs', animal, '0_dataPrep' , SKTSubfold
 savefolder = codecorresfolder;
 copyfile2folder(codefilepath, savefolder);
 
-ciCohPhasefile_prefix =[animal 'ciCohPhasefile'];
+ciCohPhasefile_prefix =[animal ' ciCohPhasefile'];
 
 %%  input setup
 
@@ -144,11 +144,11 @@ for ei = 1: length(EventPhases)
         
         % extract sigciCoh
         [sigciCoh]= sigciCoh_extract(psedociCohs, ciCoh);
-       
+        
 
         % extract ciCoh_flatten and chnPairNames, such as M1-stn0-1
-        [ciCoh_flatten, deltaphis_flatten, chnPairNames] = ciCohDephiFlatten_chnPairNames_extract(ciCoh, deltaphis_allChnsTrials, T_chnsarea);
-        [ciCoh_flatten_used, deltaphis_flatten_used, chnPairNames_used]= ciCoh_deltaPhi_Used(chnPairNames, ciCoh_flatten, deltaphis_flatten, removed_chns);
+        [sigciCoh_flatten, deltaphis_flatten, chnPairNames] = ciCohDephiFlatten_chnPairNames_extract(sigciCoh, deltaphis_allChnsTrials, T_chnsarea);
+        [ciCoh_flatten_used, deltaphis_flatten_used, chnPairNames_used]= ciCoh_deltaPhi_Used(chnPairNames, sigciCoh_flatten, deltaphis_flatten, removed_chns);
         
         
         % plot and save ciCoh Histogram image
@@ -399,7 +399,7 @@ for chnPairi = 1 : nchnPairs
         % save
         sigstr = '';
         if sig
-            sigstr = '_sig';
+            sigstr = ['_sig'];
         end
         savefile =  fullfile(savefolder, [savefile_prefix '_pair' chnPairName '_' num2str(round(f))  'Hz_' savefile_suffix sigstr '.' image_type]);
         saveas(gcf,savefile, image_type);
