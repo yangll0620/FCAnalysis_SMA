@@ -15,7 +15,6 @@ clear idx
 
 % add path
 addpath(genpath(fullfile(codefolder,'util')));
-addpath(genpath(fullfile(codefolder,'NHPs')));
 addpath(genpath(fullfile(codefolder,'connAnalyTool')));
 
 % find animal corresponding folder
