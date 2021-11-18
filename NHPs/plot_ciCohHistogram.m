@@ -1,9 +1,16 @@
-function plot_ciCohHistogram(ciCoh_flatten, chnPairNames, f_selected, titlename)
+function plot_ciCohHistogram(ciCoh_flatten, chnPairNames, f_selected, titlename, varargin)
 %
 %   Inputs:
 %       
 %
 %
+
+if nargin < 1
+    histClim = [0 1];
+else
+    histClim = varargin{1};
+end
+
 fig_left = 50;
 fig_bottom = 50;
 fig_width = 1200;
@@ -23,7 +30,7 @@ yticks([1:npairs]);
 set(gca,'YTickLabel',chnPairNames,'fontsize',12,'FontWeight','bold')
 xlabel('freqs')
 title(titlename, 'FontSize', 15, 'FontWeight', 'normal')
-set(gca,'CLim', [0 1])
+set(gca,'CLim', histClim)
 colorbar
 
 
