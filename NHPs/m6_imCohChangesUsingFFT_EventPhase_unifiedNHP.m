@@ -70,7 +70,7 @@ removed_chns = [unwanted_DBS noisy_chns notAOI_chns];
 clear unwanted_DBS noisy_chns
 
 
-for ci = 1 : length(cond_cell)
+for ci = 3 : length(cond_cell)
     pdcond = cond_cell{ci};
     
     % load Rest ciCoh
@@ -192,7 +192,7 @@ for ci = 1 : length(cond_cell)
             
             clear lfptrials fs_lfpSKT T_chnsarea_lfpSKT files t_minmax_reach
             
-            load(ciCohPhasefile, 'psedoiCohChanges');
+            load(ciCohChangesfile, 'psedoiCohChanges');
         end
         nshuffle = size(psedoiCohChanges, 4);
         
@@ -206,10 +206,11 @@ for ci = 1 : length(cond_cell)
         
         % plot and save ciCohChanges Histogram image
         titlename = [animal ' FC Changes '  pdcond '-'  event '['  num2str(t_AOI(1)) ' ' num2str(t_AOI(2))   ']s,' ' align2 = ' align2name ', ntrials = ' num2str(ntrials) ' nshuffle= ' num2str(nshuffle)];
-        plot_ciCohHistogram(ciCohChanges_flatten_used, chnPairNames_used, f_selected, titlename);
+        plot_ciCohHistogram(ciCohChanges_flatten_used, chnPairNames_used, f_selected, titlename, [-0.5 0.5]);
         saveimgname = [animal '_' event '_' pdcond '_align2' char(align2) '.' image_type];
         saveas(gcf, fullfile(savefolder, saveimgname), image_type);
         clear titlename  saveimgname
+        close all
         
         clear event align2 t_AOI align2name ciCohChangesfile
         clear('ciCohChanges', 'T_chnsarea', 'ntrials', 'f_selected', 'psedoiCohChanges');

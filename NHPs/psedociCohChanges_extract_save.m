@@ -17,9 +17,12 @@ ntotal = size(lfp_combined, 3);
 ntrials = size(lfptrials, 3);
 for si = shuffi_str : suffi_end
     randomSKTInds =  randsample(ntotal,ntrials);
-    randomRestInds= arrayfun(@(x) any(randomSKTInds==x),[1: ntotal]);
-    psedolfp_SKT = lfp_combined(:, :, randomSKTInds);
-    psedolfp_rest = lfp_combined(:, :, randomRestInds);
+    
+    masksRest = logical([1: ntotal]);
+    masksRest(randomSKTInds) = 0;
+   
+    psedolfp_SKT = lfp_combined(:, :, masksRest);
+    psedolfp_rest = lfp_combined(:, :, ~masksRest);
     
     [~, psedoiCoh_SKT, ~] = ciCoh_trialDeltaPhi(psedolfp_SKT, fs, f_AOI);
     [~, psedoiCoh_rest, ~] = ciCoh_trialDeltaPhi(psedolfp_rest, fs, f_AOI);

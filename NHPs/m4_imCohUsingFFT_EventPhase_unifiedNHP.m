@@ -79,6 +79,8 @@ for ei = 1: length(EventPhases)
             mkdir(subpdsavefolder);
         end
         
+        disp([codefilename ' ' animal '-' event '-' pdcond])
+        
         [align2, t_AOI, align2name] = SKT_EventPhase_align2_tAOI_extract(event, animal, pdcond);
         
         % load(and extract) ciCohPhasefile
