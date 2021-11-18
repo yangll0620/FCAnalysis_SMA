@@ -20,8 +20,12 @@ addpath(genpath(fullfile(codefolder,'connAnalyTool')));
 
 % find animal corresponding folder
 [~, codefilename]= fileparts(codefilepath);
+SKTSubfolder = 'SKT';
+if strcmpi(animal, 'Kitty')
+    SKTSubfolder = 'SKT_SegV';
+end
 
-NHPCodefilepath = fullfile(codefolder, 'NHPs', animal, '0_dataPrep' , 'SKT', codefilename);
+NHPCodefilepath = fullfile(codefolder, 'NHPs', animal, '0_dataPrep' , SKTSubfolder, codefilename);
 [codecorresfolder, ~] = code_corresfolder(NHPCodefilepath, true, false);
 
 
@@ -37,10 +41,6 @@ ciCohPhasefile_prefix =[animal '_Rest_ciCohPhasefile'];
 inputcodefolder_Rest = fullfile(codefolder, 'NHPs', animal, '0_dataPrep' , 'Rest', 'm3_restData_rmChns_avgArea');
 [inputfolder_Rest, ~] = code_corresfolder(inputcodefolder_Rest, false, false);
 
-SKTSubfolder = 'SKT';
-if strcmpi(animal, 'Kitty')
-    SKTSubfolder = 'SKT_SegV';
-end
 inputcodefolder_SKT = fullfile(codefolder, 'NHPs', animal, '0_dataPrep' , SKTSubfolder, 'm4_imCohUsingFFT_EventPhase_unifiedNHP');
 [inputfolder_SKT, ~] = code_corresfolder(inputcodefolder_SKT, false, false);
 clear inputcodefolder_Rest SKTSubfolder inputcodefolder_SKT
@@ -71,12 +71,19 @@ for ci = 1 : length(cond_cell)
         mkdir(subpdsavefolder);
     end
     
+    disp([codefilename ': ' animal '-' pdcond])
+    
     % load(and extract) ciCohPhasefile
     ciCohPhasefile = fullfile(savefolder, [ciCohPhasefile_prefix  '_' pdcond  '.mat']);
     if(~exist(ciCohPhasefile, 'file'))
         
         files = dir(fullfile(inputfolder_Rest, ['*_' pdcond '_*.mat']));
         [lfpsegs, fs, T_chnsarea]= seg2ShortSegments(files, twin);
+        % remove unused chns
+        removedChns_mask = cellfun(@(x) contains(x, removed_chns), T_chnsarea.brainarea);
+        lfpsegs = lfpsegs(~removedChns_mask, :, :);
+        T_chnsarea = T_chnsarea(~removedChns_mask, :);
+        clear files removedChns_mask
         
         % match the trial number in rest and SKT
         load(fullfile(inputfolder_SKT, [animal ' ciCohPhasefile_' pdcond '_earlyReach_align2ReachOnset.mat']), 'ntrials')
@@ -104,6 +111,12 @@ for ci = 1 : length(cond_cell)
     if ~exist('psedociCohs','var') || size(psedociCohs, 4) < shuffleN_psedoTest
         files = dir(fullfile(inputfolder_Rest, ['*_' pdcond '_*.mat']));
         [lfpsegs, fs, T_chnsarea]= seg2ShortSegments(files, twin);
+        % remove unused chns
+        removedChns_mask = cellfun(@(x) contains(x, removed_chns), T_chnsarea.brainarea);
+        lfpsegs = lfpsegs(~removedChns_mask, :, :);
+        T_chnsarea = T_chnsarea(~removedChns_mask, :);
+        clear files removedChns_mask
+        
 
         psedociCoh_extract_save(shuffleN_psedoTest, lfpsegs, fs, f_AOI, ciCohPhasefile);
         load(ciCohPhasefile, 'psedociCohs');

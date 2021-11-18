@@ -105,7 +105,7 @@ for ci = 1 : length(cond_cell)
         event = EventPhases{ei};
         [align2, t_AOI, align2name] = SKT_EventPhase_align2_tAOI_extract(event, animal, pdcond);
         
-        disp([animal '-' pdcond '-' event])
+        disp([codefilename ': ' animal '-' pdcond '-' event])
         
         % load(and extract) ciCohPhasefile
         ciCohChangesfile = fullfile(savefolder, [ciCohChangesfile_prefix  '_' pdcond '_' event '_align2' align2name '.mat']);
