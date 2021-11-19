@@ -15,6 +15,7 @@ clear idx
 
 % add path
 addpath(genpath(fullfile(codefolder,'util')));
+addpath(genpath(fullfile(codefolder,'toolbox')));
 addpath(genpath(fullfile(codefolder,'connAnalyTool')));
 
 % find animal corresponding folder
@@ -70,7 +71,7 @@ removed_chns = [unwanted_DBS noisy_chns notAOI_chns];
 clear unwanted_DBS noisy_chns
 
 
-for ci = 3 : length(cond_cell)
+for ci = 2 : length(cond_cell)
     pdcond = cond_cell{ci};
     
     % load Rest ciCoh
@@ -100,7 +101,7 @@ for ci = 3 : length(cond_cell)
     
     
     % each event Phase
-    for ei = 1: length(EventPhases)
+    for ei = 4: length(EventPhases)
         event = EventPhases{ei};
         [align2, t_AOI, align2name] = SKT_EventPhase_align2_tAOI_extract(event, animal, pdcond);
         

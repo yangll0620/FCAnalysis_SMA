@@ -53,7 +53,7 @@ f_AOI = [8 40];
 
 
 shuffleN_psedoTest = 500;
-
+runRose = false;
 
 %% Code start here
 cond_cell = cond_cell_extract(animal);
@@ -134,7 +134,7 @@ for ci = 1 : length(cond_cell)
     
     
     % plot and save ciCoh Histogram image
-    titlename = [animal ' Rest-'  pdcond ', nshuffle= ' num2str(nshuffle)];
+    titlename = [animal ' Rest-'  pdcond ', nsegs = ' num2str(nsegs) ', nshuffle= ' num2str(nshuffle)];
     plot_ciCohHistogram(ciCoh_flatten_used, chnPairNames_used, f_selected, titlename);
     saveimgname = [animal '_' pdcond '.' image_type];
     saveas(gcf, fullfile(savefolder, saveimgname), image_type);
@@ -142,12 +142,14 @@ for ci = 1 : length(cond_cell)
     
     
     % rose histogram of deltaphis_allChnsTrials
-    titlename_prefix = [animal ' Rest-'  pdcond];
-    subtitlename = '';
-    savefile_prefix = [animal 'trialPhaseDiff'];
-    savefile_suffix = '';
-    plotsave_deltaphirose(deltaphis_flatten_used, ciCoh_flatten_used, chnPairNames_used, f_selected, titlename_prefix, subtitlename, subpdsavefolder, savefile_prefix, savefile_suffix, image_type);
-    clear titlename_prefix subtitlename savefile_prefix savefile_suffix
+    if runRose
+        titlename_prefix = [animal ' Rest-'  pdcond];
+        subtitlename = '';
+        savefile_prefix = [animal 'trialPhaseDiff'];
+        savefile_suffix = '';
+        plotsave_deltaphirose(deltaphis_flatten_used, ciCoh_flatten_used, chnPairNames_used, f_selected, titlename_prefix, subtitlename, subpdsavefolder, savefile_prefix, savefile_suffix, image_type);
+        clear titlename_prefix subtitlename savefile_prefix savefile_suffix
+    end
     
     
     clear pdcond

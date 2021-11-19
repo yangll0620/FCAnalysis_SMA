@@ -5,7 +5,7 @@ function plot_ciCohHistogram(ciCoh_flatten, chnPairNames, f_selected, titlename,
 %
 %
 
-if nargin < 1
+if nargin < 5
     histClim = [0 1];
 else
     histClim = varargin{1};
