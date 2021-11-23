@@ -1,14 +1,25 @@
-function plot_ciCohHistogram(ciCoh_flatten, chnPairNames, f_selected, titlename, varargin)
+function plot_ciCohHistogram(ciCoh_flatten, chnPairNames, f_selected, titlename, histClim, varargin)
 %
 %   Inputs:
-%       
+%       ciCoh_flatten:
+%       chnPairNames
+%       f_selected
+%       titlename
+%       histClim
 %
-%
+%       Name-Value: 
+%           'codesavefolder' - code saved folder
 
-if nargin < 5
-    histClim = [0 1];
-else
-    histClim = varargin{1};
+
+% parse params
+p = inputParser;
+addParameter(p, 'codesavefolder', '', @isstr);
+parse(p,varargin{:});
+
+% copy code to savefolder if not empty
+codesavefolder = p.Results.codesavefolder;
+if ~isempty(codesavefolder) 
+    copyfile2folder(mfilename('fullpath'), codesavefolder);
 end
 
 fig_left = 50;

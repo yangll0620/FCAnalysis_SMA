@@ -1,4 +1,4 @@
-function [sigciCoh]= sigciCoh_extract(psedociCohs, ciCoh)
+function [sigciCoh]= sigciCoh_extract(psedociCohs, ciCoh, varargin)
 %
 %   1. fit a normal distribution based on psedociCohs
 %
@@ -7,8 +7,25 @@ function [sigciCoh]= sigciCoh_extract(psedociCohs, ciCoh)
 %   Input:
 %       psedociCohs: nchns * nchns * nf * nshuffles
 %
+%       Name-Value: 
+%           'codesavefolder' - code saved folder
+%
 %   Output:
 %       sigciCoh: nchns * nchns * nf (if not sig, set 0; otherwise remain)
+
+
+
+% parse params
+p = inputParser;
+addParameter(p, 'codesavefolder', '', @isstr);
+parse(p,varargin{:});
+
+% copy code to savefolder if not empty
+codesavefolder = p.Results.codesavefolder;
+if ~isempty(codesavefolder) 
+    copyfile2folder(mfilename('fullpath'), codesavefolder);
+end
+
 
 % fit a normal distribution
 [nchns, ~, nf, ~] = size(psedociCohs);

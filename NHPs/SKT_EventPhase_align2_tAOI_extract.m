@@ -1,4 +1,22 @@
-function [align2, t_AOI, align2name] = SKT_EventPhase_align2_tAOI_extract(event, animal, pdcond)
+function [align2, t_AOI, align2name] = SKT_EventPhase_align2_tAOI_extract(event, animal, pdcond, varargin)
+%
+%   Inputs:
+%       animal
+%
+%       Name-Value: 
+%           'codesavefolder' - code saved folder
+
+
+% parse params
+p = inputParser;
+addParameter(p, 'codesavefolder', '', @isstr);
+parse(p,varargin{:});
+
+% copy code to savefolder if not empty
+codesavefolder = p.Results.codesavefolder;
+if ~isempty(codesavefolder) 
+    copyfile2folder(mfilename('fullpath'), codesavefolder);
+end
 
 if strcmpi(event, 'preMove')
     align2 = SKTEvent.TargetOnset;

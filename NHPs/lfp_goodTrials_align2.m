@@ -1,4 +1,4 @@
-function [lfptrials, fs_lfp, T_chnsarea, idxGroups, idxGroupNames] = lfp_goodTrials_align2(files, align2, tdur_trial, t_minmax_reach)
+function [lfptrials, fs_lfp, T_chnsarea, idxGroups, idxGroupNames] = lfp_goodTrials_align2(files, align2, tdur_trial, t_minmax_reach, varargin)
 % extract lfp data respect to targetonset, reachonset, reach and returnonset separately
 
 % 
@@ -8,6 +8,9 @@ function [lfptrials, fs_lfp, T_chnsarea, idxGroups, idxGroupNames] = lfp_goodTri
 %             tdur_trial: the duration of extracted trials respected to event(e.g. [-0.5 0.6])
 %             
 %             t_minmax_reach, t_minmax_return : min and max reach/return (s) for selecting trials (e.g [0.5 1])
+%   
+%           Name-Value: 
+%               'codesavefolder' - code saved folder
 % 
 %         return:
 %             lfptrials: nchns * ntemp * ntrials
@@ -17,10 +20,19 @@ function [lfptrials, fs_lfp, T_chnsarea, idxGroups, idxGroupNames] = lfp_goodTri
 %             fs:
 
 
+% parse params
+p = inputParser;
+addParameter(p, 'codesavefolder', '', @isstr);
+parse(p,varargin{:});
+
+% copy code to savefolder if not empty
+codesavefolder = p.Results.codesavefolder;
+if ~isempty(codesavefolder) 
+    copyfile2folder(mfilename('fullpath'), codesavefolder);
+end
+
 
 coli_align2 = uint32(align2);
-
-
 
 coli_reachonset = uint32(SKTEvent.ReachOnset);
 coli_reach = uint32(SKTEvent.Reach);

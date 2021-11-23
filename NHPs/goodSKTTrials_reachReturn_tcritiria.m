@@ -1,4 +1,23 @@
-function [t_minmax_reach_normal, t_minmax_return_normal, t_minmax_reach_mild, t_minmax_return_mild, t_minmax_reach_moderate, t_minmax_return_moderate] = goodSKTTrials_reachReturn_tcritiria(animal)
+function [t_minmax_reach_normal, t_minmax_return_normal, t_minmax_reach_mild, t_minmax_return_mild, t_minmax_reach_moderate, t_minmax_return_moderate] = goodSKTTrials_reachReturn_tcritiria(animal, varargin)
+%   Inputs:
+%       animal
+%
+%       Name-Value: 
+%           'codesavefolder' - code saved folder
+
+
+% parse params
+p = inputParser;
+addParameter(p, 'codesavefolder', '', @isstr);
+parse(p,varargin{:});
+
+% copy code to savefolder if not empty
+codesavefolder = p.Results.codesavefolder;
+if ~isempty(codesavefolder) 
+    copyfile2folder(mfilename('fullpath'), codesavefolder);
+end
+
+
 if strcmpi(animal, 'bug')
     t_minmax_reach_normal = [0.5, 2];
     t_minmax_return_normal = [0.5, 2];

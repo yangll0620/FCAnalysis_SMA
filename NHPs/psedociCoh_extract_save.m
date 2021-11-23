@@ -1,8 +1,29 @@
-function psedociCoh_extract_save(suffi_end, lfptrials, fs, f_AOI, ciCohPhasefile)
+function psedociCoh_extract_save(suffi_end, lfptrials, fs, f_AOI, ciCohPhasefile, varargin)
 %
-% lfptrials: nchns * ntemp * ntrials(nsegs)
+%   Inputs:
+%       suffi_end
+%       lfptrials: nchns * ntemp * ntrials(nsegs)
+%       fs
+%       f_AOI
+%       ciCohPhasefile:
+%       
+%       Name-Value: 
+%           'codesavefolder' - code saved folder         
 %   
 % save psedociCohs: nchns * nchns * nf * nshuffle, saved to ciCohPhasefile
+
+
+
+% parse params
+p = inputParser;
+addParameter(p, 'codesavefolder', '', @isstr);
+parse(p,varargin{:});
+
+% copy code to savefolder if not empty
+codesavefolder = p.Results.codesavefolder;
+if ~isempty(codesavefolder) 
+    copyfile2folder(mfilename('fullpath'), codesavefolder);
+end
 
 nchns = size(lfptrials, 1);
 

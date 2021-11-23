@@ -1,4 +1,4 @@
-function [ciCoh_flatten, deltaphis_flatten, chnPairNames] = ciCohDephiFlatten_chnPairNames_extract(ciCoh, deltaphis_allChnsTrials, T_chnsarea)
+function [ciCoh_flatten, deltaphis_flatten, chnPairNames] = ciCohDephiFlatten_chnPairNames_extract(ciCoh, deltaphis_allChnsTrials, T_chnsarea, varargin)
 %
 %   Input:
 %       ciCoh: nchns * nchns * nf
@@ -6,6 +6,22 @@ function [ciCoh_flatten, deltaphis_flatten, chnPairNames] = ciCohDephiFlatten_ch
 %       T_chnsarea: nchns * 5
 %
 %
+%       Name-Value: 
+%           'codesavefolder' - code saved folder
+
+
+% parse params
+p = inputParser;
+addParameter(p, 'codesavefolder', '', @isstr);
+parse(p,varargin{:});
+
+% copy code to savefolder if not empty
+codesavefolder = p.Results.codesavefolder;
+if ~isempty(codesavefolder) 
+    copyfile2folder(mfilename('fullpath'), codesavefolder);
+end
+
+
 [nchns, ~, nf] = size(ciCoh);
 chnPairNames = {};
 ciCoh_flatten = zeros(nchns * (nchns -1)/2, nf);
