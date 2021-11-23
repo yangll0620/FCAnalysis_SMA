@@ -2,7 +2,8 @@ function plotsave_deltaphirose(deltaphis_flatten, ciCoh_flatten, chnPairNames, f
 %   Inputs:
 %       
 %       Name-Value: 
-%           'codesavefolder' - code saved folder         
+%           'codesavefolder' - code saved folder
+%           'roseRLim' - RLim
 %   
 % save psedociCohs: nchns * nchns * nf * nshuffle, saved to ciCohPhasefile
 
@@ -11,10 +12,18 @@ function plotsave_deltaphirose(deltaphis_flatten, ciCoh_flatten, chnPairNames, f
 % parse params
 p = inputParser;
 addParameter(p, 'codesavefolder', '', @isstr);
+addParameter(p, 'roseRLim', 'auto', @(x) assert(isnumeric(x) && isvector(x) && length(x)==2, 'roseRLim should be a vector with 2 numbers'))
 parse(p,varargin{:});
+codesavefolder = p.Results.codesavefolder;
+if ~isequal(p.Results.roseRLim, 'auto')
+    setRoseRLim = true;
+    roseRLim = reshape(p.Results.roseRLim, 1, 2);
+else
+    setRoseRLim = false;
+end
+
 
 % copy code to savefolder if not empty
-codesavefolder = p.Results.codesavefolder;
 if ~isempty(codesavefolder) 
     copyfile2folder(mfilename('fullpath'), codesavefolder);
 end
@@ -45,6 +54,9 @@ for chnPairi = 1 : nchnPairs
         set(gcf, 'PaperUnits', 'points',  'Position', [fig_left fig_bottom fig_width fig_height]);
         set(gca, 'Position', [0.05 0.05 0.85 0.85])
         polarhistogram(deltaphi, nbins, 'Normalization', 'probability');
+        if setRoseRLim
+            set(gca, 'RLim', roseRLim)
+        end
         
         titlename = [titlename_prefix ' Trial Phase Diff of ' chnPairName ' at ' num2str(round(f)) 'Hz'];
         title(titlename, 'FontSize', 15, 'FontWeight', 'normal')
@@ -59,7 +71,7 @@ for chnPairi = 1 : nchnPairs
             sig = true;
         end
         if sig
-            text(0.8, 0.9, ['icoh = ' num2str(round(icoh, 3)) '*'], 'FontSize', 12);
+            annotation(gcf,'textbox',[0.7 0.8 0.5 0.03], 'String',{['cicoh = ' num2str(round(icoh, 3)) '*']}, 'LineStyle','none', 'FitBoxToText','off');
         end
         
         % save

@@ -39,13 +39,17 @@ NHPCodefilepath = fullfile(codefolder, 'NHPs', animal, '0_dataPrep' , SKTSubfold
 
 %% save setup
 savefolder = codecorresfolder;
-savecodefolder = fullfile(savefolder, 'code');;
+savecodefolder = fullfile(savefolder, 'code');
+if exist(savecodefolder, 'dir')
+    rmdir(savecodefolder,'s');
+end
 copyfile2folder(codefilepath, savecodefolder);
 
 phsubfolder = fullfile(savefolder, 'phases');
 if ~exist(phsubfolder, 'dir')
     mkdir(phsubfolder);
 end
+
 
 ciCohPhasefile_prefix =[animal ' ciCohPhasefile'];
 
@@ -60,8 +64,11 @@ image_type = 'tif';
 f_AOI = [8 40];
 
 histClim = [0 1];
-
+roseRLim = [0 0.3];
 shuffleN_psedoTest = 500;
+
+runCicohHist = true;
+runRosePlot = true;
 
 %% Code start here
 cond_cell = cond_cell_extract(animal);
@@ -176,21 +183,25 @@ for ei = 1: length(EventPhases)
         
         
         % plot and save ciCoh Histogram image
-        titlename = [animal '-'  pdcond '-'  event '['  num2str(t_AOI(1)) ' ' num2str(t_AOI(2))   ']s,' ' align2 = ' align2name ', ntrials = ' num2str(ntrials) ' nshuffle= ' num2str(nshuffle)];
-        plot_ciCohHistogram(ciCoh_flatten_used, chnPairNames_used, f_selected, titlename, histClim, 'codesavefolder', savecodefolder);
-        saveimgname = [animal '_' event '_' pdcond '_align2' char(align2) '.' image_type];
-        saveas(gcf, fullfile(savefolder, saveimgname), image_type);
-        clear titlename  saveimgname
-        
+        if runCicohHist
+            titlename = [animal '-'  pdcond '-'  event '['  num2str(t_AOI(1)) ' ' num2str(t_AOI(2))   ']s,' ' align2 = ' align2name ', ntrials = ' num2str(ntrials) ' nshuffle= ' num2str(nshuffle)];
+            plot_ciCohHistogram(ciCoh_flatten_used, chnPairNames_used, f_selected, titlename, histClim, 'codesavefolder', savecodefolder);
+            saveimgname = [animal '_' event '_' pdcond '_align2' char(align2) '.' image_type];
+            saveas(gcf, fullfile(savefolder, saveimgname), image_type);
+            clear titlename  saveimgname
+        end
         
         
         % rose histogram of deltaphis_allChnsTrials
-        titlename_prefix = [animal '-'  pdcond '-'  event];
-        subtitlename = [event '['  num2str(t_AOI(1)) ' ' num2str(t_AOI(2))   ']s, align2 = ' char(align2) ', ntrials = ' num2str(ntrials)];
-        savefile_prefix = [animal 'trialPhaseDiff'];
-        savefile_suffix = [event '_' pdcond '_align2' char(align2)];
-        plotsave_deltaphirose(deltaphis_flatten_used, ciCoh_flatten_used, chnPairNames_used, f_selected, titlename_prefix, subtitlename, subphsavefolder, savefile_prefix, savefile_suffix, image_type, 'codesavefolder', savecodefolder);
-        clear titlename_prefix subtitlename savefile_prefix savefile_suffix
+        if runRosePlot
+            titlename_prefix = [animal '-'  pdcond '-'  event];
+            subtitlename = [event '['  num2str(t_AOI(1)) ' ' num2str(t_AOI(2))   ']s, align2 = ' char(align2) ', ntrials = ' num2str(ntrials)];
+            savefile_prefix = [animal 'trialPhaseDiff'];
+            savefile_suffix = [event '_' pdcond '_align2' char(align2)];
+            plotsave_deltaphirose(deltaphis_flatten_used, ciCoh_flatten_used, chnPairNames_used, f_selected, titlename_prefix, subtitlename, subphsavefolder, savefile_prefix, savefile_suffix, image_type,...
+                'codesavefolder', savecodefolder, 'roseRLim', roseRLim);
+            clear titlename_prefix subtitlename savefile_prefix savefile_suffix
+        end
         
          
         clear pdcond subpdsavefolder align2 t_AOI align2name ciCohPhasefile
