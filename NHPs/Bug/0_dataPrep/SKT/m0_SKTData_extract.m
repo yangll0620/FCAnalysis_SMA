@@ -10,7 +10,7 @@ function m0_SKTData_extract()
     %           a. trial length = max(each trial length) + t_bef + t_aft 
     %                   t_bef: the time before target on (default: t_bef = 1)
     %                   t_aft: the time after mouth (default: t_aft = 0.5)
-    %           b. only remain the trials markedin both good reach and good return
+    %           b. only remain the trials marked in both good reach and good return
     %
     %
     %       2. bipolar for DBS channels

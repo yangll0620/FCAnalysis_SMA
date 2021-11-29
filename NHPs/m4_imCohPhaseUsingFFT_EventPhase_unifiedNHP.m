@@ -1,9 +1,4 @@
-function m4_imCohPhaseUsingFFT_EventPhase_unifiedNHP(varargin)
-if nargin < 1
-    animal = 'Jo';
-else
-    animal = varargin{1};
-end
+function m4_imCohPhaseUsingFFT_EventPhase_unifiedNHP(animal)
 
 codefilepath = mfilename('fullpath');
 

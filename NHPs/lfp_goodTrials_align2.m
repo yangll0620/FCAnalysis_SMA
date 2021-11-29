@@ -39,16 +39,45 @@ coli_reach = uint32(SKTEvent.Reach);
 coli_returnonset = uint32(SKTEvent.ReturnOnset);
 coli_mouth = uint32(SKTEvent.Mouth);
 
-load(fullfile(files(1).folder, files(1).name),  'fs_lfp', 'T_chnsarea');
+
+% load fs_lfp and T_chnsarea
+file1 = fullfile(files(1).folder, files(1).name);
+listOfVariables = who('-file', file1);
+if ismember('fs_lfp', listOfVariables)
+    load(file1,  'fs_lfp');
+else
+    load(file1,  'fs');
+    fs_lfp = fs;
+    clear fs
+end
+load(file1,  'T_chnsarea');
+clear file1 listOfVariables
 
 nfiles = length(files);
 lfptrials = [];
 for filei = 1 : nfiles
-    
-    % load data, lfpdata: [nchns, ntemps, ntrials]
     filename = files(filei).name;
-    load(fullfile(files(filei).folder, filename), 'lfpdata', 'T_idxevent_lfp', 'goodTrials');
-    if filei == 1
+    file = fullfile(files(filei).folder, filename);
+    
+    % load T_idxevent_lfp or T_idxevent
+    listOfVariables = who('-file', file);
+    if ismember('T_idxevent_lfp', listOfVariables)
+        load(file,  'T_idxevent_lfp');
+    else
+        if ismember('T_idxevent', listOfVariables)
+            load(file, 'T_idxevent');
+            T_idxevent_lfp = T_idxevent;
+            clear T_idxevent
+        else
+            disp([filename ' not contain T_idxevent_lfp or T_idxevent']);
+            continue;
+        end
+    end
+    clear listOfVariables
+    
+    load(file, 'lfpdata', 'goodTrials');
+    
+    if filei == 1 % load/extract idxGroups and idxGroupNames once
         load(fullfile(files(filei).folder, filename), 'idxGroups', 'tbl_goodTrialsMarks');
         idxGroupNames = tbl_goodTrialsMarks.Properties.VariableNames;
         clear tbl_goodTrialsMarks
@@ -59,8 +88,7 @@ for filei = 1 : nfiles
         continue;
     end
     
-    
-    
+
     ntrials = size(lfpdata, 3);
     for tri = 1: ntrials
         
@@ -69,19 +97,14 @@ for filei = 1 : nfiles
             continue
         end
         
-        % select trials based on reach and return duration
+        % select trials based on reach duration
         t_reach = (T_idxevent_lfp{tri, coli_reach} - T_idxevent_lfp{tri, coli_reachonset}) / fs_lfp;
-        t_return = (T_idxevent_lfp{tri, coli_mouth} - T_idxevent_lfp{tri, coli_returnonset}) / fs_lfp;
         if t_reach < t_minmax_reach(1) 
             clear t_reach
             continue
         end
-%         if t_return < t_minmax_return(1) || t_reach > t_minmax_return(2)
-%             clear t_return
-%             continue
-%         end
-        
-        
+
+               
         % extract trial with t_dur
         idxdur = round(tdur_trial * fs_lfp) + T_idxevent_lfp{tri, coli_align2};
         
@@ -93,5 +116,8 @@ for filei = 1 : nfiles
         
         clear t_reach t_return idxdur lfp_phase_1trial
     end
+    
+    clear filename file 
+    clear('lfpdata', 'T_idxevent_lfp', 'goodTrials');
 end
 end

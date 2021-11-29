@@ -1,5 +1,0 @@
-reach Time of normal and mild are not both normal
-return Time of normal and mild are not both normal
-
-median reach:normal = 0.63898, mild = 0.65864, welch ttest p = 1.4814e-08
-median return:normal = 0.5505, mild = 0.65864, welch ttest p = 7.5728e-84
