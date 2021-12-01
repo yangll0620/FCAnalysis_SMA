@@ -1,4 +1,10 @@
-function m4_imCohPhaseUsingFFT_EventPhase_unifiedNHP(animal)
+function m4_imCohPhaseUsingFFT_EventPhase_unifiedNHP(animal, varargin)
+%
+%   Input:
+%       Name-Value: 
+%           animal
+%           ei_str - event start index
+%           ci_str - condition start index
 
 codefilepath = mfilename('fullpath');
 
@@ -13,6 +19,23 @@ addpath(genpath(fullfile(codefolder,'util')));
 addpath(genpath(fullfile(codefolder,'NHPs')));
 addpath(genpath(fullfile(codefolder,'connAnalyTool')));
 addpath(genpath(fullfile(codefolder,'toolbox')));
+
+cond_cell = cond_cell_extract(animal);
+EventPhases = SKT_eventPhases_extract();
+
+% parse params
+p = inputParser;
+addParameter(p, 'animal', 'Jo', @isstr);
+addParameter(p, 'ei_str', 1, @isscalar);
+addParameter(p, 'ei_end', length(EventPhases), @isscalar);
+addParameter(p, 'ci_str', 1, @isscalar);
+addParameter(p, 'ci_end', length(cond_cell), @isscalar);
+parse(p,varargin{:});
+animal = p.Results.animal;
+ei_str = p.Results.ei_str;
+ei_end = p.Results.ei_end;
+ci_str = p.Results.ci_str;
+ci_end = p.Results.ci_end;
 
 % find animal corresponding folder
 [~, codefilename]= fileparts(codefilepath);
@@ -66,9 +89,6 @@ runCicohHist = true;
 runRosePlot = true;
 
 %% Code start here
-cond_cell = cond_cell_extract(animal);
-
-EventPhases = SKT_eventPhases_extract();
 [t_minmax_reach_normal, t_minmax_return_normal, t_minmax_reach_mild, t_minmax_return_mild, t_minmax_reach_moderate, t_minmax_return_moderate] = ...
     goodSKTTrials_reachReturn_tcritiria(animal, 'codesavefolder', savecodefolder);
 [tdur_trial_normal, tdur_trial_mild, tdur_trial_moderate] = SKT_tdurTrial_extact(animal, 'codesavefolder', savecodefolder);
@@ -79,7 +99,7 @@ notAOI_chns = notInterested_chns_extract(animal, 'codesavefolder', savecodefolde
 removed_chns = [unwanted_DBS noisy_chns notAOI_chns];
 clear unwanted_DBS noisy_chns
 
-for ei = 1: length(EventPhases)
+for ei = ei_str: ei_end
     event = EventPhases{ei};
     
     subphsavefolder = fullfile(phsubfolder, event);
@@ -87,7 +107,7 @@ for ei = 1: length(EventPhases)
         mkdir(subphsavefolder);
     end
     
-    for ci = 1 : length(cond_cell)
+    for ci = ci_str : ci_end
         pdcond = cond_cell{ci};
         
         disp([codefilename ' ' animal '-' event '-' pdcond])
