@@ -25,13 +25,11 @@ EventPhases = SKT_eventPhases_extract();
 
 % parse params
 p = inputParser;
-addParameter(p, 'animal', 'Jo', @isstr);
 addParameter(p, 'ei_str', 1, @isscalar);
 addParameter(p, 'ei_end', length(EventPhases), @isscalar);
 addParameter(p, 'ci_str', 1, @isscalar);
 addParameter(p, 'ci_end', length(cond_cell), @isscalar);
 parse(p,varargin{:});
-animal = p.Results.animal;
 ei_str = p.Results.ei_str;
 ei_end = p.Results.ei_end;
 ci_str = p.Results.ci_str;
