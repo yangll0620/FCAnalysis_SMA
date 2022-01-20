@@ -48,7 +48,7 @@ for fi = 1 : length(files)
     
     load(fullfile(inputfolder, filename), 'ciCoh', 'deltaphis_allChnsTrials', 'f_selected', 'psedociCohs', 'T_chnsarea');
     
-    sigciCoh= sigciCoh_extract(psedociCohs, ciCoh);
+    sigciCohs= sigciCoh_extract(psedociCohs, ciCoh);
     
     for bi = 1 : length(T_chnsarea.brainarea)-1
         site1 = T_chnsarea.brainarea{bi};
@@ -58,8 +58,9 @@ for fi = 1 : length(files)
                 continue;
             end
             
-            contInds = contiFreqrange(sigciCoh(bi, bj, :)); % get continuous sig inds
+            contInds = contiFreqrange(sigciCohs(bi, bj, :)); % get continuous sig inds
             deltaphis_trials = squeeze(deltaphis_allChnsTrials(bi, bj, :, :));
+            sigcicoh_1pair = squeeze(sigciCohs(bi, bj, :));
             
             for ci = 1 : size(contInds, 1)
                 idx_str = contInds(ci, 1);
@@ -67,7 +68,7 @@ for fi = 1 : length(files)
                 
                 figTitle_prefix = [animal '-' pdcond '-' ephase ' ' site1 '-' site2 ' time-frequency lag Histogram'];
                 saveimgname_prefix = [animal '_' pdcond '_' ephase '_freqtimeLagPlot_' site1 '_' site2];
-                plotTimefreqLag(f_selected(idx_str:idx_end), deltaphis_trials, figTitle_prefix, savefolder, saveimgname_prefix)
+                plotTimefreqLag(f_selected(idx_str:idx_end), deltaphis_trials(idx_str:idx_end, :), sigcicoh_1pair(idx_str:idx_end), figTitle_prefix, savefolder, saveimgname_prefix)
                 clear idx_str idx_end
             end
         end
@@ -97,12 +98,13 @@ for di = 1 : length(data)
 end
 
 
-function plotTimefreqLag(freqs, deltaphis_trials, figTitle_prefix, savefolder, saveimgname_prefix)
+function plotTimefreqLag(freqs, deltaphis_trials, sigcicoh, figTitle_prefix, savefolder, saveimgname_prefix)
 %   plot Time frequency lag for length(freqs) > 2
 %
 %   Input:
 %       freqs: vector nf * 1
 %       deltaphis_trials: delta phis across trials nf * ntrials
+%       sigcicoh: vector nf * 1
 
 nfs = length(freqs);
 if nfs <=2
@@ -113,18 +115,25 @@ image_type = 'tif';
 
 % figure setup
 x0 = 0.03;
-y0 = 0.1;
-width = 0.07;
-height = 0.8;
+uppermargin = 0.1;
+lowermargin = 0.1;
+width = 0.08;
 deltax = 0.05;
-figpos = [250 250 1600 420];
+deltay = 0.05;
+figpos_base = [250 250 1600 420];
 histedge = [-0.05:0.005:0.05 ];
 nPerFig = 8;
 
 
+nrows = ceil(nfs / nPerFig);
+figpos = figpos_base;
+figpos(4) = figpos(4) * nrows;
+height = ((1- uppermargin - lowermargin)- (nrows -1)* deltay)/nrows;
+fig = figure('Position', figpos);
 for fi = 1 : nfs
     f = freqs(fi);
     deltaphis = deltaphis_trials(fi, :);
+    
     
     % convert to [-pi pi]
     for di = 1 : length(deltaphis)
@@ -139,29 +148,37 @@ for fi = 1 : nfs
     
     deltat = deltaphis / (2 * pi * f);
     
-    if mod(fi, nPerFig) == 1
-        fig = figure('Position', figpos);
+    coli = mod(fi, nPerFig);
+    rowi = ceil(fi/nPerFig);
+    if coli == 0
+        coli = nPerFig;
+    end
+    if coli == 1
         f_str = freqs(fi);
     end
-    ax = axes(fig, 'Position', [x0+(mod(fi, nPerFig)-1)*(deltax + width) y0  width height]);
+   
+    x = x0 + (coli -1) * (deltax + width);
+    y = 1-uppermargin - height - (rowi -1) * (deltay + height);
+    ax = axes(fig, 'Position', [x y  width height]);
     histogram(ax, deltat, histedge)
     
     ylabel([num2str(f) 'Hz'])
     ylim([0 40])
-    if mod(fi, nPerFig) == 1
-        xlabel('\Deltat')
+    if coli == 1
+        xlabel('\Deltat /s')
     end
     view(90,90)
+    annotation(fig,'textbox',...
+    [x+width-0.05 y+height-0.05 0.06 0.05],...
+    'String',{['cicoh = ' num2str(sigcicoh(fi))]},'LineStyle','none','FitBoxToText','off');
     
-    if fi == nfs || mod(fi, nPerFig) == 0
+    if fi == nfs
         f_end = freqs(fi);
         
         % Create textbox
-        annotation(fig,'textbox',[0.34 0.92 0.3 0.07],...
+        annotation(fig,'textbox',[0.34 0.92 0.5 0.1],...
             'String',[figTitle_prefix '-freq' num2str(round(f_str)) '-' num2str(round(f_end)) 'Hz'],...
-            'LineStyle','none', 'FitBoxToText','off');
-        
-        
+            'LineStyle','none', 'FitBoxToText','off'); 
         saveas(fig, fullfile(savefolder, [saveimgname_prefix '_f' num2str(round(f_str)) '_' num2str(round(f_end)) 'Hz']), image_type);
         close(fig);
         clear f_end
