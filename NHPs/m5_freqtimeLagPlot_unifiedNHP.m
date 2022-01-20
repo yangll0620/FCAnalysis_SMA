@@ -114,20 +114,22 @@ end
 image_type = 'tif';
 
 % figure setup
-x0 = 0.03;
+leftmargin = 0.03;
+rightmargin = 0.03;
 uppermargin = 0.1;
 lowermargin = 0.1;
-width = 0.08;
+
 deltax = 0.05;
 deltay = 0.05;
 figpos_base = [250 250 1600 420];
-histedge = [-0.05:0.005:0.05 ];
-nPerFig = 8;
+histedge = [-0.05:0.0025:0.05 ];
+ncols = 8;
 
 
-nrows = ceil(nfs / nPerFig);
+nrows = ceil(nfs / ncols);
 figpos = figpos_base;
 figpos(4) = figpos(4) * nrows;
+width = ((1-leftmargin - rightmargin) - (ncols -1) * deltax)/ncols;
 height = ((1- uppermargin - lowermargin)- (nrows -1)* deltay)/nrows;
 fig = figure('Position', figpos);
 for fi = 1 : nfs
@@ -148,22 +150,20 @@ for fi = 1 : nfs
     
     deltat = deltaphis / (2 * pi * f);
     
-    coli = mod(fi, nPerFig);
-    rowi = ceil(fi/nPerFig);
+    coli = mod(fi, ncols);
+    rowi = ceil(fi/ncols);
     if coli == 0
-        coli = nPerFig;
+        coli = ncols;
     end
-    if coli == 1
-        f_str = freqs(fi);
-    end
+
    
-    x = x0 + (coli -1) * (deltax + width);
+    x = leftmargin + (coli -1) * (deltax + width);
     y = 1-uppermargin - height - (rowi -1) * (deltay + height);
     ax = axes(fig, 'Position', [x y  width height]);
     histogram(ax, deltat, histedge)
     
     ylabel([num2str(f) 'Hz'])
-    ylim([0 40])
+    ylim([0 30])
     if coli == 1
         xlabel('\Deltat /s')
     end
@@ -172,14 +172,12 @@ for fi = 1 : nfs
     [x+width-0.05 y+height-0.05 0.06 0.05],...
     'String',{['cicoh = ' num2str(sigcicoh(fi))]},'LineStyle','none','FitBoxToText','off');
     
-    if fi == nfs
-        f_end = freqs(fi);
-        
+    if fi == nfs       
         % Create textbox
-        annotation(fig,'textbox',[0.34 0.92 0.5 0.1],...
-            'String',[figTitle_prefix '-freq' num2str(round(f_str)) '-' num2str(round(f_end)) 'Hz'],...
+        annotation(fig,'textbox',[0.34 0.91 0.5 0.08],...
+            'String',[figTitle_prefix '-freq' num2str(round(freqs(1))) '-' num2str(round(freqs(end))) 'Hz'],...
             'LineStyle','none', 'FitBoxToText','off'); 
-        saveas(fig, fullfile(savefolder, [saveimgname_prefix '_f' num2str(round(f_str)) '_' num2str(round(f_end)) 'Hz']), image_type);
+        saveas(fig, fullfile(savefolder, [saveimgname_prefix '_f' num2str(round(freqs(1))) '_' num2str(round(freqs(end))) 'Hz']), image_type);
         close(fig);
         clear f_end
     end
