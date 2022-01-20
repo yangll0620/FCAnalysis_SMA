@@ -114,23 +114,39 @@ end
 image_type = 'tif';
 
 % figure setup
-leftmargin = 0.03;
-rightmargin = 0.03;
-uppermargin = 0.1;
-lowermargin = 0.1;
-
-deltax = 0.05;
-deltay = 0.05;
-figpos_base = [250 250 1600 420];
+figpos_base = [250 250 160 400];
 histedge = [-0.05:0.0025:0.05 ];
-ncols = 8;
+nMaxCols = 8;
 
 
-nrows = ceil(nfs / ncols);
+deltaxWRatio = 1/4;
+leftmarginWRatio = 1/4;
+rightmarginWRatio = 1/8;
+deltayHRatio = 1/8;
+topmarginHRatio = 1/8;
+lowermarginHRatio = 1/8;
+
+nrows = ceil(nfs / nMaxCols);
+if nfs < nMaxCols
+    ncols = nfs;
+else
+    ncols = nMaxCols;
+end
+
+% automatically get figpixal_width and figpixal_height
+figpixal_width = figpos_base(3) * ncols + figpos_base(3) * deltaxWRatio * (ncols -1) + figpos_base(3) * (leftmarginWRatio + rightmarginWRatio);
+figpixal_height = figpos_base(4) * nrows + figpos_base(4) * deltayHRatio * (nrows -1) + figpos_base(4) * (topmarginHRatio + lowermarginHRatio);
+
 figpos = figpos_base;
-figpos(4) = figpos(4) * nrows;
-width = ((1-leftmargin - rightmargin) - (ncols -1) * deltax)/ncols;
-height = ((1- uppermargin - lowermargin)- (nrows -1)* deltay)/nrows;
+figpos(3) = figpixal_width;
+figpos(4) = figpixal_height;
+
+width = 1/(leftmarginWRatio + rightmarginWRatio + ncols + deltaxWRatio * (ncols -1));
+height = 1/(topmarginHRatio + lowermarginHRatio + nrows + deltayHRatio * (nrows -1));
+deltax = deltaxWRatio * width;
+deltay = deltayHRatio * height;
+leftmargin = leftmarginWRatio * width;
+topmargin = topmarginHRatio * height;
 fig = figure('Position', figpos);
 for fi = 1 : nfs
     f = freqs(fi);
@@ -150,15 +166,15 @@ for fi = 1 : nfs
     
     deltat = deltaphis / (2 * pi * f);
     
-    coli = mod(fi, ncols);
-    rowi = ceil(fi/ncols);
+    coli = mod(fi, nMaxCols);
+    rowi = ceil(fi/nMaxCols);
     if coli == 0
-        coli = ncols;
+        coli = nMaxCols;
     end
 
    
     x = leftmargin + (coli -1) * (deltax + width);
-    y = 1-uppermargin - height - (rowi -1) * (deltay + height);
+    y = 1-topmargin - height - (rowi -1) * (deltay + height);
     ax = axes(fig, 'Position', [x y  width height]);
     histogram(ax, deltat, histedge)
     
