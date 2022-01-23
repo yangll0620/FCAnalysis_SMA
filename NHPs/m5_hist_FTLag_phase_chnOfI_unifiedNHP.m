@@ -1,4 +1,10 @@
-function m5_freqtimeLagPlot_unifiedNHP(animal, varargin)
+function m5_hist_FTLag_phase_chnOfI_unifiedNHP(animal, varargin)
+% plot cicoh Histogram, frequency time lag and phase of interested channels
+%   Input:
+%       Name-Value: 
+%           animal
+%           ei_str - event start index
+%           ci_str - condition start index
 
 codefilepath = mfilename('fullpath');
 
@@ -30,19 +36,21 @@ NHPCodefilepath = fullfile(codefolder, 'NHPs', animal, '0_dataPrep' , SKTSubfold
 %% Input setup
 inputfolder = fullfile(codecorresParentfolder, 'm4_imCohPhaseUsingFFT_EventPhase_unifiedNHP');
 if strcmpi(animal, 'Kitty')
-    ylimit = [0 20];
+    ylimit_ftLag = [0 20];
 end
 if strcmpi(animal, 'Jo')
-    ylimit = [0 30];
+    ylimit_ftLag = [0 30];
 end
 
 %% save setup
 savefolder = codecorresfolder;
 copyfile2folder(codefilepath, fullfile(savefolder, 'code'));
 
+
 %% Code start here
 cond_cell = cond_cell_extract(animal);
 EventPhases = SKT_eventPhases_extract();
+chnsOfI = chnOfInterest_extract(animal, 'codesavefolder', fullfile(savefolder, 'code'));
 
 files = dir(fullfile(inputfolder, '*.mat'));
 for fi = 1 : length(files)
@@ -53,36 +61,53 @@ for fi = 1 : length(files)
     
     load(fullfile(inputfolder, filename), 'ciCoh', 'deltaphis_allChnsTrials', 'f_selected', 'psedociCohs', 'T_chnsarea');
     
+    % select the data of chnOfI
+    mask_chnOfI = cellfun(@(x) any(strcmp(chnsOfI, x)), T_chnsarea.brainarea);
+    T_chnsarea = T_chnsarea(mask_chnOfI, :);
+    ciCoh = ciCoh(mask_chnOfI, mask_chnOfI, :);
+    deltaphis_allChnsTrials = deltaphis_allChnsTrials(mask_chnOfI, mask_chnOfI, :, :);
+    psedociCohs = psedociCohs(mask_chnOfI, mask_chnOfI, :, :);
+    
     sigciCohs= sigciCoh_extract(psedociCohs, ciCoh);
     
-    for bi = 1 : length(T_chnsarea.brainarea)-1
-        site1 = T_chnsarea.brainarea{bi};
-        for bj = bi+1 : length(T_chnsarea.brainarea)
-            site2 = T_chnsarea.brainarea{bj};
-            if (contains(site1, 'stn')&& contains(site2, 'stn')) || (contains(site1, 'gp')&& contains(site2, 'gp'))
-                continue;
-            end
-            
-            contInds = contiFreqrange(sigciCohs(bi, bj, :)); % get continuous sig inds
-            deltaphis_trials = squeeze(deltaphis_allChnsTrials(bi, bj, :, :));
-            sigcicoh_1pair = squeeze(sigciCohs(bi, bj, :));
-            
-            for ci = 1 : size(contInds, 1)
-                idx_str = contInds(ci, 1);
-                idx_end = contInds(ci, 2);
-                
-                figTitle_prefix = [animal '-' ephase ' ' site1 '-' site2 '-' pdcond ' time-frequency lag Histogram'];
-                saveimgname_prefix = [animal  '_' ephase '_freqtimeLagPlot_' site1 '_' site2 '-' pdcond];
-                plotTimefreqLag(f_selected(idx_str:idx_end), deltaphis_trials(idx_str:idx_end, :), sigcicoh_1pair(idx_str:idx_end), ...
-                    figTitle_prefix, savefolder, saveimgname_prefix, ylimit)
-                clear idx_str idx_end
-            end
+    % plot
+    freqtimeLag_Plot(T_chnsarea, sigciCohs, deltaphis_allChnsTrials, f_selected, ylimit_ftLag, animal, ephase, pdcond, savefolder)
+    
+    clear filename pdcond ephase 
+    clear sigciCohs
+    clear('ciCoh', 'deltaphis_allChnsTrials', 'f_selected', 'psedociCohs', 'T_chnsarea');
+end
+
+function freqtimeLag_Plot(T_chnsarea, sigciCohs, deltaphis_allChnsTrials, f_selected, ylimit, animal, ephase, pdcond, savefolder)
+for bi = 1 : length(T_chnsarea.brainarea)-1
+    site1 = T_chnsarea.brainarea{bi};
+    for bj = bi+1 : length(T_chnsarea.brainarea)
+        site2 = T_chnsarea.brainarea{bj};
+        if (contains(site1, 'stn')&& contains(site2, 'stn')) || (contains(site1, 'gp')&& contains(site2, 'gp'))
+            clear site2
+            continue;
         end
+        
+        contInds = contiFreqrange(sigciCohs(bi, bj, :)); % get continuous sig inds
+        deltaphis_trials = squeeze(deltaphis_allChnsTrials(bi, bj, :, :));
+        sigcicoh_1pair = squeeze(sigciCohs(bi, bj, :));
+        
+        for ci = 1 : size(contInds, 1)
+            idx_str = contInds(ci, 1);
+            idx_end = contInds(ci, 2);
+            
+            figTitle_prefix = [animal '-' ephase ' ' site1 '-' site2 '-' pdcond ' time-frequency lag Histogram'];
+            saveimgname_prefix = [animal  '_' ephase '_freqtimeLagPlot_' site1 '_' site2 '-' pdcond];
+            ContFreq_TFLag_Plot(f_selected(idx_str:idx_end), deltaphis_trials(idx_str:idx_end, :), sigcicoh_1pair(idx_str:idx_end), ...
+                figTitle_prefix, savefolder, saveimgname_prefix, ylimit)
+            
+            clear idx_str idx_end figTitle_prefix saveimgname_prefix
+        end
+        
+        clear site2
+        clear contInds deltaphis_trials sigcicoh_1pair
     end
-    
-    clear('filename', 'ciCoh', 'deltaphis_allChnsTrials', 'f_selected', 'psedociCohs', 'T_chnsarea');
-    
-    
+    clear site1
 end
 
 function contInds = contiFreqrange(data)
@@ -104,7 +129,7 @@ for di = 1 : length(data)
 end
 
 
-function plotTimefreqLag(freqs, deltaphis_trials, sigcicoh, figTitle_prefix, savefolder, saveimgname_prefix, ylimit)
+function ContFreq_TFLag_Plot(freqs, deltaphis_trials, sigcicoh, figTitle_prefix, savefolder, saveimgname_prefix, ylimit)
 %   plot Time frequency lag for length(freqs) > 2
 %
 %   Input:
@@ -185,4 +210,3 @@ for fi = 1 : nfs
         clear f_end
     end
 end
-
