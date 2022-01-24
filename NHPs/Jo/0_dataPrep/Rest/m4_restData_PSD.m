@@ -325,15 +325,20 @@ h3 = plot(F_AOI, psd_moderate_mean, 'Color', color_moderate_mean, 'LineWidth', l
 %     plot([F_maxPSD F_maxPSD], [0 maxPSD + maxPSD * 0.2], 'k--')
 
 xlim([min(F_AOI) max(F_AOI)])
+ylim([0 0.2])
+set(gca,'XTick',[10 15 20 25 30 35 40 45 50],'YTick',[0 0.1 0.2]);
+xlabel('Frequency (Hz)', 'FontWeight','bold')
+ylabel('Power', 'FontWeight','bold')
+set(gca, 'Box', 'off')
 
 % legend
 legend([h1, h2, h3], {'normal', 'mild', 'moderate'})
 
 % title
-title([animal ' PSD in ' strrep(brainarea, '_', '-')])
+title([animal ' Rest PSD in ' strrep(brainarea, '_', '-')])
 
 % save figure
-savename = fullfile(savefolder, ['psd_' brainarea]);
+savename = fullfile(savefolder, [animal 'Rest_psd_' brainarea]);
 saveas(gcf, savename, 'png')
 
 clear psd_allsegs_normal psd_allsegs_mild psd_allsegs_moderate
