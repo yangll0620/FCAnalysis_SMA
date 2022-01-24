@@ -14,6 +14,8 @@ function plot_ciCohHistogram(ciCoh_flatten, chnPairNames, f_selected, titlename,
 % parse params
 p = inputParser;
 addParameter(p, 'codesavefolder', '', @isstr);
+addParameter(p, 'fig_width', 1200, @(x) assert(isnumeric(x) && isscalar(x)));
+addParameter(p, 'fig_height', 600, @(x) assert(isnumeric(x) && isscalar(x)));
 parse(p,varargin{:});
 
 % copy code to savefolder if not empty
@@ -24,8 +26,8 @@ end
 
 fig_left = 50;
 fig_bottom = 50;
-fig_width = 1200;
-fig_height = 600;
+fig_width = p.Results.fig_width;
+fig_height = p.Results.fig_height;
 
 
 % plot
@@ -33,7 +35,7 @@ figure;
 set(gcf, 'PaperUnits', 'points',  'Position', [fig_left fig_bottom fig_width fig_height]);
 imagesc(ciCoh_flatten)
 colormap(jet)
-set(gca, 'Position', [0.09 0.05 0.9 0.88])
+set(gca, 'Position', [0.15 0.2 0.75 0.7])
 [npairs, nf] = size(ciCoh_flatten);
 xticks([1:nf])
 xticklabels(round(f_selected,2))

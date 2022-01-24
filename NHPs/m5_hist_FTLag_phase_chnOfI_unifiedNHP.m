@@ -42,15 +42,25 @@ if strcmpi(animal, 'Jo')
     ylimit_ftLag = [0 30];
 end
 
+histClim = [0 1];
+roseRLim = [0 0.3];
+
+image_type = 'tif';
+
 %% save setup
 savefolder = codecorresfolder;
 copyfile2folder(codefilepath, fullfile(savefolder, 'code'));
+savecodefolder = fullfile(savefolder, 'code');
 
 
 %% Code start here
+runTFLag = true;
+runCicohHist = true;
+runRosePlot = true;
+
 cond_cell = cond_cell_extract(animal);
 EventPhases = SKT_eventPhases_extract();
-chnsOfI = chnOfInterest_extract(animal, 'codesavefolder', fullfile(savefolder, 'code'));
+chnsOfI = chnOfInterest_extract(animal, 'codesavefolder', savecodefolder);
 
 files = dir(fullfile(inputfolder, '*.mat'));
 for fi = 1 : length(files)
@@ -71,10 +81,61 @@ for fi = 1 : length(files)
     sigciCohs= sigciCoh_extract(psedociCohs, ciCoh);
     
     % plot
-    freqtimeLag_Plot(T_chnsarea, sigciCohs, deltaphis_allChnsTrials, f_selected, ylimit_ftLag, animal, ephase, pdcond, savefolder)
+    if runTFLag
+        TFLagsavefolder = fullfile(savefolder, 'TFLag');
+        if ~exist(TFLagsavefolder, 'dir')
+            mkdir(TFLagsavefolder);
+        end
+        freqtimeLag_Plot(T_chnsarea, sigciCohs, deltaphis_allChnsTrials, f_selected, ylimit_ftLag, animal, ephase, pdcond, TFLagsavefolder);
+        
+        clear TFLagsavefolder
+    end
+    
+    if runCicohHist || runRosePlot
+        [sigciCohs_flatten, deltaphis_flatten, chnPairNames] = ciCohDephiFlatten_chnPairNames_extract(sigciCohs, deltaphis_allChnsTrials, T_chnsarea, 'codesavefolder', savecodefolder);
+        [align2, t_AOI, align2name] = SKT_EventPhase_align2_tAOI_extract(ephase, animal, pdcond, 'codesavefolder', savecodefolder);
+        ntrials = size(deltaphis_allChnsTrials, 4);
+        
+        if runCicohHist
+            nshuffle = size(psedociCohs, 4);
+            titlename = [animal '-'  pdcond '-'  ephase '['  num2str(t_AOI(1)) ' ' num2str(t_AOI(2))   ']s,' ' align2 = ' align2name ', ntrials = ' num2str(ntrials) ' nshuffle= ' num2str(nshuffle)];
+            
+            plot_ciCohHistogram(sigciCohs_flatten, chnPairNames, f_selected, titlename, histClim, ...
+                'codesavefolder', savecodefolder, 'fig_width', 1000, 'fig_height', 250);
+            
+            saveimgname = [animal '_' ephase '_' pdcond '_align2' char(align2) '.' image_type];
+            histsavefolder = fullfile(savefolder, 'ciCohHist');
+            if ~exist(histsavefolder, 'dir')
+                mkdir(histsavefolder)
+            end
+            saveas(gcf, fullfile(histsavefolder, saveimgname), image_type);
+            close(gcf)
+            clear nshuffle titlename saveimgname histsavefolder
+        end
+        
+        % rose histogram of deltaphis_allChnsTrials
+        if runRosePlot
+            titlename_prefix = [animal '-'  pdcond '-'  ephase];
+            subtitlename = [ephase '['  num2str(t_AOI(1)) ' ' num2str(t_AOI(2))   ']s, align2 = ' char(align2) ', ntrials = ' num2str(ntrials)];
+            savefile_prefix = [animal 'trialPhaseDiff'];
+            savefile_suffix = [ephase '_' pdcond '_align2' char(align2)];
+            rosePlotsavefolder = fullfile(savefolder, 'rosePlot');
+            if ~exist(rosePlotsavefolder, 'dir')
+                mkdir(rosePlotsavefolder);
+            end
+            
+            plotsave_deltaphirose(deltaphis_flatten, sigciCohs_flatten, chnPairNames, f_selected, titlename_prefix, subtitlename, rosePlotsavefolder, savefile_prefix, savefile_suffix, image_type,...
+                'codesavefolder', savecodefolder, 'roseRLim', roseRLim);
+            
+            clear titlename_prefix subtitlename savefile_prefix savefile_suffix
+        end
+        
+        clear sigciCohs_flatten deltaphis_flatten chnPairNames
+        clear align2 t_AOI align2name ntrials
+    end
     
     clear filename pdcond ephase 
-    clear sigciCohs
+    clear sigciCohs mask_chnOfI
     clear('ciCoh', 'deltaphis_allChnsTrials', 'f_selected', 'psedociCohs', 'T_chnsarea');
 end
 

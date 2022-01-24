@@ -16,6 +16,9 @@ codesavefolder = p.Results.codesavefolder;
 if ~isempty(codesavefolder) 
     copyfile2folder(mfilename('fullpath'), codesavefolder);
 end
+
+
+
 chnsOfI = {};
 if strcmpi(animal,'jo')
     chnsOfI = {'M1', 'stn1-2', 'gp3-4'};
