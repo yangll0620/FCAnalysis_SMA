@@ -329,7 +329,7 @@ ylim([0 0.2])
 set(gca,'XTick',[10 15 20 25 30 35 40 45 50],'YTick',[0 0.1 0.2]);
 xlabel('Frequency (Hz)', 'FontWeight','bold')
 ylabel('Power', 'FontWeight','bold')
-set(gca, 'Box', 'off')
+
 
 % legend
 legend([h1, h2, h3], {'normal', 'mild', 'moderate'})
