@@ -54,9 +54,9 @@ savecodefolder = fullfile(savefolder, 'code');
 
 
 %% Code start here
-runTFLag = true;
+runTFLag = false;
 runCicohHist = false;
-runRosePlot = false;
+runRosePlot = true;
 
 cond_cell = cond_cell_extract(animal);
 EventPhases = SKT_eventPhases_extract();
@@ -118,8 +118,8 @@ for fi = 1 : length(files)
             titlename_prefix = [animal '-'  pdcond '-'  ephase];
             subtitlename = [ephase '['  num2str(t_AOI(1)) ' ' num2str(t_AOI(2))   ']s, align2 = ' char(align2) ', ntrials = ' num2str(ntrials)];
             savefile_prefix = [animal 'trialPhaseDiff'];
-            savefile_suffix = [ephase '_' pdcond '_align2' char(align2)];
-            rosePlotsavefolder = fullfile(savefolder, 'rosePlot');
+            savefile_suffix = [pdcond '_' ephase   '_align2' char(align2)];
+            rosePlotsavefolder = fullfile(savefolder, 'rosePlot', ephase);
             if ~exist(rosePlotsavefolder, 'dir')
                 mkdir(rosePlotsavefolder);
             end
