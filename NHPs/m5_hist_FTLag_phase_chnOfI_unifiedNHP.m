@@ -55,8 +55,8 @@ savecodefolder = fullfile(savefolder, 'code');
 
 %% Code start here
 runTFLag = true;
-runCicohHist = true;
-runRosePlot = true;
+runCicohHist = false;
+runRosePlot = false;
 
 cond_cell = cond_cell_extract(animal);
 EventPhases = SKT_eventPhases_extract();
@@ -82,7 +82,7 @@ for fi = 1 : length(files)
     
     % plot
     if runTFLag
-        TFLagsavefolder = fullfile(savefolder, 'TFLag');
+        TFLagsavefolder = fullfile(savefolder, 'TFLag', ephase);
         if ~exist(TFLagsavefolder, 'dir')
             mkdir(TFLagsavefolder);
         end
