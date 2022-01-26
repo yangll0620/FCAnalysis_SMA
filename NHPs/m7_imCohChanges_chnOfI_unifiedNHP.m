@@ -78,10 +78,10 @@ for ci = 1 : length(cond_cell)
         
         % plot and save ciCohChanges Histogram image
         nshuffle = size(psedoiCohChanges,4);
-        titlename = [animal ' FCChangesChnOI '  pdcond '-'  ephase '['  num2str(t_AOI(1)) ' ' num2str(t_AOI(2))   ']s,' ' align2 = ' align2name ', ntrials = ' num2str(ntrials) ' nshuffle= ' num2str(nshuffle)];
-        plot_ciCohHistogram(sigciCohChanges_flatten, chnPairNames, f_selected, titlename, [-1 1], ...
+        titlename = [animal ' FCChanges '  pdcond '-'  ephase '['  num2str(t_AOI(1)) ' ' num2str(t_AOI(2))   ']s,' ' align2 = ' align2name ', ntrials = ' num2str(ntrials) ' nshuffle= ' num2str(nshuffle)];
+        plot_ciCohHistogram(sigciCohChanges_flatten, chnPairNames, round(f_selected), titlename, [-1 1], ...
             'fig_width', 1000, 'fig_height', 250);
-        saveimgname = [animal '_' ephase '_' pdcond '_align2' align2name '.' image_type];
+        saveimgname = [animal 'FCChangesChoI_' ephase '_' pdcond '_align2' align2name '.' image_type];
         saveas(gcf, fullfile(savefolder, saveimgname), image_type);
         clear titlename  saveimgname nshuffle
         close all
