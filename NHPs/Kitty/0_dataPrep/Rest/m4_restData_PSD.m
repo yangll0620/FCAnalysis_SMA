@@ -295,7 +295,7 @@ h3 = plot(F_AOI, psd_moderate_mean, 'Color', color_moderate_mean, 'LineWidth', l
 xlim([min(F_AOI) max(F_AOI)])
 ylim([0 0.2])
 set(gca,'XTick',[10 15 20 25 30 35 40 45 50],'YTick',[0 0.1 0.2]);
-set(gca, 'Box', 'off')
+
 
 xlabel('Frequency (Hz)', 'FontWeight','bold')
 ylabel('Power', 'FontWeight','bold')

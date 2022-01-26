@@ -101,7 +101,7 @@ for fi = 1 : length(files)
             titlename = [animal '-'  pdcond '-'  ephase '['  num2str(t_AOI(1)) ' ' num2str(t_AOI(2))   ']s,' ' align2 = ' align2name ', ntrials = ' num2str(ntrials) ' nshuffle= ' num2str(nshuffle)];
             
             plot_ciCohHistogram(sigciCohs_flatten, chnPairNames, f_selected, titlename, histClim, ...
-                'codesavefolder', savecodefolder, 'fig_width', 1000, 'fig_height', 250);
+                'codesavefolder', savecodefolder, 'fig_width', 500, 'fig_height', 200);
             
             saveimgname = [animal '_' ephase '_' pdcond '_align2' char(align2) '.' image_type];
             histsavefolder = fullfile(savefolder, 'ciCohHist');
@@ -201,26 +201,26 @@ function ContFreq_TFLag_Plot(freqs, deltaphis_trials, sigcicoh, figTitle_prefix,
 nfs = length(freqs);
 
 image_type = 'tif';
-
-% figure setup
-leftmargin = 0.03;
-rightmargin = 0.03;
-uppermargin = 0.1;
-lowermargin = 0.1;
-
-deltax = 0.05;
-deltay = 0.05;
-figpos_base = [250 250 1600 420];
 histedge = [-0.05:0.0025:0.05 ];
-ncols = 8;
+
+width_outsubplot = 180;
+height_outsubplot = 410;
+deltaWidth = 20;
+dispix_outinpos = [30 20 20 50];
+width_insubplot = width_outsubplot - dispix_outinpos(1) - dispix_outinpos(3);
+height_insubplot = height_outsubplot - dispix_outinpos(2) - dispix_outinpos(4);
 
 
-nrows = ceil(nfs / ncols);
-figpos = figpos_base;
-figpos(4) = figpos(4) * nrows;
-width = ((1-leftmargin - rightmargin) - (ncols -1) * deltax)/ncols;
-height = ((1- uppermargin - lowermargin)- (nrows -1)* deltay)/nrows;
-fig = figure('Position', figpos);
+x_leftmargin = 20;
+x_rightmargin = 0;
+y_topmargin = 10;
+y_bottommargin = 20;
+
+fig_width = nfs* width_outsubplot + (nfs-1)* deltaWidth + x_leftmargin + x_rightmargin;
+fig_height = height_outsubplot + y_bottommargin + y_topmargin;
+figpos = [250 250 fig_width fig_height];
+fig = figure('Units', 'pixels', 'Position', figpos);
+
 for fi = 1 : nfs
     f = freqs(fi);
     deltaphis = deltaphis_trials(fi, :);
@@ -239,28 +239,22 @@ for fi = 1 : nfs
     
     deltat = deltaphis / (2 * pi * f);
     
-    coli = mod(fi, ncols);
-    rowi = ceil(fi/ncols);
-    if coli == 0
-        coli = ncols;
-    end
-
    
-    x = leftmargin + (coli -1) * (deltax + width);
-    y = 1-uppermargin - height - (rowi -1) * (deltay + height);
-    ax = axes(fig, 'Position', [x y  width height]);
+    x_out = x_leftmargin + (fi-1) * width_outsubplot;
+    x = x_out + dispix_outinpos(1);
+    y = y_bottommargin + dispix_outinpos(2); 
+    pos = [x y width_insubplot height_insubplot];
+    ax = axes(fig, 'Units', 'pixels', 'Position', pos);
     histogram(ax, deltat, histedge)
     
     ylabel([num2str(f) 'Hz'])
     ylim(ylimit)
-    if coli == 1
-        xlabel('\Deltat /s')
-    end
     view(90,90)
     
     % annotation for cicoh and median
     annotation(fig,'textbox',[x+width-0.05 y+height-0.05 0.06 0.05],...
     'String',{['cicoh = ' num2str(sigcicoh(fi))]},'LineStyle','none','FitBoxToText','off');
+
     
     % annotation for median deltat
     med = round(median(abs(deltat)),3)*1000;
@@ -272,7 +266,7 @@ for fi = 1 : nfs
     
     if fi == nfs       
         % Create textbox
-        annotation(fig,'textbox',[0.04 0.91 0.5 0.08],...
+        annotation(fig,'textbox',[0.05 0.88 0.9 0.08],...
             'String',[figTitle_prefix '-freq' num2str(round(freqs(1))) '-' num2str(round(freqs(end))) 'Hz'],...
             'LineStyle','none', 'FitBoxToText','off'); 
         saveas(fig, fullfile(savefolder, [saveimgname_prefix '_f' num2str(round(freqs(1))) '_' num2str(round(freqs(end))) 'Hz']), image_type);
