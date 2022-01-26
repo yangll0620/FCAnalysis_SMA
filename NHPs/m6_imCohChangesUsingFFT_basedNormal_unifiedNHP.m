@@ -68,7 +68,7 @@ clear unwanted_DBS noisy_chns
 
 
 % each event Phase
-for ei = 1: length(EventPhases)
+for ei = 3: length(EventPhases)
     event = EventPhases{ei};
     
     % base lfp is normal
@@ -166,7 +166,7 @@ for ei = 1: length(EventPhases)
         clear titlename  saveimgname
         close all
         
-        clear event align2 t_AOI align2name ciCohChangesfile
+        clear align2 t_AOI align2name ciCohChangesfile
         clear('ciCohChanges', 'T_chnsarea', 'ntrials', 'f_selected', 'psedoiCohChanges');
     end
     
