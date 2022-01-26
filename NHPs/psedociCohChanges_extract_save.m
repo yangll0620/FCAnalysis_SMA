@@ -1,4 +1,4 @@
-function psedociCohChanges_extract_save(suffi_end, lfptrials, lfpsegs_rest, fs, f_AOI, ciCohChangesfile)
+function psedociCohChanges_extract_save(suffi_end, lfptrials, lfpsegs_base, fs, f_AOI, ciCohChangesfile)
 %
 % lfptrials: nchns * ntemp * ntrials(nsegs)
 %   
@@ -12,22 +12,22 @@ if(~exist('psedoiCohChanges', 'var'))
 else
     shuffi_str = size(psedoiCohChanges, 4) + 1;
 end
-lfp_combined = cat(3, lfpsegs_rest, lfptrials);
+lfp_combined = cat(3, lfpsegs_base, lfptrials);
 ntotal = size(lfp_combined, 3);
 ntrials = size(lfptrials, 3);
 for si = shuffi_str : suffi_end
     randomSKTInds =  randsample(ntotal,ntrials);
     
-    masksRest = logical([1: ntotal]);
-    masksRest(randomSKTInds) = 0;
+    masksBase = logical([1: ntotal]);
+    masksBase(randomSKTInds) = 0;
    
-    psedolfp_SKT = lfp_combined(:, :, masksRest);
-    psedolfp_rest = lfp_combined(:, :, ~masksRest);
+    psedolfp_SKT = lfp_combined(:, :, masksBase);
+    psedolfp_Base = lfp_combined(:, :, ~masksBase);
     
     [~, psedoiCoh_SKT, ~] = ciCoh_trialDeltaPhi(psedolfp_SKT, fs, f_AOI);
-    [~, psedoiCoh_rest, ~] = ciCoh_trialDeltaPhi(psedolfp_rest, fs, f_AOI);
+    [~, psedoiCoh_Base, ~] = ciCoh_trialDeltaPhi(psedolfp_Base, fs, f_AOI);
     
-    psedoiCohChanges = cat(4, psedoiCohChanges, psedoiCoh_SKT - psedoiCoh_rest);
+    psedoiCohChanges = cat(4, psedoiCohChanges, psedoiCoh_SKT - psedoiCoh_Base);
     
     if(mod(si, 10) == 0)
         disp(['pesdo test finished ' num2str(si)])
