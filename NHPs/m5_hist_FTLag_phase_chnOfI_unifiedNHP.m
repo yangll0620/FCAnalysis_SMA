@@ -54,9 +54,9 @@ savecodefolder = fullfile(savefolder, 'code');
 
 
 %% Code start here
-runTFLag = false;
+runTFLag = true;
 runCicohHist = false;
-runRosePlot = true;
+runRosePlot = false;
 
 cond_cell = cond_cell_extract(animal);
 EventPhases = SKT_eventPhases_extract();
@@ -257,9 +257,18 @@ for fi = 1 : nfs
         xlabel('\Deltat /s')
     end
     view(90,90)
-    annotation(fig,'textbox',...
-    [x+width-0.05 y+height-0.05 0.06 0.05],...
+    
+    % annotation for cicoh and median
+    annotation(fig,'textbox',[x+width-0.05 y+height-0.05 0.06 0.05],...
     'String',{['cicoh = ' num2str(sigcicoh(fi))]},'LineStyle','none','FitBoxToText','off');
+    
+    % annotation for median deltat
+    med = round(median(abs(deltat)),3)*1000;
+    T = round(1/f,3)*1000;
+    med_4T = [med med+T  med+2*T med+3*T];
+
+    annotation(fig,'textbox',[x+0.005 y+0.07 0.07 0.05],'String',{['median \Deltat=[' num2str(med_4T) ']ms']},'LineStyle','none','FitBoxToText','off');
+
     
     if fi == nfs       
         % Create textbox
