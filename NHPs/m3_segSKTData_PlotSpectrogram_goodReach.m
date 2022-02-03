@@ -1,8 +1,16 @@
-function m3_SKTData_PlotSpectrogram()
-%  extract lfp data respect to reachonset
+function m3_segSKTData_PlotSpectrogram_goodReach(animal, varargin)
+%  spectrogram of all good Reach
+%
+%
+%   Inputs:
+%       animal
+%
+%       Name-Value: 
+%           'F_AOI': frequency of Interested, default [8 40]
+%
+%           'codesavefolder' - code saved folder
 % 
-%  return:
-%        lfptrials: nchns * ntemp * ntrials
+
 
 
 %% folders generate
@@ -19,76 +27,69 @@ addpath(genpath(fullfile(codefolder,'util')));
 addpath(genpath(fullfile(codefolder,'NHPs')));
 
 
-% codecorresfolder, codecorresParentfolder
-[codecorresfolder, codecorresParentfolder] = code_corresfolder(codefilepath, true, false);
-
-%% global variables
-
-% animal
-if ismac
-    % Code to run on Mac platform
-elseif isunix
-    % Code to run on Linux platform
-    
-    [fi, j] = regexp(codecorresfolder, ['NHPs', '/', '[A-Za-z]*']);
-elseif ispc
-    % Code to run on Windows platform
-    
-    [fi, j] = regexp(codecorresfolder, ['NHPs', '\\', '[A-Za-z]*']);
-else
-    disp('Platform not supported')
+% find animal corresponding folder
+[~, codefilename]= fileparts(codefilepath);
+SKTSubfolder = 'SKT';
+if strcmpi(animal, 'Kitty')
+    SKTSubfolder = 'SKT_SegV';
 end
-animal = codecorresfolder(fi + length('NHPs') + 1:j);
+NHPCodefilepath = fullfile(codefolder, 'NHPs', animal, '0_dataPrep' , SKTSubfolder, codefilename);
+[codecorresfolder, codecorresParentfolder] = code_corresfolder(NHPCodefilepath, true, false);
+
+
+
+% parse params
+p = inputParser;
+addParameter(p, 'codesavefolder', '', @isstr);
+addParameter(p, 'f_AOI', [8 40], @(x)isnumeric(x)&&isvector(x)&&length(x)==2);
+parse(p,varargin{:});
+codesavefolder = p.Results.codesavefolder;
+f_AOI = p.Results.f_AOI;
+
+% copy code to savefolder if not empty
+if ~isempty(codesavefolder)  
+    copyfile2folder(mfilename('fullpath'), codesavefolder);
+end
+
 
 
 %%  input setup
 
-% input folder: extracted raw rest data with grayMatter 
-inputfolder = fullfile(codecorresParentfolder, 'm2_SKTData_SelectTrials');
-
-cond_cell = cond_cell_extract(animal);
-[t_minmax_reach_normal, t_minmax_return_normal, t_minmax_reach_mild, t_minmax_return_mild, t_minmax_reach_moderate, t_minmax_return_moderate] ...
-    = goodSKTTrials_reachReturn_tcritiria(animal);
-
-if strcmpi(animal, 'bug')
-    tdur_trial_normal = [-0.6 1];
-    tdur_trial_mild = [-0.6 1];
-    tdur_trial_moderate = [-0.6 1];
+% input folder
+if strcmpi(animal, 'Kitty')
+    SKTTrialfolder = 'm2_segSKTData_SelectTrials_goodReach';
 end
-if strcmpi(animal, 'jo') 
-    
-    tdur_trial_normal = [-0.8 0.8];
-    tdur_trial_mild = [-0.8 0.8];
-    tdur_trial_moderate = [-0.8 0.8];
-    
-end
+if strcmpi(animal, 'Jo')
+    SKTTrialfolder = 'm2_SKTData_SelectTrials';
+end 
+inputfolder = fullfile(codecorresParentfolder, SKTTrialfolder);
 
-if strcmpi(animal, 'kitty') % Kitty not have mild
-    tdur_trial_normal = [-0.6 1];
-    tdur_trial_moderate = [-0.6 1];
-    
-end
-
-if strcmpi(animal, 'pinky')
-    tdur_trial_normal = [-0.6 1];
-    tdur_trial_mild = [-0.6 1];
-    tdur_trial_moderate = [-.6 1];
-end
 
 % align to event
 align2 = SKTEvent.ReachOnset;
 coli_align2 = uint32(align2);
 
-% saved fig format
-savefig_format = 'tif';
 
 %% save setup
 savefolder = codecorresfolder;
+fresubsavefolder = fullfile(savefolder, ['freq_' num2str(f_AOI(1)) '-' num2str(f_AOI(2)) 'Hz']);
+
+codesavefolder = fullfile(fresubsavefolder, 'code');
+
+copyfile2folder(codefilepath, codesavefolder);
+
+% saved fig format
+savefig_format = 'tif';
 
 %% starting: narrow filter the lfp data of all the files
+cond_cell = cond_cell_extract(animal);
+[t_minmax_reach_normal, t_minmax_return_normal, t_minmax_reach_mild, t_minmax_return_mild, t_minmax_reach_moderate, t_minmax_return_moderate] ...
+    = goodSKTTrials_reachReturn_tcritiria(animal);
+
+[tdur_trial_normal, tdur_trial_mild, tdur_trial_moderate] = SKT_tdurTrial_extact(animal, 'codesavefolder', codesavefolder);
 
 % save trials 
-reply = input('save trials or no y/n [n] ', 's');
+reply = input('save spectrogram for each trial y/n [n] ', 's');
 if isempty(reply) || ~strcmpi(reply, 'y')
     savetrials =  'n';
 else
@@ -96,7 +97,7 @@ else
 end
 clear reply
 
-savefolder_trials = fullfile(savefolder, 'trials');
+savefolder_trials = fullfile(fresubsavefolder, 'trials');
 if ~exist(savefolder_trials, 'dir')
     mkdir(savefolder_trials);
 end
@@ -106,22 +107,30 @@ for i = 1 : length(cond_cell)
     pdcond = cond_cell{i};
     
     files = dir(fullfile(inputfolder, ['*_' pdcond '_*.mat']));
+    if isempty(files)
+        continue
+    end
     
     eval(['tdur_trial = tdur_trial_' pdcond ';']);
     eval(['t_minmax_reach = t_minmax_reach_' pdcond ';']);
     eval(['t_minmax_return = t_minmax_return_' pdcond ';']);
     
     
-    %%% plot spectrogram across all trials  
-    [lfptrials, fs, T_chnsarea] = lfp_goodTrials_align2(files, align2, tdur_trial, t_minmax_reach, t_minmax_return);
+    %%% plot spectrogram across all trials
+    if strcmpi(animal, 'Kitty')
+        [lfptrials, fs, T_chnsarea] = lfpseg_selectedTrials_align2(files, align2, tdur_trial, t_minmax_reach);
+    end
+    if strcmpi(animal, 'Jo')      
+        [lfptrials, fs, T_chnsarea] = lfp_goodTrials_align2(files, align2, tdur_trial, t_minmax_reach);
+    end
     mask_noisyChns = cellfun(@(x) contains(x, noisy_chns), T_chnsarea.brainarea);
     mask_notDBS_notM1 = ~strcmp(T_chnsarea.brainarea, 'M1') & ~strcmp(T_chnsarea.electype, 'DBS');
     mask_usedChns = ~(mask_noisyChns | mask_notDBS_notM1);
     T_chnsarea = T_chnsarea(mask_usedChns, :); T_chnsarea.chni = [1: height(T_chnsarea)]';
     lfptrials = lfptrials(mask_usedChns, :, :);
     
-    plot_spectrogram_acrossTrials(lfptrials, T_chnsarea, tdur_trial, fs, animal, pdcond, align2, savefolder, savefig_format);
-    saveas(gcf, fullfile(savefolder, [animal '_' pdcond]), savefig_format);
+    plot_spectrogram_acrossTrials(lfptrials, T_chnsarea, f_AOI, tdur_trial, fs, animal, pdcond, align2, fresubsavefolder, savefig_format);
+    saveas(gcf, fullfile(fresubsavefolder, [animal '_' pdcond]), savefig_format);
     close gcf
     
     if strcmpi(savetrials, 'y')
@@ -144,7 +153,7 @@ end
 end
 
 
-function plot_spectrogram_acrossTrials(lfp_phase_trials, T_chnsarea, tdur_trial, fs, animal, pdcond, align2, varargin)
+function plot_spectrogram_acrossTrials(lfp_phase_trials, T_chnsarea, f_AOI, tdur_trial, fs, animal, pdcond, align2, varargin)
 % plot lfpdata of all the channels: nchns * ntemp * ntrials
 
 
@@ -162,7 +171,6 @@ end
 
 twin = 0.2;
 toverlap = 0.18;
-f_AOI = [8 40];
 t_AOI = [-0.5 0.5];
 
 nwin = round(twin * fs);
@@ -253,6 +261,7 @@ for idxGi = 1 : length(idxGroups)
         subp_bottom = subp_startTop - subp_height - (idxi -1) * (subp_height + supb_deltaY);
         ax = axes(fig, 'Position', [subp_left, subp_bottom, subp_width, subp_height]);
         imagesc(ax, times_plot, freqs_plot, psd_allchns(:, :, idxs(idxi)));
+        clim = [];
         if isempty(clim)
             set(ax,'YDir','normal')
         else
