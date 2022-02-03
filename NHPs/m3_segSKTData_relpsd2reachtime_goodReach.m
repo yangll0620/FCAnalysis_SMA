@@ -50,7 +50,7 @@ if ~isempty(codesavefolder)
 end
 
 %%  input setup
-
+image_type = 'tif';
 % input folder
 if strcmpi(animal, 'Kitty')
     SKTTrialfolder = 'm2_segSKTData_SelectTrials_goodReach';
@@ -117,19 +117,26 @@ for i = 1 : length(cond_cell)
 end
 
 plotstyles = {'bo', 'k.'};
-for i = 1 : length(cond_cell)
-    pdcond = cond_cell{i};
-    eval(['reachtimes = reachtime_' pdcond ';']);
-    eval(['relpsds = relpsd_' pdcond ';']);
-    
-    plot(relpsds, reachtimes, plotstyles{i});
-    hold on
-    
-    clear reachtimes relpsds pdcond
+for chi = 1 : height(T_chnsarea)
+    for i = 1 : length(cond_cell)
+        pdcond = cond_cell{i};
+        eval(['reachtimes = reachtime_' pdcond ';']);
+        eval(['relpsds = relpsd_' pdcond '(:, chi);']);
+        
+        figure
+        plot(relpsds, reachtimes, plotstyles{i});
+        hold on
+        
+        clear reachtimes relpsds pdcond
+    end
+    title(T_chnsarea.brainarea(chi))
+    xlabel('relative psd')
+    ylabel('reach time /s')
+    xlim([-0.5 3])
 end
-xlabel('relative psd')
-ylabel('reach time /s')
-xlim([-0.5 1])
+
+saveimgname = [animal '_relativePSD2Reachtime'];
+saveas(gcf, fullfile(savefolder, saveimgname), image_type)
 end
 
 
@@ -198,6 +205,8 @@ for tri = 1: ntrials
         x = lfp_phase_1trial(chi, :);
         [~, freqs, times, psd] = spectrogram(x, nwin, noverlap,[],fs_lfp); % ps: nf * nt
         
+        % convert into dB
+        psd = 10 * log10(psd);
         
         % select freqs and corresponding psd
         idx_f_AOI = (freqs >= f_AOI(1) &  freqs <=f_AOI(2));
@@ -207,7 +216,7 @@ for tri = 1: ntrials
         
         psd_AOI = mean(mean(psd(idx_f_AOI, idx_t_AOI), 2),1);
         psd_base = mean(mean(psd(idx_f_AOI, idx_t_base), 2),1);
-        relpsd = (psd_AOI - psd_base)/psd_base;
+        relpsd = (psd_AOI - psd_base)/abs(psd_base);
         
         % cat into psd_allchns
         relpsd_allchns = cat(2, relpsd_allchns, relpsd);
