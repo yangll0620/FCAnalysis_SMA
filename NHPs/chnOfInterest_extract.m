@@ -1,4 +1,8 @@
 function chnsOfI = chnOfInterest_extract(animal, varargin)
+%   
+%   Usage:
+%       chnsOfI = chnOfInterest_extract('Kitty', 'codesavefolder', codesavefolder)
+%   
 %   Inputs:
 %       animal
 %

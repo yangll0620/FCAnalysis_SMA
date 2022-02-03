@@ -67,11 +67,18 @@ coli_align2 = uint32(align2);
 
 %% save setup
 savefolder = codecorresfolder;
+savecodefolder = fullfile(savefolder, 'code');
+copyfile2folder(codefilepath, savecodefolder);
+
 
 %% starting: narrow filter the lfp data of all the files
 cond_cell = cond_cell_extract(animal);
 noisy_chns = noisy_chns_extract(animal);
 [tdur_trial_normal, tdur_trial_mild, tdur_trial_moderate] = SKT_tdurTrial_extact(animal, 'codesavefolder', codesavefolder);
+
+
+
+% for each cond, extract reachtime and relative psd
 for i = 1 : length(cond_cell)
     pdcond = cond_cell{i};
     
@@ -92,14 +99,37 @@ for i = 1 : length(cond_cell)
         reachtime_1cond = cat(1, reachtime_1cond, reachtime_alltrials); 
         relpsd_1cond = cat(1, relpsd_1cond, relpsd_allchns_alltrials); 
         clear reachtime_alltrials relpsd_allchns_alltrials
+        
+        if ~exist('T_chnsarea', 'var')
+            load(file, 'T_chnsarea');
+            chnsOfI = chnOfInterest_extract(animal, 'codesavefolder', savecodefolder);
+            mask_chnOfI = cellfun(@(x) any(strcmp(chnsOfI, x)), T_chnsarea.brainarea);
+            T_chnsarea = T_chnsarea(mask_chnOfI, :);
+        end
+        
     end
     eval(['reachtime_' pdcond ' = reachtime_1cond;']);
+    relpsd_1cond = relpsd_1cond(:, mask_chnOfI);
     eval(['relpsd_' pdcond ' = relpsd_1cond;']);
     
     clear pdcond files tdur_trial
-    clear reachtime_1cond reachtime_1cond
+    clear reachtime_1cond relpsd_1cond 
 end
 
+plotstyles = {'bo', 'k.'};
+for i = 1 : length(cond_cell)
+    pdcond = cond_cell{i};
+    eval(['reachtimes = reachtime_' pdcond ';']);
+    eval(['relpsds = relpsd_' pdcond ';']);
+    
+    plot(relpsds, reachtimes, plotstyles{i});
+    hold on
+    
+    clear reachtimes relpsds pdcond
+end
+xlabel('relative psd')
+ylabel('reach time /s')
+xlim([-0.5 1])
 end
 
 
@@ -121,7 +151,7 @@ coli_align2 = uint32(align2);
 twin = 0.2;
 toverlap = 0.15;
 f_AOI = [15 20];
-t_AOI = [0 0.5];
+t_AOI = [0 0.3];
 t_base = [-0.5 0];
 
 

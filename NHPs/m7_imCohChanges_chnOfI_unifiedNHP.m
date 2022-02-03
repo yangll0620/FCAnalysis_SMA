@@ -39,8 +39,9 @@ image_type = 'tif';
 
 %% save setup
 savefolder = codecorresfolder;
-copyfile2folder(codefilepath, fullfile(savefolder, 'code'));
 savecodefolder = fullfile(savefolder, 'code');
+copyfile2folder(codefilepath, savecodefolder);
+
 
 %% Code start here
 
