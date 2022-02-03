@@ -102,6 +102,7 @@ if ~exist(savefolder_trials, 'dir')
     mkdir(savefolder_trials);
 end
 
+disp(['spectrogram saved to ' savefolder])
 noisy_chns = noisy_chns_extract(animal);
 for i = 1 : length(cond_cell)
     pdcond = cond_cell{i};
@@ -232,7 +233,7 @@ mask_GP = contains(T_chnsarea.brainarea, 'gp');
 mask_Others = ~(mask_STN | mask_GP);
 idxGroups = [{find(mask_STN)}; {find(mask_GP)}; {find(mask_Others)}];
 idxGroupNames = {'STN'; 'GP'; 'Others'};
-[clim_Spectrogram_STN, clim_Spectrogram_GP, clim_Spectrogram_Others] = clim_SKTSpectrogram_extract(animal);
+[clim_Spectrogram_STN, clim_Spectrogram_GP, clim_Spectrogram_Others] = clim_SKTSpectrogram_extract(animal, 'F_AOI', f_AOI);
 ntrials = size(lfp_phase_trials, 3);
 
 fig = figure(); 
@@ -261,7 +262,6 @@ for idxGi = 1 : length(idxGroups)
         subp_bottom = subp_startTop - subp_height - (idxi -1) * (subp_height + supb_deltaY);
         ax = axes(fig, 'Position', [subp_left, subp_bottom, subp_width, subp_height]);
         imagesc(ax, times_plot, freqs_plot, psd_allchns(:, :, idxs(idxi)));
-        clim = [];
         if isempty(clim)
             set(ax,'YDir','normal')
         else
@@ -397,7 +397,7 @@ animal = filename(1:tmp(1)-1);
 [clim_Spectrogram_STN, clim_Spectrogram_GP, clim_Spectrogram_Others] = clim_SKTSpectrogram_extract(animal);
 
 
-load(file, 'lfpdata', 'T_idxevent_lfp', 'fs_lfp', 'goodTrials', 'T_chnsarea',...
+load(file, 'lfpdata', 'T_idxevent_lfp', 'fs_lfp', 'selectedTrials', 'T_chnsarea',...
     'smoothWspeed_trial', 'Wrist_smooth_trial', 'T_idxevent_ma', 'fs_ma');
 
 
@@ -406,7 +406,6 @@ mask_noisyChns = cellfun(@(x) contains(x, noisy_chns), T_chnsarea.brainarea);
 mask_notDBS_notM1 = ~strcmp(T_chnsarea.brainarea, 'M1') & ~strcmp(T_chnsarea.electype, 'DBS');
 mask_usedChns = ~(mask_noisyChns | mask_notDBS_notM1);
 T_chnsarea = T_chnsarea(mask_usedChns, :); T_chnsarea.chni = [1: height(T_chnsarea)]';
-
 
         
 nwin = round(twin * fs_lfp);
@@ -419,36 +418,41 @@ mask_GP = contains(T_chnsarea.brainarea, 'gp');
 mask_Others = ~(mask_STN | mask_GP);
 idxGroups = [{find(mask_STN)}; {find(mask_GP)}; {find(mask_Others)}];
 
-
 % plot and save each trial
-ntrials = length(goodTrials);
+ntrials = length(selectedTrials);
 for tri = 1: ntrials
     
     % ignore trials marked with 0
-    if ~goodTrials(tri)
+    if ~selectedTrials(tri)
         continue
     end
     
     
     %%% --- extract MA data: ma_WSpeed,  ma_W_X/Y/Z--- %%% 
     % extract trial with t_dur for MA data
-    idxdur = round(tdur_trial * fs_ma) + T_idxevent_ma{tri, coli_align2};
-    ma_WSpeed = smoothWspeed_trial(idxdur(1):idxdur(2), tri);
-    ma_W_X =  squeeze(Wrist_smooth_trial(idxdur(1):idxdur(2), 1, tri));
-    ma_W_Y =  squeeze(Wrist_smooth_trial(idxdur(1):idxdur(2), 2, tri));
-    ma_W_Z =  squeeze(Wrist_smooth_trial(idxdur(1):idxdur(2), 3, tri));
+    idxdur_ma = round(tdur_trial * fs_ma) + T_idxevent_ma{tri, coli_align2};
+    
+    tmp = smoothWspeed_trial{tri};
+    ma_WSpeed = tmp(idxdur_ma(1):idxdur_ma(2),:);
+    clear tmp
+    
+    tmp = Wrist_smooth_trial{tri};
+    ma_W_X =  squeeze(tmp(idxdur_ma(1):idxdur_ma(2), 1));
+    ma_W_Y =  squeeze(tmp(idxdur_ma(1):idxdur_ma(2), 2));
+    ma_W_Z =  squeeze(tmp(idxdur_ma(1):idxdur_ma(2), 3));
     times_plot_ma = [1: length(ma_WSpeed)]/fs_ma + tdur_trial(1);
-    clear idxdur
+    clear idxdur_ma tmp
     
     
     
     
     %%% --- extract psd of lfp data for each chn: psd_allchns %%%    
     % extract trial with t_dur for lfp data: lfp_phase_1trial (nchns * ntemp)
-    idxdur = round(tdur_trial * fs_lfp) + T_idxevent_lfp{tri, coli_align2};
-    lfp_phase_1trial = squeeze(lfpdata(:, idxdur(1):idxdur(2), tri));
+    idxdur_lfp = round(tdur_trial * fs_lfp) + T_idxevent_lfp{tri, coli_align2};
+    tmp = lfpdata{tri};
+    lfp_phase_1trial = squeeze(tmp(:, idxdur_lfp(1):idxdur_lfp(2)));
     lfp_phase_1trial = lfp_phase_1trial(mask_usedChns, :, :);
-    clear idxdur
+    clear idxdur_lfp
     
     % extract psd_allchns_plot using spectrogram, convert into dB and gaussfilt
     psd_allchns = []; % psd_allchns: nf * nt * nchns
