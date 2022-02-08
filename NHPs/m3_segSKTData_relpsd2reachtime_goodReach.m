@@ -129,9 +129,13 @@ for chi = 1 : height(T_chnsarea)
         
         clear reachtimes relpsds pdcond
     end
-    title([T_chnsarea.brainarea(chi) ' psd vs reach time aligned to reachonset'])
+    title([animal ' ' T_chnsarea.brainarea{chi} ' psd vs reach time aligned to reachonset'])
     xlabel('relative psd')
     ylabel('reach time /s')
+    xlim([-1 0.5])
+    legend(cond_cell)
+    savefile = [animal '_relpsd2reachtime_align2'  'reachonset_' T_chnsarea.brainarea{chi}];
+    saveas(gcf, fullfile(savefolder, savefile), image_type);
 end
 
 
@@ -185,15 +189,20 @@ for chi = 1 : height(T_chnsarea)
         eval(['reachtimes = reachtime_' pdcond ';']);
         eval(['relpsds = relpsd_' pdcond '(:, chi);']);
         
-        plot(relpsds, reachtimes, plotstyles{i});
+        plot(relpsds, reachtimes, plotstyles{i}, 'DisplayName',pdcond);
         hold on
         
         clear reachtimes relpsds pdcond
     end
-    title([T_chnsarea.brainarea(chi) ' psd vs reach time aligned to peakV'])
+    title([animal ' ' T_chnsarea.brainarea{chi} ' psd vs reach time aligned to peakV'])
     xlabel('relative psd')
     ylabel('reach time /s')
+    xlim([-1 0.5])
+    legend(cond_cell)
+    savefile = [animal '_relpsd2reachtime_align2'  'peakV_' T_chnsarea.brainarea{chi}];
+    saveas(gcf, fullfile(savefolder, savefile), image_type);
 end
+close all
 
 
 end
@@ -239,8 +248,20 @@ end
 
 
 %% code start here
-load(file, 'lfpdata', 'T_idxevent_lfp', 'fs_lfp', 'selectedTrials', 'T_chnsarea',...
-    'smoothWspeed_trial', 'Wrist_smooth_trial', 'T_idxevent_ma', 'fs_ma');
+listOfVariables = who('-file', file);
+if ismember('selectedTrials', listOfVariables)
+    load(file,  'selectedTrials');
+else
+    if ismember('goodTrials', listOfVariables)
+        load(file,  'goodTrials');
+        selectedTrials = goodTrials;
+        clear goodTrials
+    end
+end
+clear listOfVariables
+
+
+load(file, 'lfpdata', 'T_idxevent_lfp', 'fs_lfp','T_chnsarea');
 
 
 % remove the noisy chns
@@ -270,10 +291,14 @@ for tri = 1: ntrials
     %%% --- extract psd of lfp data for each chn: psd_allchns %%%    
     % extract trial with t_dur for lfp data: lfp_phase_1trial (nchns * ntemp)
     idxdur_lfp = round(tdur_trial * fs_lfp) + T_idxevent_lfp{tri, coli_align2};
-    tmp = lfpdata{tri};
-    lfp_phase_1trial = squeeze(tmp(:, idxdur_lfp(1):idxdur_lfp(2)));
-    lfp_phase_1trial = lfp_phase_1trial(mask_usedChns, :, :);
-    clear idxdur_lfp tmp
+    
+    if iscell(lfpdata) % lfpdata: cell, lfpdata{tri}: nchns * ntemp
+        tmp = lfpdata{tri}; % tmp: nchns * ntemp
+    else 
+        tmp = squeeze(lfpdata(:, :, tri)); % lfpdata: nchns * ntemp * ntrials
+    end
+    lfp_phase_1trial = tmp(mask_usedChns, idxdur_lfp(1):idxdur_lfp(2));
+    clear idxdur_lfp  tmp
     
     % extract relative psd relpsd_allchns respect to t_base
     relpsd_allchns = []; % psd_allchns: nf * nt * nchns
