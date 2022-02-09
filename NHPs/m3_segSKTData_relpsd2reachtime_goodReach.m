@@ -87,7 +87,7 @@ for algi = 1 : length(align2events)
         
         disp(['align2event = ' align2event ', phasetimename = ' phasetimename])
         
-        % for each cond, extract phase time and relative psd
+        %%% for each cond, extract phase time and relative psd %%%
         for i = 1 : length(cond_cell)
             pdcond = cond_cell{i};
             
@@ -126,7 +126,7 @@ for algi = 1 : length(align2events)
             clear phtime_1cond relpsd_1cond
         end
         
-        % plot
+        %%%  plot %%%
         for chi = 1 : height(T_chnsarea)
             figure
             for i = 1 : length(cond_cell)
@@ -151,9 +151,9 @@ for algi = 1 : length(align2events)
                 
                 clear phtime relpsds pdcond pltstyle
             end
-            title([animal ' ' T_chnsarea.brainarea{chi} ' psd vs ' phasetimename ' aligned to ' align2event])
-            xlabel('relative psd')
-            ylabel('reach time /s')
+            title([animal ' ' T_chnsarea.brainarea{chi} ' psd vs ' phasetimename])
+            xlabel(['relative psd in [' num2str(t_AOI(1)) ' ' num2str(t_AOI(2)) ']s, t_based=[' num2str(t_base(1)) ' ' num2str(t_base(2)) ']s time 0=' align2event])
+            ylabel([phasetimename ' /s' ])
             xlim([-1 0.5])
             legend(cond_cell)
             
@@ -360,7 +360,7 @@ for tri = 1: ntrials
                 tmp = smoothWspeed_trial(:, tri); % smoothWspeed_trial: ntemp * ntrials
             end
             [~, idx_peakV] = max(tmp(idx_reachonset_ma: idx_reach_ma, 1));
-            phtime = (length(tmp) - idx_peakV) / fs_ma;
+            phtime = (idx_reach_ma - idx_reachonset_ma + 1 - idx_peakV) / fs_ma;
             
             clear idx_reachonset_ma idx_reach_ma tmp idx_peakV    
     end
