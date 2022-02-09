@@ -71,89 +71,104 @@ copyfile2folder(codefilepath, savecodefolder);
 F_AOI = [15 20];
 t_AOI = [0 0.3];
 t_base = [-0.3 0];
-align2event = 'reachOnset';
-phasetimename = 'reachTime';
+align2events = {'reachOnset', 'peakV'};
+phasetimenames = {'reachTime', 'reachonset2PeakvTime', 'peakv2TouchTime'};
 
 cond_cell = cond_cell_extract(animal);
 noisy_chns = noisy_chns_extract(animal);
 [tdur_trial_normal, tdur_trial_mild, tdur_trial_moderate] = SKT_tdurTrial_extact(animal, 'codesavefolder', codesavefolder);
 
-
-
-% for each cond, extract reachtime and relative psd
-for i = 1 : length(cond_cell)
-    pdcond = cond_cell{i};
-    
-    files = dir(fullfile(inputfolder, ['*_' pdcond '_*.mat']));
-    
-    if isempty(files)
-        continue
-    end
-    
-    eval(['tdur_trial = tdur_trial_' pdcond ';']);
-
-    
-    reachtime_1cond = [];
-    relpsd_1cond = [];
-    for fi = 1 : length(files)
-        file = fullfile(files(fi).folder, files(fi).name);
-        [reachtime_alltrials, relpsd_allchns_alltrials] = relpsd_eachTrials(file, 'F_AOI', F_AOI, 't_AOI', t_AOI, 't_base', t_base, 'tdur_trial', tdur_trial, ...
-                                                                                  'align2event', align2event, 'phasetimename', phasetimename, 'noisy_chns', noisy_chns);
-        reachtime_1cond = cat(1, reachtime_1cond, reachtime_alltrials); 
-        relpsd_1cond = cat(1, relpsd_1cond, relpsd_allchns_alltrials); 
-        clear reachtime_alltrials relpsd_allchns_alltrials
-        
-        if ~exist('T_chnsarea', 'var')
-            load(file, 'T_chnsarea');
-            chnsOfI = chnOfInterest_extract(animal, 'codesavefolder', savecodefolder);
-            mask_chnOfI = cellfun(@(x) any(strcmp(chnsOfI, x)), T_chnsarea.brainarea);
-            T_chnsarea = T_chnsarea(mask_chnOfI, :);
-        end
-        
-    end
-    eval(['reachtime_' pdcond ' = reachtime_1cond;']);
-    relpsd_1cond = relpsd_1cond(:, mask_chnOfI);
-    eval(['relpsd_' pdcond ' = relpsd_1cond;']);
-    
-    clear pdcond files tdur_trial
-    clear reachtime_1cond relpsd_1cond 
-end
-
 plotstyles = {'bo', 'r+', 'k*'};
-for chi = 1 : height(T_chnsarea)
-    figure
-    for i = 1 : length(cond_cell)
-        pdcond = cond_cell{i};
-        eval(['reachtimes = reachtime_' pdcond ';']);
-        eval(['relpsds = relpsd_' pdcond '(:, chi);']);
+
+for algi = 1 : length(align2events)
+    align2event = align2events{algi};
+    for phi = 1 : length(phasetimenames)
+        phasetimename = phasetimenames{phi};
         
-        if strcmpi(pdcond, 'normal')
-            pltstyle = plotstyles{1};
-        else
-            if strcmpi(pdcond, 'mild')
-                pltstyle = plotstyles{2};
-            else
-                if strcmpi(pdcond, 'moderate')
-                    pltstyle = plotstyles{3};
-                end
+        disp(['align2event = ' align2event ', phasetimename = ' phasetimename])
+        
+        % for each cond, extract phase time and relative psd
+        for i = 1 : length(cond_cell)
+            pdcond = cond_cell{i};
+            
+            files = dir(fullfile(inputfolder, ['*_' pdcond '_*.mat']));
+            
+            if isempty(files)
+                continue
             end
+            
+            eval(['tdur_trial = tdur_trial_' pdcond ';']);
+            
+            
+            phtime_1cond = [];
+            relpsd_1cond = [];
+            for fi = 1 : length(files)
+                file = fullfile(files(fi).folder, files(fi).name);
+                [phtime_alltrials, relpsd_allchns_alltrials] = relpsd_eachTrials(file, 'F_AOI', F_AOI, 't_AOI', t_AOI, 't_base', t_base, 'tdur_trial', tdur_trial, ...
+                    'align2event', align2event, 'phasetimename', phasetimename, 'noisy_chns', noisy_chns);
+                phtime_1cond = cat(1, phtime_1cond, phtime_alltrials);
+                relpsd_1cond = cat(1, relpsd_1cond, relpsd_allchns_alltrials);
+                clear reachtime_alltrials relpsd_allchns_alltrials
+                
+                if ~exist('T_chnsarea', 'var')
+                    load(file, 'T_chnsarea');
+                    chnsOfI = chnOfInterest_extract(animal, 'codesavefolder', savecodefolder);
+                    mask_chnOfI = cellfun(@(x) any(strcmp(chnsOfI, x)), T_chnsarea.brainarea);
+                    T_chnsarea = T_chnsarea(mask_chnOfI, :);
+                end
+                
+            end
+            eval(['phtime_' pdcond ' = phtime_1cond;']);
+            relpsd_1cond = relpsd_1cond(:, mask_chnOfI);
+            eval(['relpsd_' pdcond ' = relpsd_1cond;']);
+            
+            clear pdcond files tdur_trial
+            clear phtime_1cond relpsd_1cond
         end
         
-        plot(relpsds, reachtimes, pltstyle, 'DisplayName',pdcond);
-        hold on
+        % plot
+        for chi = 1 : height(T_chnsarea)
+            figure
+            for i = 1 : length(cond_cell)
+                pdcond = cond_cell{i};
+                eval(['phtime = phtime_' pdcond ';']);
+                eval(['relpsds = relpsd_' pdcond '(:, chi);']);
+                
+                if strcmpi(pdcond, 'normal')
+                    pltstyle = plotstyles{1};
+                else
+                    if strcmpi(pdcond, 'mild')
+                        pltstyle = plotstyles{2};
+                    else
+                        if strcmpi(pdcond, 'moderate')
+                            pltstyle = plotstyles{3};
+                        end
+                    end
+                end
+                
+                plot(relpsds, phtime, pltstyle, 'DisplayName',pdcond);
+                hold on
+                
+                clear phtime relpsds pdcond pltstyle
+            end
+            title([animal ' ' T_chnsarea.brainarea{chi} ' psd vs ' phasetimename ' aligned to ' align2event])
+            xlabel('relative psd')
+            ylabel('reach time /s')
+            xlim([-1 0.5])
+            legend(cond_cell)
+            
+            % save
+            savefile = [animal '_relpsd2' phasetimename '_align2' align2event '_' T_chnsarea.brainarea{chi}];
+            saveas(gcf, fullfile(savefolder, savefile), image_type);
+            close gcf
+            
+            clear savefile
+        end
         
-        clear reachtimes relpsds pdcond pltstyle
+        clear phasetimename T_chnsarea phtime_*
     end
-    title([animal ' ' T_chnsarea.brainarea{chi} ' psd vs reach time aligned to reachonset'])
-    xlabel('relative psd')
-    ylabel('reach time /s')
-    xlim([-1 0.5])
-    legend(cond_cell)
-    savefile = [animal '_relpsd2reachtime_align2'  'reachonset_' T_chnsarea.brainarea{chi}];
-    saveas(gcf, fullfile(savefolder, savefile), image_type);
+    clear align2event
 end
-
-
 
 end
 
@@ -171,9 +186,9 @@ function [phtime_alltrials, relpsd_allchns_alltrials] = relpsd_eachTrials(file, 
 %           'F_AOI': frequency of Interested, default [8 40]
 %           't_AOI': time duration of Interested, default [0 0.3]
 %           't_base': time base for relative psd, default [-0.3 0]
-%           'align2event': align to event ('reachOnset', 'peakV'), i.e. time 0, default reachTime
+%           'align2event': align to event {'reachOnset', 'peakV'}, i.e. time 0, default reachTime
 %           'tdur_trial': time duration 
-%           'phasetimename': phase time name of interest ('reachTime', 'reachonset2PeakvTime', 'peakv2TouchTime'), default 'reachTime'
+%           'phasetimename': phase time name of interest {'reachTime', 'reachonset2PeakvTime', 'peakv2TouchTime'}, default 'reachTime'
 %           'noisy_chns': noisy_chns, default {}
 %
 %   Return:
@@ -259,18 +274,25 @@ for tri = 1: ntrials
         case 'peakV'
             idx_reachonset_ma = T_idxevent_ma{tri, coli_reachonset};
             idx_reach_ma = T_idxevent_ma{tri, coli_reach};
-            [~, idx] = max(smoothWspeed_trial{tri}(idx_reachonset_ma: idx_reach_ma, 1));
+            if iscell(smoothWspeed_trial) % smoothWspeed_trial: cell, lfpdata{tri}: ntemp * 1
+                tmp = smoothWspeed_trial{tri}; % tmp: ntemp * 1
+            else
+                tmp = smoothWspeed_trial(:, tri); % smoothWspeed_trial: ntemp * ntrials
+            end
+            [~, idx] = max(tmp(idx_reachonset_ma: idx_reach_ma, 1));
             idx_peakV_ma = idx + idx_reachonset_ma -1;
             
             t_reachonset2peakV = (idx_peakV_ma - idx_reachonset_ma)/ fs_ma;
             t_peakV2reach = (idx_reach_ma - idx_peakV_ma)/ fs_ma;
             if t_reachonset2peakV < abs(t_AOI(1)) || t_peakV2reach < t_AOI(2)
-                clear idx_reachonset_ma idx_reach_ma idx idx_peakV_ma t_reachonset2peakV t_peakV2reach
+                clear idx_reachonset_ma idx_reach_ma idx idx_peakV_ma t_reachonset2peakV t_peakV2reach tmp
                 continue;
             end
             
             idx_peakV_lfp = round(idx_peakV_ma / fs_ma * fs_lfp);
             idxdur_lfp = round(tdur_trial * fs_lfp) + idx_peakV_lfp;
+            clear idx_reachonset_ma idx_reach_ma idx idx_peakV_ma t_reachonset2peakV t_peakV2reach tmp
+            clear idx_peakV_lfp
     end
     
     % extract trial with t_dur for lfp data: lfp_phase_1trial (nchns * ntemp)
@@ -325,7 +347,7 @@ for tri = 1: ntrials
                 tmp = smoothWspeed_trial(:, tri); % smoothWspeed_trial: ntemp * ntrials
             end
             [~, idx_peakV] = max(tmp(idx_reachonset_ma: idx_reach_ma, 1));
-            phtime = idx_peakV / lf_ma;
+            phtime = idx_peakV / fs_ma;
             
             clear idx_reachonset_ma idx_reach_ma tmp idx_peakV
             
@@ -338,7 +360,7 @@ for tri = 1: ntrials
                 tmp = smoothWspeed_trial(:, tri); % smoothWspeed_trial: ntemp * ntrials
             end
             [~, idx_peakV] = max(tmp(idx_reachonset_ma: idx_reach_ma, 1));
-            phtime = (length(tmp) - idx_peakV) / lf_ma;
+            phtime = (length(tmp) - idx_peakV) / fs_ma;
             
             clear idx_reachonset_ma idx_reach_ma tmp idx_peakV    
     end
