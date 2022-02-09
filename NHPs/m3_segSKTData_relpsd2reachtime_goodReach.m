@@ -152,7 +152,7 @@ for algi = 1 : length(align2events)
                 clear phtime relpsds pdcond pltstyle
             end
             title([animal ' ' T_chnsarea.brainarea{chi} ' psd vs ' phasetimename])
-            xlabel(['relative psd in [' num2str(t_AOI(1)) ' ' num2str(t_AOI(2)) ']s, t_based=[' num2str(t_base(1)) ' ' num2str(t_base(2)) ']s time 0=' align2event])
+            xlabel(['relative psd in [' num2str(t_AOI(1)) ' ' num2str(t_AOI(2)) ']s, t-based=[' num2str(t_base(1)) ' ' num2str(t_base(2)) ']s time 0=' align2event])
             ylabel([phasetimename ' /s' ])
             xlim([-1 0.5])
             legend(cond_cell)
