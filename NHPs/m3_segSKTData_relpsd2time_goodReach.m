@@ -37,17 +37,17 @@ NHPCodefilepath = fullfile(codefolder, 'NHPs', animal, '0_dataPrep' , SKTSubfold
 
 
 % parse params
-p = inputParser;
-addParameter(p, 'codesavefolder', '', @isstr);
-addParameter(p, 'f_AOI', [15 20], @(x)isnumeric(x)&&isvector(x)&&length(x)==2);
-addParameter(p, 't_AOI', [0 0.3], @(x)isnumeric(x)&&isvector(x)&&length(x)==2);
-addParameter(p, 't_base', [-0.3 0], @(x)isnumeric(x)&&isvector(x)&&length(x)==2);
+pfit = inputParser;
+addParameter(pfit, 'codesavefolder', '', @isstr);
+addParameter(pfit, 'f_AOI', [15 20], @(x)isnumeric(x)&&isvector(x)&&length(x)==2);
+addParameter(pfit, 't_AOI', [0 0.3], @(x)isnumeric(x)&&isvector(x)&&length(x)==2);
+addParameter(pfit, 't_base', [-0.3 0], @(x)isnumeric(x)&&isvector(x)&&length(x)==2);
 
-parse(p,varargin{:});
-codesavefolder = p.Results.codesavefolder;
-f_AOI =  p.Results.f_AOI;
-t_AOI =  p.Results.t_AOI;
-t_base =  p.Results.t_base;
+parse(pfit,varargin{:});
+codesavefolder = pfit.Results.codesavefolder;
+f_AOI =  pfit.Results.f_AOI;
+t_AOI =  pfit.Results.t_AOI;
+t_base =  pfit.Results.t_base;
 
 % copy code to savefolder if not empty
 if ~isempty(codesavefolder)  
@@ -155,6 +155,14 @@ for algi = 1 : length(align2events)
                 eval(['phtime = phtime_' phasetimename '_' align2event '_' pdcond ';']);
                 eval(['relpsds = relpsd_' phasetimename '_' align2event '_' pdcond '(:, chi);']);
                 
+                % corrcoef
+                sig = false;
+                [r,pfit]= corrcoef(relpsds, phtime);
+                if(pfit(1,2) < 0.05)
+                    sig = true;
+                end
+                
+                
                 if strcmpi(pdcond, 'normal')
                     pltstyle = plotstyles{1};
                 else
@@ -170,6 +178,14 @@ for algi = 1 : length(align2events)
                 plot(relpsds, phtime, pltstyle, 'DisplayName',pdcond);
                 hold on
                 
+                if sig
+                    pfit = polyfit(relpsds,phtime, 1);
+                    x1 = [min(relpsds) max(relpsds)];
+                    y1 = polyval(pfit,x1);
+                    plot(x1,y1, pltstyle(1), 'DisplayName', ['cc=' num2str(r(1,2))])
+                    clear pfit x1 y1
+                end
+                
                 clear phtime relpsds pdcond pltstyle
             end
             title([animal ' ' T_chnsarea.brainarea{chi} ' psd vs ' phasetimename])
@@ -177,7 +193,7 @@ for algi = 1 : length(align2events)
                 ']Hz, t-based=[' num2str(t_base(1)) ' ' num2str(t_base(2)) ']s time 0=' align2event])
             ylabel([phasetimename ' /s' ])
             xlim([-1 0.5])
-            legend(cond_cell)
+            legend
             
             % save
             saveimgfile = [animal '_relpsd_' num2str(f_AOI(1)) '-' num2str(f_AOI(2)) 'Hz_' phasetimename '_align2' align2event '_' T_chnsarea.brainarea{chi}];
