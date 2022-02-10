@@ -1,4 +1,4 @@
-function m3_segSKTData_relpsd2reachtime_goodReach(animal, varargin)
+function m3_segSKTData_relpsd2time_goodReach(animal, varargin)
 %  spectrogram of all good Reach
 %
 %
@@ -39,10 +39,15 @@ NHPCodefilepath = fullfile(codefolder, 'NHPs', animal, '0_dataPrep' , SKTSubfold
 % parse params
 p = inputParser;
 addParameter(p, 'codesavefolder', '', @isstr);
-addParameter(p, 'f_AOI', [8 40], @(x)isnumeric(x)&&isvector(x)&&length(x)==2);
+addParameter(p, 'f_AOI', [15 20], @(x)isnumeric(x)&&isvector(x)&&length(x)==2);
+addParameter(p, 't_AOI', [0 0.3], @(x)isnumeric(x)&&isvector(x)&&length(x)==2);
+addParameter(p, 't_base', [-0.3 0], @(x)isnumeric(x)&&isvector(x)&&length(x)==2);
+
 parse(p,varargin{:});
 codesavefolder = p.Results.codesavefolder;
-f_AOI = p.Results.f_AOI;
+f_AOI =  p.Results.f_AOI;
+t_AOI =  p.Results.t_AOI;
+t_base =  p.Results.t_base;
 
 % copy code to savefolder if not empty
 if ~isempty(codesavefolder)  
@@ -68,9 +73,6 @@ copyfile2folder(codefilepath, savecodefolder);
 
 
 %% starting: narrow filter the lfp data of all the files
-F_AOI = [15 20];
-t_AOI = [0 0.3];
-t_base = [-0.3 0];
 align2events = {'reachOnset', 'peakV'};
 phasetimenames = {'reachTime', 'reachonset2PeakvTime', 'peakv2TouchTime'};
 
@@ -104,7 +106,7 @@ for algi = 1 : length(align2events)
             relpsd_1cond = [];
             for fi = 1 : length(files)
                 file = fullfile(files(fi).folder, files(fi).name);
-                [phtime_alltrials, relpsd_allchns_alltrials] = relpsd_eachTrials(file, 'F_AOI', F_AOI, 't_AOI', t_AOI, 't_base', t_base, 'tdur_trial', tdur_trial, ...
+                [phtime_alltrials, relpsd_allchns_alltrials] = relpsd_eachTrials(file, 'F_AOI', f_AOI, 't_AOI', t_AOI, 't_base', t_base, 'tdur_trial', tdur_trial, ...
                     'align2event', align2event, 'phasetimename', phasetimename, 'noisy_chns', noisy_chns);
                 phtime_1cond = cat(1, phtime_1cond, phtime_alltrials);
                 relpsd_1cond = cat(1, relpsd_1cond, relpsd_allchns_alltrials);
@@ -152,13 +154,14 @@ for algi = 1 : length(align2events)
                 clear phtime relpsds pdcond pltstyle
             end
             title([animal ' ' T_chnsarea.brainarea{chi} ' psd vs ' phasetimename])
-            xlabel(['relative psd in [' num2str(t_AOI(1)) ' ' num2str(t_AOI(2)) ']s, t-based=[' num2str(t_base(1)) ' ' num2str(t_base(2)) ']s time 0=' align2event])
+            xlabel(['relative psd in [' num2str(t_AOI(1)) ' ' num2str(t_AOI(2)) ']s,[' num2str(f_AOI(1)) ' ' num2str(f_AOI(2))...
+                ']Hz, t-based=[' num2str(t_base(1)) ' ' num2str(t_base(2)) ']s time 0=' align2event])
             ylabel([phasetimename ' /s' ])
             xlim([-1 0.5])
             legend(cond_cell)
             
             % save
-            savefile = [animal '_relpsd2' phasetimename '_align2' align2event '_' T_chnsarea.brainarea{chi}];
+            savefile = [animal '_relpsd_' num2str(f_AOI(1)) '-' num2str(f_AOI(2)) 'Hz_' phasetimename '_align2' align2event '_' T_chnsarea.brainarea{chi}];
             saveas(gcf, fullfile(savefolder, savefile), image_type);
             close gcf
             
