@@ -71,6 +71,8 @@ savefolder = codecorresfolder;
 savecodefolder = fullfile(savefolder, 'code');
 copyfile2folder(codefilepath, savecodefolder);
 
+savefilename_prefix = 'relpsd2time_';
+
 
 %% starting: narrow filter the lfp data of all the files
 align2events = {'reachOnset', 'peakV'};
@@ -82,59 +84,76 @@ noisy_chns = noisy_chns_extract(animal);
 
 plotstyles = {'bo', 'r+', 'k*'};
 
+
+%%% calculate phase time and relative psd
+savematfile = fullfile(savefolder, [savefilename_prefix '_' num2str(f_AOI(1)) '-' num2str(f_AOI(2)) 'Hz' ...
+                                    '_tAOI' num2str(t_AOI(1)) '-' num2str(t_AOI(2)) 's' ...
+                                    '_tbase' num2str(t_base(1)) '-' num2str(t_base(2)) 's' '.mat']);
+if ~exist(savematfile, 'file')
+    for algi = 1 : length(align2events)
+        align2event = align2events{algi};
+        for phi = 1 : length(phasetimenames)
+            phasetimename = phasetimenames{phi};
+            
+            disp(['align2event = ' align2event ', phasetimename = ' phasetimename])
+            
+            %%% for each cond, extract phase time and relative psd %%%
+            for i = 1 : length(cond_cell)
+                pdcond = cond_cell{i};
+                
+                files = dir(fullfile(inputfolder, ['*_' pdcond '_*.mat']));
+                
+                if isempty(files)
+                    continue
+                end
+                
+                eval(['tdur_trial = tdur_trial_' pdcond ';']);
+                
+                
+                phtime_1cond = [];
+                relpsd_1cond = [];
+                for fi = 1 : length(files)
+                    file = fullfile(files(fi).folder, files(fi).name);
+                    [phtime_alltrials, relpsd_allchns_alltrials] = relpsd_eachTrials(file, 'F_AOI', f_AOI, 't_AOI', t_AOI, 't_base', t_base, 'tdur_trial', tdur_trial, ...
+                        'align2event', align2event, 'phasetimename', phasetimename, 'noisy_chns', noisy_chns);
+                    phtime_1cond = cat(1, phtime_1cond, phtime_alltrials);
+                    relpsd_1cond = cat(1, relpsd_1cond, relpsd_allchns_alltrials);
+                    clear phtime_alltrials relpsd_allchns_alltrials
+                    
+                    if ~exist('T_chnsarea', 'var')
+                        load(file, 'T_chnsarea');
+                        chnsOfI = chnOfInterest_extract(animal, 'codesavefolder', savecodefolder);
+                        mask_chnOfI = cellfun(@(x) any(strcmp(chnsOfI, x)), T_chnsarea.brainarea);
+                        T_chnsarea = T_chnsarea(mask_chnOfI, :);
+                    end
+                    
+                end
+                eval(['phtime_' phasetimename '_' align2event '_' pdcond ' = phtime_1cond;']);
+                relpsd_1cond = relpsd_1cond(:, mask_chnOfI);
+                eval(['relpsd_' phasetimename '_' align2event '_' pdcond ' = relpsd_1cond;']);
+                
+                clear pdcond files tdur_trial
+                clear phtime_1cond relpsd_1cond
+            end
+        end
+    end
+    save(savematfile, 'phtime_*', 'relpsd_*', 'T_chnsarea');
+    clear('phtime_*', 'relpsd_*', 'T_chnsarea');
+end
+
+%%%  plot %%%
+load(savematfile, 'phtime_*', 'relpsd_*', 'T_chnsarea');
 for algi = 1 : length(align2events)
     align2event = align2events{algi};
     for phi = 1 : length(phasetimenames)
         phasetimename = phasetimenames{phi};
-        
-        disp(['align2event = ' align2event ', phasetimename = ' phasetimename])
-        
-        %%% for each cond, extract phase time and relative psd %%%
-        for i = 1 : length(cond_cell)
-            pdcond = cond_cell{i};
-            
-            files = dir(fullfile(inputfolder, ['*_' pdcond '_*.mat']));
-            
-            if isempty(files)
-                continue
-            end
-            
-            eval(['tdur_trial = tdur_trial_' pdcond ';']);
-            
-            
-            phtime_1cond = [];
-            relpsd_1cond = [];
-            for fi = 1 : length(files)
-                file = fullfile(files(fi).folder, files(fi).name);
-                [phtime_alltrials, relpsd_allchns_alltrials] = relpsd_eachTrials(file, 'F_AOI', f_AOI, 't_AOI', t_AOI, 't_base', t_base, 'tdur_trial', tdur_trial, ...
-                    'align2event', align2event, 'phasetimename', phasetimename, 'noisy_chns', noisy_chns);
-                phtime_1cond = cat(1, phtime_1cond, phtime_alltrials);
-                relpsd_1cond = cat(1, relpsd_1cond, relpsd_allchns_alltrials);
-                clear reachtime_alltrials relpsd_allchns_alltrials
-                
-                if ~exist('T_chnsarea', 'var')
-                    load(file, 'T_chnsarea');
-                    chnsOfI = chnOfInterest_extract(animal, 'codesavefolder', savecodefolder);
-                    mask_chnOfI = cellfun(@(x) any(strcmp(chnsOfI, x)), T_chnsarea.brainarea);
-                    T_chnsarea = T_chnsarea(mask_chnOfI, :);
-                end
-                
-            end
-            eval(['phtime_' pdcond ' = phtime_1cond;']);
-            relpsd_1cond = relpsd_1cond(:, mask_chnOfI);
-            eval(['relpsd_' pdcond ' = relpsd_1cond;']);
-            
-            clear pdcond files tdur_trial
-            clear phtime_1cond relpsd_1cond
-        end
-        
-        %%%  plot %%%
         for chi = 1 : height(T_chnsarea)
             figure
             for i = 1 : length(cond_cell)
                 pdcond = cond_cell{i};
-                eval(['phtime = phtime_' pdcond ';']);
-                eval(['relpsds = relpsd_' pdcond '(:, chi);']);
+
+                eval(['phtime = phtime_' phasetimename '_' align2event '_' pdcond ';']);
+                eval(['relpsds = relpsd_' phasetimename '_' align2event '_' pdcond '(:, chi);']);
                 
                 if strcmpi(pdcond, 'normal')
                     pltstyle = plotstyles{1};
@@ -161,18 +180,16 @@ for algi = 1 : length(align2events)
             legend(cond_cell)
             
             % save
-            savefile = [animal '_relpsd_' num2str(f_AOI(1)) '-' num2str(f_AOI(2)) 'Hz_' phasetimename '_align2' align2event '_' T_chnsarea.brainarea{chi}];
-            saveas(gcf, fullfile(savefolder, savefile), image_type);
+            saveimgfile = [animal '_relpsd_' num2str(f_AOI(1)) '-' num2str(f_AOI(2)) 'Hz_' phasetimename '_align2' align2event '_' T_chnsarea.brainarea{chi}];
+            saveas(gcf, fullfile(savefolder, saveimgfile), image_type);
             close gcf
             
-            clear savefile
+            clear saveimgfile
         end
-        
-        clear phasetimename T_chnsarea phtime_*
+        clear phasetimename
     end
     clear align2event
 end
-
 end
 
 
