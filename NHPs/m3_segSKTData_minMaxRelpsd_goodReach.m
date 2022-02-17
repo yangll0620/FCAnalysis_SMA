@@ -1,5 +1,10 @@
-function m3_segSKTData_relpsd2time_goodReach(animal, varargin)
-%  spectrogram of all good Reach
+function m3_segSKTData_minMaxRelpsd_goodReach(animal, varargin)
+%  min and max relative psd
+%
+% Kitty_TrialsWMarkers_moderate_20150408_bktdt2, trial = 8, 0  0  1  0
+% Kitty_TrialsWMarkers_moderate_20150410_bktdt1, trial = 2, 1  0  0  0
+% Kitty_TrialsWMarkers_moderate_20150417_bktdt1, trial = 9, 0  1  0  0
+% Kitty_TrialsWMarkers_moderate_20150505_bktdt1, trial = 6, 0  0  0  1
 %
 %
 %   Inputs:
@@ -75,8 +80,8 @@ savefilename_prefix = 'relpsd2time_';
 
 
 %% starting: narrow filter the lfp data of all the files
-align2events = {'reachOnset', 'peakV'};
-phasetimenames = {'reachTime', 'reachonset2PeakvTime', 'peakv2TouchTime'};
+align2events = {'reachOnset'};
+phasetimenames = {'reachTime'};
 
 cond_cell = cond_cell_extract(animal);
 noisy_chns = noisy_chns_extract(animal);
@@ -114,7 +119,7 @@ if ~exist(savematfile, 'file')
                 relpsd_1cond = [];
                 for fi = 1 : length(files)
                     file = fullfile(files(fi).folder, files(fi).name);
-                    [phtime_alltrials, relpsd_allchns_alltrials] = relpsd_eachTrials(file, 'F_AOI', f_AOI, 't_AOI', t_AOI, 't_base', t_base, 'tdur_trial', tdur_trial, ...
+                    [phtime_alltrials, relpsd_allchns_alltrials] = find_relpsd(file, 'F_AOI', f_AOI, 't_AOI', t_AOI, 't_base', t_base, 'tdur_trial', tdur_trial, ...
                         'align2event', align2event, 'phasetimename', phasetimename, 'noisy_chns', noisy_chns);
                     phtime_1cond = cat(1, phtime_1cond, phtime_alltrials);
                     relpsd_1cond = cat(1, relpsd_1cond, relpsd_allchns_alltrials);
@@ -122,7 +127,7 @@ if ~exist(savematfile, 'file')
                     
                     if ~exist('T_chnsarea', 'var')
                         load(file, 'T_chnsarea');
-                        chnsOfI = chnOfInterest_extract(animal, 'codesavefolder', savecodefolder);
+                        chnsOfI = chnsOfInterest_extract(animal, 'codesavefolder', savecodefolder);
                         mask_chnOfI = cellfun(@(x) any(strcmp(chnsOfI, x)), T_chnsarea.brainarea);
                         T_chnsarea = T_chnsarea(mask_chnOfI, :);
                     end
@@ -141,76 +146,31 @@ if ~exist(savematfile, 'file')
     clear('phtime_*', 'relpsd_*', 'T_chnsarea');
 end
 
-%%%  plot %%%
+%%% 
 load(savematfile, 'phtime_*', 'relpsd_*', 'T_chnsarea');
+stnmask = cellfun(@(x) strcmp(x,'stn1-2'), T_chnsarea.brainarea);
+relpsd_IOA = relpsd_reachTime_reachOnset_moderate(:, stnmask);
+[sortpsd, indpsd] = sort(relpsd_IOA);
+psdIOA = [sortpsd(1) sortpsd(2) sortpsd(end-1) sortpsd(end-2)];
+
+
+pdcond = 'moderate';
+eval(['tdur_trial = tdur_trial_' pdcond ';']);
 for algi = 1 : length(align2events)
     align2event = align2events{algi};
-    for phi = 1 : length(phasetimenames)
-        phasetimename = phasetimenames{phi};
-        for chi = 1 : height(T_chnsarea)
-            figure
-            for i = 1 : length(cond_cell)
-                pdcond = cond_cell{i};
-
-                eval(['phtime = phtime_' phasetimename '_' align2event '_' pdcond ';']);
-                eval(['relpsds = relpsd_' phasetimename '_' align2event '_' pdcond '(:, chi);']);
-                
-                % corrcoef
-                sig = false;
-                [r,pvals]= corrcoef(relpsds, phtime);
-                if(pvals(1,2) < 0.05)
-                    sig = true;
-                end
-                
-                
-                if strcmpi(pdcond, 'normal')
-                    pltstyle = plotstyles{1};
-                else
-                    if strcmpi(pdcond, 'mild')
-                        pltstyle = plotstyles{2};
-                    else
-                        if strcmpi(pdcond, 'moderate')
-                            pltstyle = plotstyles{3};
-                        end
-                    end
-                end
-                
-                plot(relpsds, phtime, pltstyle, 'DisplayName',pdcond);
-                hold on
-                
-                if sig
-                    pfit = polyfit(relpsds,phtime, 1);
-                    x1 = [min(relpsds) max(relpsds)];
-                    y1 = polyval(pfit,x1);
-                    plot(x1,y1, pltstyle(1), 'DisplayName', ['cc=' num2str(r(1,2))])
-                    clear pfit x1 y1
-                end
-                
-                clear phtime relpsds pdcond pltsty
-                le
-            end
-            title([animal ' ' T_chnsarea.brainarea{chi} ' psd vs ' phasetimename])
-            xlabel(['relative psd in [' num2str(t_AOI(1)) ' ' num2str(t_AOI(2)) ']s,[' num2str(f_AOI(1)) ' ' num2str(f_AOI(2))...
-                ']Hz, t-based=[' num2str(t_base(1)) ' ' num2str(t_base(2)) ']s time 0=' align2event])
-            ylabel([phasetimename ' /s' ])
-            xlim([-1 0.5])
-            legend
-            
-            % save
-            saveimgfile = [animal '_relpsd_' num2str(f_AOI(1)) '-' num2str(f_AOI(2)) 'Hz_' phasetimename '_align2' align2event '_' T_chnsarea.brainarea{chi}];
-            saveas(gcf, fullfile(savefolder, saveimgfile), image_type);
-            close gcf
-            
-            clear saveimgfile
-        end
-        clear phasetimename
+    
+    files = dir(fullfile(inputfolder, ['*_' pdcond '_*.mat']));
+    for fi = 1 : length(files)
+        file = fullfile(files(fi).folder, files(fi).name);
+        [phtime_alltrials, relpsd_allchns_alltrials] = find_relpsd(file, psdIOA, 'F_AOI', f_AOI, 't_AOI', t_AOI, 't_base', t_base, 'tdur_trial', tdur_trial, ...
+            'align2event', align2event, 'noisy_chns', noisy_chns);
     end
-    clear align2event
 end
+
 end
 
 
-function [phtime_alltrials, relpsd_allchns_alltrials] = relpsd_eachTrials(file, varargin)
+function [phtime_alltrials, relpsd_allchns_alltrials] = find_relpsd(file, psdIOA, varargin)
 %    
 %
 %   file: abs path for file
@@ -280,12 +240,10 @@ load(file, 'lfpdata', 'T_idxevent_lfp', 'fs_lfp','T_chnsarea', ...
     'T_idxevent_ma', 'smoothWspeed_trial', 'fs_ma');
 
 
-% remove the noisy chns
-mask_noisyChns = cellfun(@(x) contains(x, noisy_chns), T_chnsarea.brainarea);
-mask_notDBS_notM1 = ~strcmp(T_chnsarea.brainarea, 'M1') & ~strcmp(T_chnsarea.electype, 'DBS');
-mask_usedChns = ~(mask_noisyChns | mask_notDBS_notM1);
-T_chnsarea = T_chnsarea(mask_usedChns, :); T_chnsarea.chni = [1: height(T_chnsarea)]';
-
+% only remain stn
+stnmask = cellfun(@(x) strcmp(x,'stn1-2'), T_chnsarea.brainarea);
+mask_usedChns = stnmask;
+T_chnsarea = T_chnsarea(mask_usedChns, :);
         
 nwin = round(twin * fs_lfp);
 noverlap = round(toverlap * fs_lfp);  
@@ -342,73 +300,38 @@ for tri = 1: ntrials
     clear idxdur_lfp  tmp
     
     % extract relative psd relpsd_allchns respect to t_base
-    relpsd_allchns = []; % psd_allchns: nf * nt * nchns
-    for chi = 1 : size(lfp_phase_1trial, 1)
-        x = lfp_phase_1trial(chi, :);
-        [~, freqs, times, psd] = spectrogram(x, nwin, noverlap,[],fs_lfp); % ps: nf * nt
-        
-        % convert into dB
-        psd = 10 * log10(psd);
-        
-        % select freqs and corresponding psd
-        idx_f_AOI = (freqs >= f_AOI(1) &  freqs <=f_AOI(2));
-        times = times + tdur_trial(1);
-        idx_t_AOI = (times >= t_AOI(1) &  times <=t_AOI(2));
-        idx_t_base = (times >= t_base(1) &  times <=t_base(2));
-        
-        psd_AOI = mean(mean(psd(idx_f_AOI, idx_t_AOI), 2),1);
-        psd_base = mean(mean(psd(idx_f_AOI, idx_t_base), 2),1);
-        relpsd = (psd_AOI - psd_base)/abs(psd_base);
-        
-        % cat into psd_allchns
-        relpsd_allchns = cat(2, relpsd_allchns, relpsd);
-        
-        clear x freqs times psd 
-        clear idx_f_AOI idx_t_AOI idx_t_base
-        clear psd_AOI psd_base relpsd
-    end
-    relpsd_allchns_alltrials = cat(1, relpsd_allchns_alltrials, relpsd_allchns);
+    x = lfp_phase_1trial;
+    [~, freqs, times, psd] = spectrogram(x, nwin, noverlap,[],fs_lfp); % ps: nf * nt
     
+    % convert into dB
+    psd = 10 * log10(psd);
     
-    %%% extract phase time: phtime %%%     
-    switch phasetimename
-        case 'reachTime'
-            phtime = (T_idxevent_ma{tri, coli_reach} -  T_idxevent_ma{tri, coli_reachonset})/fs_ma;
-            
-        case 'reachonset2PeakvTime'
-            idx_reachonset_ma = T_idxevent_ma{tri, coli_reachonset};
-            idx_reach_ma = T_idxevent_ma{tri, coli_reach};
-            if iscell(smoothWspeed_trial) % smoothWspeed_trial: cell, lfpdata{tri}: ntemp * 1
-                tmp = smoothWspeed_trial{tri}; % tmp: ntemp * 1
-            else
-                tmp = smoothWspeed_trial(:, tri); % smoothWspeed_trial: ntemp * ntrials
-            end
-            [~, idx_peakV] = max(tmp(idx_reachonset_ma: idx_reach_ma, 1));
-            phtime = idx_peakV / fs_ma;
-            
-            clear idx_reachonset_ma idx_reach_ma tmp idx_peakV
-            
-        case 'peakv2TouchTime'
-            idx_reachonset_ma = T_idxevent_ma{tri, coli_reachonset};
-            idx_reach_ma = T_idxevent_ma{tri, coli_reach};
-            if iscell(smoothWspeed_trial) % smoothWspeed_trial: cell, lfpdata{tri}: ntemp * 1
-                tmp = smoothWspeed_trial{tri}; % tmp: ntemp * 1
-            else
-                tmp = smoothWspeed_trial(:, tri); % smoothWspeed_trial: ntemp * ntrials
-            end
-            [~, idx_peakV] = max(tmp(idx_reachonset_ma: idx_reach_ma, 1));
-            phtime = (idx_reach_ma - idx_reachonset_ma + 1 - idx_peakV) / fs_ma;
-            
-            clear idx_reachonset_ma idx_reach_ma tmp idx_peakV    
+    % select freqs and corresponding psd
+    idx_f_AOI = (freqs >= f_AOI(1) &  freqs <=f_AOI(2));
+    times = times + tdur_trial(1);
+    idx_t_AOI = (times >= t_AOI(1) &  times <=t_AOI(2));
+    idx_t_base = (times >= t_base(1) &  times <=t_base(2));
+    
+    psd_AOI = mean(mean(psd(idx_f_AOI, idx_t_AOI), 2),1);
+    psd_base = mean(mean(psd(idx_f_AOI, idx_t_base), 2),1);
+    relpsd_1trial = (psd_AOI - psd_base)/abs(psd_base);
+    
+    if any(psdIOA == relpsd_1trial)
+        [~,filename,~] = fileparts(file);
+        disp([filename ', trial = ' num2str(tri) ', ' num2str(psdIOA == relpsd_1trial)])
+        clear filename
     end
-    phtime_alltrials = cat(1, phtime_alltrials, phtime);
+        
+    clear x freqs times psd
+    clear idx_f_AOI idx_t_AOI idx_t_base
     
     
     %%% final clear
-    clear reachtime lfp_phase_1trial relpsd_allchns
+    clear lfp_phase_1trial relpsd_1trial
 end
 
 end
+
 
 
 

@@ -1,7 +1,7 @@
-function chnsOfI = chnOfInterest_extract(animal, varargin)
+function chnsOfI = chnsOfInterest_extract(animal, varargin)
 %   
 %   Usage:
-%       chnsOfI = chnOfInterest_extract('Kitty', 'codesavefolder', codesavefolder)
+%       chnsOfI = chnsOfInterest_extract('Kitty', 'codesavefolder', codesavefolder)
 %   
 %   Inputs:
 %       animal

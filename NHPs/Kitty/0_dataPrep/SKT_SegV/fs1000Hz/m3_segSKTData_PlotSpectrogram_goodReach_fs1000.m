@@ -44,7 +44,7 @@ animal = codecorresfolder(fi + length('NHPs') + 1:j);
 %%  input setup
 
 % input folder: extracted raw rest data with grayMatter 
-inputfolder = fullfile(codecorresParentfolder, 'm2_segSKTData_SelectTrials_goodReach');
+inputfolder = fullfile(codecorresParentfolder, 'm2_segSKTData_SelectTrials_goodReach_fs1000Hz');
 
 cond_cell = cond_cell_extract(animal);
 [t_minmax_reach_normal, t_minmax_return_normal, t_minmax_reach_mild, t_minmax_return_mild, t_minmax_reach_moderate, t_minmax_return_moderate] ...
@@ -102,6 +102,7 @@ if ~exist(savefolder_trials, 'dir')
 end
 
 noisy_chns = noisy_chns_extract(animal);
+chnsOfI = chnsOfInterest_extract(animal);
 for i = 1 : length(cond_cell)
     pdcond = cond_cell{i};
     
@@ -118,8 +119,9 @@ for i = 1 : length(cond_cell)
     %%% plot spectrogram across all trials
     [lfptrials, fs, T_chnsarea] = lfpseg_selectedTrials_align2(files, align2, tdur_trial, t_minmax_reach);
     mask_noisyChns = cellfun(@(x) contains(x, noisy_chns), T_chnsarea.brainarea);
+    mask_chnsOfI= cellfun(@(x) contains(x, chnsOfI), T_chnsarea.brainarea);
     mask_notDBS_notM1 = ~strcmp(T_chnsarea.brainarea, 'M1') & ~strcmp(T_chnsarea.electype, 'DBS');
-    mask_usedChns = ~(mask_noisyChns | mask_notDBS_notM1);
+    mask_usedChns = ~(mask_noisyChns | mask_notDBS_notM1) & mask_chnsOfI;
     T_chnsarea = T_chnsarea(mask_usedChns, :); T_chnsarea.chni = [1: height(T_chnsarea)]';
     lfptrials = lfptrials(mask_usedChns, :, :);
     
@@ -165,7 +167,7 @@ end
 
 twin = 0.2;
 toverlap = 0.18;
-f_AOI = [8 40];
+f_AOI = [100 400];
 t_AOI = [-0.5 0.5];
 
 nwin = round(twin * fs);
@@ -256,6 +258,7 @@ for idxGi = 1 : length(idxGroups)
         subp_bottom = subp_startTop - subp_height - (idxi -1) * (subp_height + supb_deltaY);
         ax = axes(fig, 'Position', [subp_left, subp_bottom, subp_width, subp_height]);
         imagesc(ax, times_plot, freqs_plot, psd_allchns(:, :, idxs(idxi)));
+        clim = [];
         if isempty(clim)
             set(ax,'YDir','normal')
         else
