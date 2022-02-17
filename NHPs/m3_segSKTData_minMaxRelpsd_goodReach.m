@@ -151,7 +151,7 @@ load(savematfile, 'phtime_*', 'relpsd_*', 'T_chnsarea');
 stnmask = cellfun(@(x) strcmp(x,'stn1-2'), T_chnsarea.brainarea);
 relpsd_IOA = relpsd_reachTime_reachOnset_moderate(:, stnmask);
 [sortpsd, indpsd] = sort(relpsd_IOA);
-psdIOA = [sortpsd(1) sortpsd(2) sortpsd(end-1) sortpsd(end-2)];
+psdIOA = [sortpsd(1) sortpsd(2) sortpsd(end-1) sortpsd(end-2)]
 
 
 pdcond = 'moderate';
