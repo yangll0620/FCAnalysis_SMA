@@ -43,13 +43,13 @@ function m1_restData_cleaned_extract()
     drive = 'Y:';
     rootname = 'root2';
     anifolder = 'Animals';
-    folder_processed_root2 = fullfile(drive, rootname, anifolder, animal, 'Recording', 'Processed');
+    folder_processed_root2 = fullfile(drive, rootname, anifolder, animal, 'Recording', 'Processed', 'DataDatabase');
 
     % threshold used by Ying to extract cleaned resting data
     configFile = fullfile(datafolder, 'Animals', 'config_m1lf_fromYing.mat');
 
     % dateBlock File
-    dateBlocksXLSFile = fullfile(codecorresParentfolder, 'm0_restData_dateBlockYingUsed', [animal 'dateBlocksYingUsed_rest.xlsx']);
+    dateBlocksXLSFile = fullfile(datafolder, 'Animals', animal, 'Kitty_Rest_DateBlockUsed');
 
     %% save setup
     savefolder = codecorresfolder;
@@ -75,14 +75,12 @@ function m1_restData_cleaned_extract()
 
     nfiles = height(tbl_dateBlocks);
 
-    for i = 1:nfiles
-        dateblockstr = tbl_dateBlocks(i, :).dateBlock_rest{1}; % dateblockstr = "20151002_1"
-        condition = tbl_dateBlocks(i, :).condition{1};
+    for fi = 1:nfiles
+        pdcond = tbl_dateBlocks.pdcond{fi};
 
         % extract the date_num, and blocki
-        tmp = split(dateblockstr, '_');
-        date_num = datenum(tmp{1}, 'yyyymmdd');
-        tdtblocki = str2num(tmp{2});
+        date_num = datenum(num2str(tbl_dateBlocks.rest_date(fi)), 'yyyymmdd');
+        tdtblocki = tbl_dateBlocks.rest_tdtBk(fi);
 
 
         folder_allsync = fullfile(folder_processed_root2, [animal '_' datestr(date_num, 'mmddyy')], ['Block-' num2str(tdtblocki)]);
@@ -92,11 +90,11 @@ function m1_restData_cleaned_extract()
 
         % file not exist
         if (length(files_allsync) ~= 1)
-            disp([num2str(i) '/' num2str(nfiles) ':' filepattern_allsync ' has ' num2str(length(files_allsync)) ' files, not 1 file'])
+            disp([num2str(fi) '/' num2str(nfiles) ':' filepattern_allsync ' has ' num2str(length(files_allsync)) ' files, not 1 file'])
             continue;
         end
 
-        disp(['dealing ' num2str(i) '/' num2str(nfiles) ': ' fullfile(files_allsync.folder, files_allsync.name)])
+        disp(['dealing ' num2str(fi) '/' num2str(nfiles) ': ' fullfile(files_allsync.folder, files_allsync.name)])
 
         % load data
         load(fullfile(files_allsync.folder, files_allsync.name), 'data');
@@ -122,7 +120,7 @@ function m1_restData_cleaned_extract()
             continue;
         end
 
-        savefile = fullfile(savefolder, [savefilename_prefix condition '_' datestr(date_num, savename_datestr_format) '_tdt' num2str(tdtblocki) '.mat']);
+        savefile = fullfile(savefolder, [savefilename_prefix pdcond '_' datestr(date_num, savename_datestr_format) '_tdt' num2str(tdtblocki) '.mat']);
         save(savefile, 'data_segments', 'segsIndex', 'fs')
 
         clear allsyncfile dateblockstr thr_power1

@@ -41,7 +41,7 @@ function m0_SKTData_extract()
     animal = animal_extract(correspipelinefolder);
 
     % Input dir:  preprocessed folder in root2
-    processedfolder_inroot2 = fullfile('H:', 'My Drive', 'NMRC_umn', 'Projects', 'FCAnalysis', 'exp',  'data', animal, 'Recording', 'Processed', 'DataDatabase');;
+    processedfolder_inroot2 = fullfile('H:', 'My Drive', 'NMRC_umn', 'Projects', 'FCAnalysis', 'exp',  'data', animal, 'Recording', 'Processed', 'DataDatabase');
 
     % master sheet
     xlsxfile_master = fullfile(datafolder, animal, [animal 'MasterDatabase.xlsx']);
