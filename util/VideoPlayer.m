@@ -9,6 +9,27 @@ classdef VideoPlayer < matlab.apps.AppBase
         videoObject
     end
     
+    methods (Access = public)
+        
+        % Construct app
+        function app = VideoPlayer
+            
+            % Create UIFigure and components
+            createComponents(app);
+            
+            if nargout == 0
+                clear app
+            end
+        end
+        
+        % Code that executes before app deletion
+        function delete(app)
+            
+            delete(app.VideoPlayerUIFigure);
+        end
+    end
+    
+    
     methods (Access = private)
         
          % Create UIFigure and components
@@ -75,9 +96,10 @@ classdef VideoPlayer < matlab.apps.AppBase
     
     methods (Access = private)
         function PlayingVideo(app)
-            for framei = 1 : app.videoObject.NumberOfFrames
+            for framei = 1 : 100 %app.videoObject.NumberOfFrames
                 frame = read(app.videoObject,framei);
                 imshow(frame, 'Parent', app.VideoUIAxes);
+                title(app.VideoUIAxes, ['framei ' num2str(framei)])
                 drawnow;
             end
         end
@@ -99,24 +121,4 @@ classdef VideoPlayer < matlab.apps.AppBase
         end
     end
     
-    
-    methods (Access = public)
-        
-        % Construct app
-        function app = VideoPlayer
-            
-            % Create UIFigure and components
-            createComponents(app);
-            
-            if nargout == 0
-                clear app
-            end
-        end
-        
-        % Code that executes before app deletion
-        function delete(app)
-            
-            delete(app.VideoPlayerUIFigure);
-        end
-    end
 end
