@@ -162,10 +162,17 @@ else
     savefig_format = 'tif';
 end
 
+
 twin = 0.2;
 toverlap = 0.18;
 f_AOI = [100 400];
 t_AOI = [-0.5 0.5];
+
+if length(varargin) >= 3
+    save_psdMatfilename = varargin{3};
+else
+    save_psdMatfilename = [animal '_psdallchns_' num2str(f_AOI(1)) '-' num2str(f_AOI(2)) 'Hz_'  pdcond '.mat'];
+end
 
 nwin = round(twin * fs);
 noverlap = round(toverlap * fs);
@@ -187,7 +194,7 @@ supb_deltaX = 0.02;
 supb_deltaY = 0.015;
 
 
-% calculate psd for each chn across trials
+%%% calculate psd for each chn across trials %%%
 psd_allchns = [];
 for chi = 1 : size(lfp_phase_trials, 1)
     psds = []; %  psds: nf * nt * ntrials
@@ -218,8 +225,12 @@ for chi = 1 : size(lfp_phase_trials, 1)
     psd_allchns = cat(3, psd_allchns, psd_plot); % psd_allchns: nf * nt * nchns
     clear psds psd psd_plot idx_t idx_f
 end
+% save psd_allchns
+save(fullfile(savefolder, save_psdMatfilename), ...
+    'psd_allchns', 'T_chnsarea', 'freqs_plot', 'times_plot', 'align2');
 
-% plot spectrogram
+
+%%%  plot spectrogram  %%%
 % Group chns into STN, GP and others
 mask_STN = contains(T_chnsarea.brainarea, 'stn');
 mask_GP = contains(T_chnsarea.brainarea, 'gp');
