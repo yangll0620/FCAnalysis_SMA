@@ -39,6 +39,9 @@ savefolder = codecorresfolder;
 files = dir(fullfile(inputfolder_fs1000, '*.mat'));
 for fi = 1 : length(files)
     filename = files(fi).name;
+    if ~exist(fullfile(inputfolder_fs500_avgArea, filename))
+        continue;
+    end
     data_fs500 = load(fullfile(inputfolder_fs500_avgArea, filename));
     load(fullfile(inputfolder_fs1000, filename), 'T_chnsarea', 'T_idxevent_ma', 'Wrist_smooth_trial', 'fs_ma' , 'smoothWspeed_trial',...  
                                                         'T_idxevent_lfp', 'Wpos_smooth_trial', 'fs_lfp', 'lfpdata');
@@ -52,7 +55,7 @@ for fi = 1 : length(files)
     
     selectedFile = dir(fullfile(inputfolder_fs500_selectedTrials, ['*' filename(end-19:end)]));
     if(length(selectedFile)~=1)
-        disp([filename ': selected File not 1.']);
+        disp([filename ': selected File number = ' num2str(length(selectedFile))]);
         clear selectedFile
         continue
     end

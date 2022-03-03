@@ -41,7 +41,7 @@ function m0_SKTData_extract_fs1000Hz()
     animal = animal_extract(correspipelinefolder);
 
     % Input dir:  preprocessed folder in root
-    processedfolder_inroot2 = fullfile('Z:', 'root', 'Animals', animal, 'Recording', 'Processed', 'DataDatabase');
+    processedfolder_inroot2 = fullfile('H:\My Drive\NMRC_umn\Projects\FCAnalysis\exp\data', 'Animals', animal, 'Recording', 'Processed', 'DataDatabase');
 
     % master sheet
     xlsxfile_master = fullfile(datafolder, 'Animals', animal, [animal 'MasterDatabase.xlsx']);
@@ -456,6 +456,18 @@ function [lfptrial_cortical, lfptrial_dbs, fs_lfp, T_idxevent_lfp, fs_ma, T_idxe
 
     % disp play the max trial time
     disp(['max trial time is ' num2str(maxlen / fs_lfpcortical)]);
+    
+%     if maxlen / fs_lfpcortical > 5
+%         disp('Abandon the file with max trial time > 5s')
+%         
+%         lfptrial_cortical = []; lfptrial_dbs = [];
+%         fs_lfp = []; T_idxevent_lfp = [];
+%         fs_ma = []; T_idxevent_ma = [];
+%         smoothWspeed_trial = []; Wpos_smooth_trial = []; Wrist_smooth_trial = [];
+%         T_dbsChn = [];
+%         
+%         return
+%     end
 
 
     %% DBSLFP data

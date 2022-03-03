@@ -60,7 +60,7 @@ runRosePlot = false;
 
 cond_cell = cond_cell_extract(animal);
 EventPhases = SKT_eventPhases_extract();
-chnsOfI = chnOfInterest_extract(animal, 'codesavefolder', savecodefolder);
+chnsOfI = chnsOfInterest_extract(animal, 'codesavefolder', savecodefolder);
 
 files = dir(fullfile(inputfolder, '*.mat'));
 for fi = 1 : length(files)
