@@ -224,6 +224,7 @@ function btn_nextTrial(src,event)
 tri = tri + 1;
 lfp_1trial = lfpdata{tri}(mask_chnOfI, :);
 plot_1trial_MA_Spectrogram(fig, lfp_1trial, smoothWspeed_trial, Wrist_smooth_trial, T_idxevent_ma, T_idxevent_lfp, T_chnsarea, fs_lfp, fs_ma, tri);
+implay('H:\My Drive\NMRC_umn\Projects\FCAnalysis\exp\data\Animals\Kitty\KittyMinMaxPSD\Kitty20150408_2-1394 Desktop Video Camera.avi', 15)
 end
 
 function btn_prevTrial(src,event)
@@ -231,6 +232,7 @@ tri = tri - 1;
 lfp_1trial = lfpdata{tri}(mask_chnOfI, :);
 plot_1trial_MA_Spectrogram(fig, lfp_1trial, smoothWspeed_trial, Wrist_smooth_trial, T_idxevent_ma, T_idxevent_lfp, T_chnsarea, fs_lfp, fs_ma, tri);
 
+implay('H:\My Drive\NMRC_umn\Projects\FCAnalysis\exp\data\Animals\Kitty\KittyMinMaxPSD\Kitty20150408_2-1394 Desktop Video Camera.avi', 15)
 end
 
 end
