@@ -13,9 +13,14 @@ file_timexls = fullfile(folder_timexls, fname_timexls);
 folder_malfp = 'H:\My Drive\NMRC_umn\Projects\FCAnalysis\exp\pipeline\NHPs\Kitty\0_dataPrep\SKT_SegV\m2_segSKTData_SelectTrials_goodReach';
 
 
+% Figure parameters
+fig_left = 50;
+fig_bottom = 50;
+fig_width = 500;
+fig_height = 800;
+
 
 %% Code start here
-
 opts = detectImportOptions(file_timexls);
 opts = setvaropts(opts, 'date', 'type','string');
 tb_trialstime = readtable(file_timexls, opts);
@@ -47,6 +52,8 @@ global lfpdata T_chnsarea fs_lfp T_idxevent_lfp
 global smoothWspeed_trial  Wrist_smooth_trial T_idxevent_ma  fs_ma
 global tri;
 
+
+
 lfpdata = dataloaded.lfpdata;
 T_chnsarea = dataloaded.T_chnsarea; 
 fs_lfp = dataloaded.fs_lfp; 
@@ -58,19 +65,12 @@ fs_ma = dataloaded.fs_ma;
 clear dataloaded
 
 
-% Figure parameters
-fig_left = 50;
-fig_bottom = 50;
-fig_width = 400;
-fig_height = 800;
-
-%% Code start here
 chnsOfI = chnsOfInterest_extract(animal, 'codesavefolder', savecodefolder);
 mask_chnOfI = cellfun(@(x) any(strcmp(chnsOfI, x)), T_chnsarea.brainarea);
 T_chnsarea = T_chnsarea(mask_chnOfI, :);
 
 %%% plot start here  %%%
-fig = figure();
+fig = figure('Name',[pdcond ', ' datestr(dateofexp, 'yyyymmdd') '-bktdt' num2str(bk)]);
 set(fig, 'PaperUnits', 'points',  'Position', [fig_left fig_bottom fig_width fig_height], 'PaperPositionMode', 'auto');
 
 
@@ -95,10 +95,10 @@ fig_width = pos_fig(3);
 fig_height = pos_fig(4);
 
 % spectrogram subplot parameters
-margin_left = 0.22;
+margin_left = 0.15;
 margin_top = 0.05;
 margin_bottom = 0.05;
-margin_right = 0.03;
+margin_right = 0.05;
 margin_deltaX = 0.01;
 margin_deltaY = 0.02;
 clim = [-40 0];
@@ -126,10 +126,9 @@ btn_prev = uicontrol(fig, 'Style','pushbutton', 'String', 'Previous', 'Position'
 btn_prev.Callback = @btn_prevTrial;
 
 annotation(gcf,'textbox',...
-    [0.5 1-margin_top 0.21 0.03],...
+    [0.75 1-margin_top 0.21 0.03],...
     'String', ['triali = ' num2str(tri)], ...
     'LineStyle', 'none', 'FontWeight', 'bold', 'FitBoxToText', 'off');
-
 
 
 % calc subp_height subp_width
@@ -240,8 +239,10 @@ plot(times_plot_ma, ma_W_X, 'r', times_plot_ma, ma_W_Y, 'g', times_plot_ma, ma_W
 
 % set gca
 set(gca, 'XLim', get(ax_spectrogram, 'XLim'));
-legend({'Wrist Speed','Wrist-X', 'Wrist-Y', 'Wrist-Z'},'AutoUpdate','off', 'Location', 'Best');
+legend({'Wrist Speed','Wrist-X', 'Wrist-Y', 'Wrist-Z'},...
+    'Position',[0.15 0.92 0.45 0.07], 'NumColumns',2);
 xticks([]);
+
 
 annotation(gcf,'textbox',...
     [areaName_left subp_bottom_ma+subp_height/2 0.03 0.03],...
@@ -273,6 +274,10 @@ end
 
 
 function play_1trial_video(frames, fps)
+    figs = findall(0, 'Type', 'figure', 'Name', 'Movie Player');
+    if ~isempty(figs)
+        close(figs)
+    end
     implay(frames, fps);
 end
 
