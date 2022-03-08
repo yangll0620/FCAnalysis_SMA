@@ -1,10 +1,52 @@
 function Ma_Spectrogram_Video_plot()
 savecodefolder = '';
 animal = 'Kitty';
-file = 'H:\My Drive\NMRC_umn\Projects\FCAnalysis\exp\pipeline\NHPs\Kitty\0_dataPrep\SKT_SegV\m2_segSKTData_SelectTrials_goodReach\Kitty_TrialsWMarkers_moderate_20150408_bktdt2.mat';
-dataloaded = load(file, 'lfpdata', 'smoothWspeed_trial', 'Wrist_smooth_trial', 'T_idxevent_ma', 'T_idxevent_lfp', 'T_chnsarea', 'fs_lfp', 'fs_ma');
+
+folder_video = 'H:\My Drive\NMRC_umn\Projects\FCAnalysis\exp\data\Animals\Kitty\KittyMinMaxPSD';
+fname_video = 'Kitty20150408_2-1394 Desktop Video Camera.avi';
+file_video = fullfile(folder_video, fname_video);
+
+folder_timexls = 'H:\My Drive\NMRC_umn\Projects\FCAnalysis\exp\data\Animals\Kitty\KittyMinMaxPSD';
+fname_timexls = 'KittyTrialTime.xlsx';
+file_timexls = fullfile(folder_timexls, fname_timexls);
+
+folder_malfp = 'H:\My Drive\NMRC_umn\Projects\FCAnalysis\exp\pipeline\NHPs\Kitty\0_dataPrep\SKT_SegV\m2_segSKTData_SelectTrials_goodReach';
+
+
+
+%% Code start here
+
+opts = detectImportOptions(file_timexls);
+opts = setvaropts(opts, 'date', 'type','string');
+tb_trialstime = readtable(file_timexls, opts);
+clear opts
+
+
+% extract dateofexp
+tmp = regexp(fname_video, '[0-9]{8}_[0-9]{1}', 'match');
+dateofexp = datenum(tmp{1}(1:8), 'yyyymmdd');
+bk = str2num(tmp{1}(end));
+
+% load malfp data
+pdcond = parsePDCondition(dateofexp, animal); 
+fname_malfp = [animal '_TrialsWMarkers_' pdcond '_' datestr(dateofexp, 'yyyymmdd') '_bktdt' num2str(bk) '.mat'];
+file_malfp = fullfile(folder_malfp, fname_malfp);
+dataloaded = load(file_malfp, 'lfpdata', 'smoothWspeed_trial', 'Wrist_smooth_trial', 'T_idxevent_ma', 'T_idxevent_lfp', 'T_chnsarea', 'fs_lfp', 'fs_ma');
+
+% select dateofexp-bk trialtime
+tb_times_1daybk = tb_trialstime(tb_trialstime.date == datestr(dateofexp, 'yyyymmdd') & tb_trialstime.bk == bk, :);
+
+% read dateofexp-bk video
+obj = VideoReader(file_video);
+vidframes = read(obj);
+vidFrate = obj.FrameRate;
+clear obj
+
+
 global lfpdata T_chnsarea fs_lfp T_idxevent_lfp
 global smoothWspeed_trial  Wrist_smooth_trial T_idxevent_ma  fs_ma
+global tri;
+
 lfpdata = dataloaded.lfpdata;
 T_chnsarea = dataloaded.T_chnsarea; 
 fs_lfp = dataloaded.fs_lfp; 
@@ -31,10 +73,9 @@ T_chnsarea = T_chnsarea(mask_chnOfI, :);
 fig = figure();
 set(fig, 'PaperUnits', 'points',  'Position', [fig_left fig_bottom fig_width fig_height], 'PaperPositionMode', 'auto');
 
-global tri;
+
 tri = 1;
-lfp_1trial = lfpdata{tri}(mask_chnOfI, :);
-plot_1trial_MA_Spectrogram(fig, lfp_1trial, smoothWspeed_trial, Wrist_smooth_trial, T_idxevent_ma, T_idxevent_lfp, T_chnsarea, fs_lfp, fs_ma, tri);
+plot_play_1trial(tri)
 
 
 
@@ -222,17 +263,27 @@ end
 
 function btn_nextTrial(src,event)
 tri = tri + 1;
-lfp_1trial = lfpdata{tri}(mask_chnOfI, :);
-plot_1trial_MA_Spectrogram(fig, lfp_1trial, smoothWspeed_trial, Wrist_smooth_trial, T_idxevent_ma, T_idxevent_lfp, T_chnsarea, fs_lfp, fs_ma, tri);
-implay('H:\My Drive\NMRC_umn\Projects\FCAnalysis\exp\data\Animals\Kitty\KittyMinMaxPSD\Kitty20150408_2-1394 Desktop Video Camera.avi', 15)
+plot_play_1trial(tri);
 end
 
 function btn_prevTrial(src,event)
 tri = tri - 1;
-lfp_1trial = lfpdata{tri}(mask_chnOfI, :);
-plot_1trial_MA_Spectrogram(fig, lfp_1trial, smoothWspeed_trial, Wrist_smooth_trial, T_idxevent_ma, T_idxevent_lfp, T_chnsarea, fs_lfp, fs_ma, tri);
+plot_play_1trial(tri);
+end
 
-implay('H:\My Drive\NMRC_umn\Projects\FCAnalysis\exp\data\Animals\Kitty\KittyMinMaxPSD\Kitty20150408_2-1394 Desktop Video Camera.avi', 15)
+
+function play_1trial_video(frames, fps)
+    implay(frames, fps);
+end
+
+function plot_play_1trial(tri)
+    lfp_1trial = lfpdata{tri}(mask_chnOfI, :);
+    tinVid_str = tb_times_1daybk.tStrInVideo(tb_times_1daybk.triali == tri);
+    tinVid_end = tb_times_1daybk.tEndInVideo(tb_times_1daybk.triali == tri);
+    vidframe_1trial = vidframes(:, :, :, tinVid_str*vidFrate: tinVid_end*vidFrate);
+    
+    plot_1trial_MA_Spectrogram(fig, lfp_1trial, smoothWspeed_trial, Wrist_smooth_trial, T_idxevent_ma, T_idxevent_lfp, T_chnsarea, fs_lfp, fs_ma, tri);
+    play_1trial_video(vidframe_1trial, vidFrate);  
 end
 
 end
