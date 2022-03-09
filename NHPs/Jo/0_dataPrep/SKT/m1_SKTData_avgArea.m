@@ -3,9 +3,8 @@ function m1_SKTData_avgArea()
 %
 %
 %   1. remove chns marked with multiple areas or GP/STN in Gray Matter
-%   2. average across each GM area (no DBS)
+%   2. average across each area (e.g M1)
 %   3. change STN/GP into stn0-1, stn1-2... gp0-1, gp1-2 et.al
-%   4. remove unwanted DBS chns
 
 
 
@@ -22,26 +21,11 @@ addpath(genpath(fullfile(codefolder,'NHPs')));
 addpath(genpath(fullfile(codefolder, 'toolbox', 'NexMatlabFiles')))
 
 % datafolder, pipelinefolder 
-[codecorresfolder, codecorresParentfolder] = code_corresfolder(codefilepath, true, false);
+[correspipelinefolder, codecorresParentfolder] = code_corresfolder(codefilepath, true, false);
 
 
 % animal
-if ismac
-    % Code to run on Mac platform
-elseif isunix
-    % Code to run on Linux platform
-    
-    [fi, j] = regexp(codecorresfolder, ['NHPs', '/', '[A-Za-z]*']);
-elseif ispc
-    % Code to run on Windows platform
-    
-    [fi, j] = regexp(codecorresfolder, ['NHPs', '\\', '[A-Za-z]*']);
-else
-    disp('Platform not supported')
-end
-animal = codecorresfolder(fi + length('NHPs') + 1:j);
-
-
+animal = animal_extract(correspipelinefolder);
 
 
 %%  input setup
@@ -49,32 +33,38 @@ animal = codecorresfolder(fi + length('NHPs') + 1:j);
 % input folder: extracted raw STK data 
 inputfolder = fullfile(codecorresParentfolder, 'm0_SKTData_extract');
 
-unwanted_DBS = unwanted_DBS_extract(animal);
-
-
 
 %% save setup
-savefolder = codecorresfolder;
+savefolder = correspipelinefolder;
+savecodefolder = fullfile(correspipelinefolder, 'code');
 savefilename_addstr = 'avgArea';
 
 %% start here
+if ~exist(savecodefolder, 'dir')
+    mkdir(savecodefolder);
+end
+copyfile2folder(codefilepath, savecodefolder);
+
 
 files = dir(fullfile(inputfolder, '*.mat'));
 
 
 nfiles = length(files);
 close all;
-for fi = 1 : nfiles
-    % wait bar
-    if(mod(fi, 10) == 0)
-        disp(['Avg area lfp data in file ' num2str(fi) '/' num2str(nfiles)]);
-    end
+for fi = 22 : nfiles
+
+    disp(['Avg area lfp data in file ' num2str(fi) '/' num2str(nfiles)]);
+
     
     % load lfpdata: nchns * ntemp * ntrials
     filename = files(fi).name;
     load(fullfile(files(fi).folder, filename), 'lfpdata', 'fs_lfp', 'T_chnsarea', 'T_idxevent_lfp', ...
                                                'fs_ma', 'T_idxevent_ma', 'smoothWspeed_trial', 'Wpos_smooth_trial', 'Wrist_smooth_trial');
     
+    if ~exist('lfpdata', 'var')
+        continue;
+    end
+                                           
     % remove chns marked with multiple areas or GP/STN in Gray Matter
     multipleAreas_mask = cellfun(@(x) contains(x, '/'), T_chnsarea.brainarea);
     GPSTNinGM_mask = cellfun(@(x) contains(x, 'GP'), T_chnsarea.brainarea) & ~strcmp(T_chnsarea.electype, 'DBS');
@@ -96,8 +86,6 @@ for fi = 1 : nfiles
     end
     
     
-    
-    
     % change STN/GP into stn0-1, stn1-2... gp0-1, gp1-2 et.al
     for i = 1: height(T_DBSchnsarea)
         chn = T_DBSchnsarea(i, :).recordingchn;
@@ -105,13 +93,6 @@ for fi = 1 : nfiles
         T_DBSchnsarea(i, :).brainarea = {[lower(barea) num2str(chn-1) '-' num2str(chn)]};
         clear chn
     end
-    
-    % remove unwanted DBS chns
-    rows_unwantedDBS = cellfun(@(x) any(strcmp(x, unwanted_DBS)), T_DBSchnsarea.brainarea);
-    T_DBSchnsarea(rows_unwantedDBS, :) = [];
-    lfpdata_DBS(rows_unwantedDBS, :, :) = [];
-    clear rows_unwantedDBS
-    
     
     
     % cat GM and DBS

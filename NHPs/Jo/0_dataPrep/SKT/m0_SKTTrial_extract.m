@@ -1,4 +1,4 @@
-function m0_SKTData_extract()
+function m0_SKTTrial_extract()
 %% extract the STK data
 %
 %	Inputs:
@@ -92,7 +92,7 @@ T_chnsarea = chanInf_M1DBS(nM1, nSTN -1, nGP -1); % bipolar DBS
 f = waitbar(0, 'Extracting all STK trials');
 nrecords = height(t_SKT);
 
-for i = 105:nrecords
+for i = 1:nrecords
     % waitbar
     waitbar(i / nrecords, f, ['Extracting trials in file ' num2str(i) '/' num2str(nrecords)]);
     
@@ -134,11 +134,11 @@ for i = 105:nrecords
     disp(['extracting ' onedaypath '-tdtbk' num2str(tdtbk)])
     
     % extract trials of lfp data for particular date and tdt block number
-    [lfptrial_cortical, lfptrial_dbs, fs_lfp, T_idxevent_lfp, fs_ma, T_idxevent_ma, smoothWspeed_trial, Wpos_smooth_trial, Wrist_smooth_trial, T_dbsChn] = ...
-        extractlfptrial_(onedaypath, tdtbk);
+    [lfptrial_notDBS, lfptrial_dbs, fs_lfp, T_idxevent_lfp, fs_ma, T_idxevent_ma, smoothWspeed_trial, Wpos_smooth_trial, Wrist_smooth_trial, T_dbsChn] = ...
+        extract_lfptrial(onedaypath, tdtbk);
     
     % skip this day if any is empty
-    if isempty(lfptrial_cortical) || isempty(lfptrial_dbs) || isempty(fs_lfp) || isempty(T_idxevent_lfp) || isempty(T_dbsChn)
+    if isempty(lfptrial_notDBS) || isempty(lfptrial_dbs) || isempty(fs_lfp) || isempty(T_idxevent_lfp) || isempty(T_dbsChn)
         clear outputfoldername dateofexp tdtbk
         clear pdcond savefilename onedaypath
         clear lfptrial_cortical lfptrial_dbs fs_lfp T_idxevent_lfp
@@ -149,17 +149,25 @@ for i = 105:nrecords
     
     
     %%% extract the lfptrial_m1 marked with good channels %%%
-    lfptrial_m1 = lfptrial_cortical;
+    if strcmpi(animal, 'Jo')
+        lfptrial_m1 = lfptrial_notDBS;
+    end
     
     %%% bipolar dbs %%%%
-    lfptrial_stn = diff(lfptrial_dbs(1:nSTN, :, :), [], 1);
-    lfptrial_gp = diff(lfptrial_dbs(nSTN+1:nSTN+nGP, :, :), [], 1);
-    lfptrial_dbs = cat(1, lfptrial_stn, lfptrial_gp);
-    clear lfptrial_stn lfptrial_gp
+    for tri = 1 : length(lfptrial_dbs)
+        tmp = lfptrial_dbs{tri}; % tmp: 16 * ntemp
+        bipo_stn = diff(tmp(1:nSTN, :), [], 1);
+        bipo_gp = diff(tmp(nSTN +1:nSTN+nGP, :), [], 1);
+        lfptrial_dbs{tri} = cat(1, bipo_stn, bipo_gp);
+        clear tmp bipo_stn bipo_gp
+    end
+
     
     
     % concatenate the utah chns, and the dbs chns into lfptrial
-    lfpdata = cat(1, lfptrial_m1, lfptrial_dbs);
+    for tri = 1 : length(lfptrial_dbs)
+        lfpdata{tri} = cat(1, lfptrial_m1{tri}, lfptrial_dbs{tri});
+    end
     clear lfptrial_m1 lfptrial_dbs
     
     
@@ -177,7 +185,7 @@ end
 
 end
 
-function [lfptrial_cortical, lfptrial_dbs, fs_lfp, T_idxevent_lfp, fs_ma, T_idxevent_ma, smoothWspeed_trial, Wpos_smooth_trial, Wrist_smooth_trial, T_dbsChn] = extractlfptrial_(onedaypath, tdtblock)
+function [lfptrial_notDBS, lfptrial_dbs, fs_lfp, T_idxevent_lfp, fs_ma, T_idxevent_ma, smoothWspeed_trial, Wpos_smooth_trial, Wrist_smooth_trial, T_dbsChn] = extract_lfptrial(onedaypath, tdtblock)
 % extractlfptrial extract trials for LFP data
 %
 %  [lfptrial_cortical, lfptrial_dbs, chantbl_cortical, chantbl_dbs] =
@@ -196,16 +204,16 @@ function [lfptrial_cortical, lfptrial_dbs, fs_lfp, T_idxevent_lfp, fs_ma, T_idxe
 %   tdtblock: tdt block number
 %
 %  Used files:
-%       lfpfile_utah  -   .\LFP\Block-3\Jo_CR1_DT1_020216_Block-3_LFPch*.nex
+%       lfpfile_lfp  -   .\LFP\Block-3\Jo_CR1_DT1_020216_Block-3_LFPch*.nex
 %       lfpfile_dbs   -   .\DBSLFP\Block-3\Jo_CR1_DT1_020216_Block-3_DBSLFP.nex.nex
 %       mafile        -   .\Block-3\Jo_20160202_3_cleaned_MA_SingleTargetKluver_Analyze2.mat
 %
 %  Outputs:
-%   lfptrial_cortical: lfp trials of cortical/subcortical channels
-%                      [chn_cortical * n_temporal * n_trial]
+%        lfptrial_notDBS: lfp trials of not DBS channels
+%                      cell {1, n_trial}, inside each cell chns * ntemp
 %
 %        lfptrial_dbs: lfp trials of dbs channels
-%                      [chn_dbs * n_temporal * n_trial], 1-8: STN, 9-16:GP
+%                      cell {1, n_trial}, inside each cell chns * ntemp, 1-8: STN, 9-16:GP
 %        fs_lfp: sample rate for lfp data
 %
 %
@@ -244,7 +252,7 @@ if length(mafilestruct) ~= 1
     
     disp([mafolder 'has ' num2str(length(mafilestruct)) ' files, skip!'])
     
-    lfptrial_cortical = []; lfptrial_dbs = [];
+    lfptrial_notDBS = []; lfptrial_dbs = [];
     fs_lfp = []; T_idxevent_lfp = [];
     fs_ma = []; T_idxevent_ma = [];
     smoothWspeed_trial = []; Wpos_smooth_trial = []; Wrist_smooth_trial = [];
@@ -260,18 +268,19 @@ load(fullfile(mafolder, mafilestruct.name), 'SingleTargetKluverMAData');
 fs_ma = SingleTargetKluverMAData.SR;
 
 % time indices for target onset, reach onset, touch screen, return and mouth
-TargetTime = SingleTargetKluverMAData.TargetTime;
-ReachTimeix = SingleTargetKluverMAData.ReachTimeix;
+TargetTimeix = SingleTargetKluverMAData.TargetTime;
+ReachonsetTimeix = SingleTargetKluverMAData.ReachTimeix;
 TouchTimeix = SingleTargetKluverMAData.TouchTimeix;
 ReturnTimeix = round(SingleTargetKluverMAData.ReturnTimeix); % not integer in .ReturnTimeix
 MouthTimeix = SingleTargetKluverMAData.MouthTimeix;
-[m, n] = size(TargetTime);
+[m, n] = size(TargetTimeix);
 if m == 1 || n == 1
-    TargetTime = reshape(TargetTime, [m * n, 1]);
+    TargetTimeix = reshape(TargetTimeix, [m * n, 1]);
 end
 
-timeixtbl_ma = [table(TargetTime) table(ReachTimeix) table(TouchTimeix) table(ReturnTimeix) table(MouthTimeix)];
-clear TargetTime ReachTimeix TouchTimeix ReturnTimeix MouthTimeix
+% timeix_ma matrix: ntrials * 5,   index for event from SingleTargetKluverMAData
+timeix_ma = [TargetTimeix ReachonsetTimeix TouchTimeix ReturnTimeix MouthTimeix];
+clear TargetTimeix ReachonsetTimeix TouchTimeix ReturnTimeix MouthTimeix
 
 % the tag of good reach trials
 tag_goodreach = SingleTargetKluverMAData.goodix_reach;
@@ -285,7 +294,7 @@ idx_goodtrials = (tag_goodreach == 1) & (tag_goodreturn == 1);
 if isempty(idx_goodtrials)
     disp(['no good trials are found in ' mafilestruct.name])
     
-    lfptrial_cortical = []; lfptrial_dbs = [];
+    lfptrial_notDBS = []; lfptrial_dbs = [];
     fs_lfp = []; T_idxevent_lfp = [];
     fs_ma = []; T_idxevent_ma = [];
     smoothWspeed_trial = []; Wpos_smooth_trial = []; Wrist_smooth_trial = [];
@@ -295,16 +304,16 @@ if isempty(idx_goodtrials)
 end
 
 % only remain the good trials
-timeixtbl_ma = timeixtbl_ma(idx_goodtrials, :);
+timeix_ma = timeix_ma(idx_goodtrials, :);
 clear idx_goodtrials tag_goodreach tag_goodreturn
 
 
 % varNames and varTypes for all return T_idxevent_ma, T_idxevent_lfp
-varNames_table = {'TargetTimeix', 'ReachTimeix', 'TouchTimeix', 'ReturnTimeix', 'MouthTimeix'};
+varNames_table = {'TargetTimeix', 'ReachonsetTimeix', 'TouchTimeix', 'ReturnTimeix', 'MouthTimeix'};
 varTypes_table = {'double','double','double', 'double', 'double'};
 
 % total n_trial and n_event
-[n_trial, n_events] = size(timeixtbl_ma);
+[n_trial, n_events] = size(timeix_ma);
 
 % t_bef: time before target on, t_aft: time after mouth
 t_bef = 1;
@@ -312,26 +321,19 @@ t_aft = 0.5;
 
 
 %% extract T_idxevent_ma, smoothWspeed_trial, Wpos_smooth_trial, Wrist_smooth_trial
-n_bef = round(t_bef * fs_ma); % n_bef: index MA number before target on
-n_aft = round(t_aft * fs_ma); % n_aft: index MA number after mouth
 
-maxlen_ma = max(timeixtbl_ma.MouthTimeix - timeixtbl_ma.TargetTime) + 1;
-idx_strs = timeixtbl_ma.TargetTime - n_bef; % start ma index for each trial n_trial * 1
-idx_ends = timeixtbl_ma.TargetTime + (maxlen_ma -1) + n_aft; % end ma index for each trial n_trial * 1
-n_temporal = maxlen_ma + n_bef + n_aft;
+idx_mastrs = timeix_ma(:, 1) - round(t_bef * fs_ma); % start ma index for each trial n_trial * 1
+idx_maends = timeix_ma(:, 5) + round(t_aft * fs_ma); % end ma index for each trial n_trial * 1
 
-% smoothWspeed_trial: ntemp * ntrial
-smoothWspeed_trial = zeros(n_temporal, n_trial);
-Wpos_smooth_trial = zeros(n_temporal, n_trial);
-Wrist_smooth_trial = zeros(n_temporal, 3, n_trial);
 
+% smoothWspeed_trial,  Wpos_smooth_trial, Wrist_smooth_trial:  1* n_trial cell, each cell n_temporal * 1(3) 
 for triali = 1:n_trial
-    smoothWspeed_trial(:, triali) = SingleTargetKluverMAData.smoothWspeed(idx_strs(triali) : idx_ends(triali));
-    Wpos_smooth_trial(:, triali) = SingleTargetKluverMAData.Wpos_smooth(idx_strs(triali) : idx_ends(triali));
-    Wrist_smooth_trial(:, :, triali) = SingleTargetKluverMAData.Wrist_smooth(idx_strs(triali) : idx_ends(triali), :);
+    smoothWspeed_trial{triali} = SingleTargetKluverMAData.smoothWspeed(idx_mastrs(triali) : idx_maends(triali));
+    Wpos_smooth_trial{triali} = SingleTargetKluverMAData.Wpos_smooth(idx_mastrs(triali) : idx_maends(triali));
+    Wrist_smooth_trial{triali} = SingleTargetKluverMAData.Wrist_smooth(idx_mastrs(triali) : idx_maends(triali), :);
 end
-T_idxevent_ma = table('Size', size(timeixtbl_ma), 'VariableTypes', varTypes_table, 'VariableNames',varNames_table);
-T_idxevent_ma{:, :} = timeixtbl_ma{:, :} - repmat(idx_strs, [1, n_events]);
+T_idxevent_ma = table('Size', size(timeix_ma), 'VariableTypes', varTypes_table, 'VariableNames',varNames_table);
+T_idxevent_ma{:, :} = timeix_ma - repmat(idx_mastrs, [1, n_events]);
 
 
 %% LFP data
@@ -342,7 +344,7 @@ folder_cortical = fullfile(onedaypath, 'LFP', ['Block-' num2str(tdtblock)]);
 if isempty(dir(folder_cortical))
     disp([folder_cortical ' has no files!'])
     
-    lfptrial_cortical = []; lfptrial_dbs = [];
+    lfptrial_notDBS = []; lfptrial_dbs = [];
     fs_lfp = []; T_idxevent_lfp = [];
     fs_ma = []; T_idxevent_ma = [];
     smoothWspeed_trial = []; Wpos_smooth_trial = []; Wrist_smooth_trial = [];
@@ -371,72 +373,57 @@ for filei = 1:length(nexnames)
 end
 
 chns = sort(chns);
-chn_lfp = length(chns);
-
-for i = 1:length(chns)
-    filename = [file_prefix num2str(chns(i)) '.nex'];
+for ich = 1:length(chns)
+    filename = [file_prefix num2str(chns(ich)) '.nex'];
     [nexlfp_cortical] = readNexFile(fullfile(folder_cortical, filename));
     
     % extract the number of the structure containing LFPchn* data
     name_list = extractfield(cell2mat(nexlfp_cortical.contvars), 'name');
     i_lfp = find(contains(name_list, 'LFP')); %% i.e nexlfp_utah.contvars name == 'LFPch1', or 'MUAch1'
     
-    if i == 1% first channel
-        fs_lfpcortical = nexlfp_cortical.contvars{i_lfp}.ADFrequency;
+    
+    if ich == 1% first channel
+        fs_lfp = nexlfp_cortical.contvars{i_lfp}.ADFrequency;
         
-        % the time index in the LFP neural data based on MA data
-        timeixtbl_lfpcortical = timeixtbl_ma;
-        timeixtbl_lfpcortical{:, :} = round(timeixtbl_ma{:, :} / fs_ma * fs_lfpcortical);
+        % timeix_lfp: index for event from nexlfp_cortical
+        timeix_lfp = round(timeix_ma / fs_ma * fs_lfp);
+        idx_lfpstrs = timeix_lfp(:, 1) - round(t_bef * fs_lfp);
+        idx_lfpends = timeix_lfp(:, 5) + round(t_aft * fs_lfp);
         
-        % initialize lfp_utah : chn_lfp * n_temporal * n_trial
-        maxlen = max(timeixtbl_lfpcortical.MouthTimeix - timeixtbl_lfpcortical.TargetTime) + 1; % maximum length across all trials (unit: ind)
-        n_bef = round(t_bef * fs_lfpcortical); % n_bef: index number before target on
-        n_aft = round(t_aft * fs_lfpcortical); % n_aft: index number after mouth
-        n_temporal = maxlen + n_bef + n_aft;
-        idx_str = timeixtbl_lfpcortical.TargetTime - n_bef;
-        idx_end = timeixtbl_lfpcortical.TargetTime + (maxlen -1) + n_aft;
-        lfptrial_cortical = zeros(chn_lfp, n_temporal, n_trial);
+
+        T_idxevent_lfp = table('Size', size(timeix_lfp), 'VariableTypes', varTypes_table, 'VariableNames',varNames_table);
+        T_idxevent_lfp{:, :} = timeix_lfp - repmat(idx_lfpstrs, [1, n_events]);
         
-        % idxtbl_lfptrialutah: the idx for events of target onset, reach onset, touch screen,
-        % return and mouth in the trial matrix lfpdata_utah (chn_lfputah * n_temporal * n_trial)
-        % the first sample corresponds to target onset - t_bef
-        idxtbl_lfptrial_cortical = timeixtbl_lfpcortical;
-        idxtbl_lfptrial_cortical{:, :} = idxtbl_lfptrial_cortical{:, :} - repmat(idx_str, [1, n_events]);
         
-        clear timeixtbl_lfpsepchn n_bef n_aft
-    else
-        
-        if fs_lfpcortical ~= nexlfp_cortical.contvars{i_lfp}.ADFrequency% samping frequency is different
-            chni = chns(i);
+        % lfptrial_cortical initial
+        lfptrial_notDBS =  cell(1, n_trial);
+    else     
+        if fs_lfp ~= nexlfp_cortical.contvars{i_lfp}.ADFrequency% samping frequency is different
+            chni = chns(ich);
             disp(['sampling frequency is different for chni = ' num2str(chni)]);
             break;
         end
-        
     end
+    
+    
     
     % extract each trial for lfp data stored in separate channel
     for triali = 1:n_trial
         
-        if size(nexlfp_cortical.contvars{i_lfp}.data, 1) < idx_end(triali)
-            disp(mafilestruct)
-            disp(filename)
-            disp(fs_ma)
-            disp(fs_lfpcortical)
-            disp(['idx in ma' num2str(timeixtbl_ma{1, end})])
-            disp(size(nexlfp_cortical.contvars{i_lfp}.data, 1))
-            disp(idx_end(triali))
-            disp(['maxlen  = ' num2str(maxlen)])
+        if size(nexlfp_cortical.contvars{i_lfp}.data, 1) < idx_lfpends(triali)
+            disp(['chn = ' num2str(chns(ich)) ' LPF length < idx_end in triali = ' num2str(triali)])
+            continue;
         end
         
-        lfptrial_cortical(i, :, triali) = nexlfp_cortical.contvars{i_lfp}.data(idx_str(triali):idx_end(triali));
-        
+        tmp = nexlfp_cortical.contvars{i_lfp}.data(idx_lfpstrs(triali):idx_lfpends(triali));
+        tmp = reshape(tmp, 1, length(tmp));
+        lfptrial_notDBS{triali} = [lfptrial_notDBS{triali}; tmp];   
+        clear tmp
     end
     
-    clear filename i_lfp
+    clear filename nexlfp_cortical name_list i_lfp
 end
 
-% disp play the max trial time
-disp(['max trial time is ' num2str(maxlen / fs_lfpcortical)]);
 
 
 %% DBSLFP data
@@ -450,7 +437,7 @@ dbsfiles = dir(dbsfilepattern);
 if length(dbsfiles) ~= 1
     disp([dbsfilepattern ' has ' num2str(length(dbsfiles)) ' file, skip!'])
     
-    lfptrial_cortical = []; lfptrial_dbs = [];
+    lfptrial_notDBS = []; lfptrial_dbs = [];
     fs_lfp = []; T_idxevent_lfp = [];
     fs_ma = []; T_idxevent_ma = [];
     smoothWspeed_trial = []; Wpos_smooth_trial = []; Wrist_smooth_trial = [];
@@ -473,7 +460,7 @@ if range(cell2mat({convars(idx_dbs).ADFrequency})) ~= 0
     % check the sampling frequencies in channels are consistent
     disp(['ADFrequency in the dbs channels (STN & GP) is not consistent']);
     
-    lfptrial_cortical = []; lfptrial_dbs = [];
+    lfptrial_notDBS = []; lfptrial_dbs = [];
     fs_lfp = []; T_idxevent_lfp = [];
     fs_ma = []; T_idxevent_ma = [];
     smoothWspeed_trial = []; Wpos_smooth_trial = []; Wrist_smooth_trial = [];
@@ -482,11 +469,11 @@ if range(cell2mat({convars(idx_dbs).ADFrequency})) ~= 0
     return
 end
 
-if ~(abs(convars(idx_dbs(1)).ADFrequency - fs_lfpcortical) < 0.001)
+if ~(abs(convars(idx_dbs(1)).ADFrequency - fs_lfp) < 0.001)
     % check the sampling frequency of dbs is the same as the lfp stored in separate channels or not
     disp(['the sampling frequency of dbs is not the same as the lfp stored in separate channels'])
     
-    lfptrial_cortical = []; lfptrial_dbs = [];
+    lfptrial_notDBS = []; lfptrial_dbs = [];
     fs_lfp = []; T_idxevent_lfp = [];
     fs_ma = []; T_idxevent_ma = [];
     smoothWspeed_trial = []; Wpos_smooth_trial = []; Wrist_smooth_trial = [];
@@ -495,20 +482,20 @@ if ~(abs(convars(idx_dbs(1)).ADFrequency - fs_lfpcortical) < 0.001)
     return
 end
 
-fs_lfp = fs_lfpcortical; % sampling frequency for dbs channels
-T_idxevent_lfp = idxtbl_lfptrial_cortical;
-clear idxtbl_lfptrial_sepchn
 
 % extract each trial for lfp dbs data
 nchn_dbs = length(idx_dbs);
-lfptrial_dbs = zeros(nchn_dbs, n_temporal, n_trial);
+lfptrial_dbs =  cell(1, n_trial);
 
-for i = 1:nchn_dbs
-    chni = idx_dbs(i);
+for ich = 1:nchn_dbs
+    chni = idx_dbs(ich);
     lfp_1chn = convars(chni).data;
     
     for triali = 1:n_trial
-        lfptrial_dbs(i, :, triali) = lfp_1chn(idx_str(triali):idx_end(triali));
+        tmp = lfp_1chn(idx_lfpstrs(triali):idx_lfpends(triali));
+        tmp = reshape(tmp, 1, length(tmp));
+        lfptrial_dbs{triali} = [lfptrial_dbs{triali}; tmp];  
+        clear tmp
     end
     
     clear chni lfp_1chn triali
