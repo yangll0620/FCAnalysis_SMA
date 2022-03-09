@@ -1,6 +1,5 @@
 function status = copyfile2folder(codefilepath, savefolder)
 
-
 if ~exist(savefolder, 'dir')
     mkdir(savefolder)
 end

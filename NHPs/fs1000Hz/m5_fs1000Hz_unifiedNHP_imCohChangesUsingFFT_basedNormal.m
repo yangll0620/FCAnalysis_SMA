@@ -222,8 +222,8 @@ for fi = 1: size(fhigh_AOIs, 1)
             
             % plot and save ciCohChanges Histogram image
             titlename = [animal ' FC Changes '  pdcond '-'  event '['  num2str(t_AOI(1)) ' ' num2str(t_AOI(2))   ']s,' ' align2 = ' align2name ', ntrials = ' num2str(ntrials) ' nshuffle= ' num2str(nshuffle)];
-            plot_ciCohHistogram(ciCohChanges_flatten_used, chnPairNames_used, round(f_selected), titlename, [-1 1], ...
-                'fig_width', 1000, 'fig_height', 250);
+            plot_ciCohHistogram(ciCohChanges_flatten_used, chnPairNames_used, round(f_selected), titlename, ...
+                                'histClim', [-0.5 0.5], 'fig_width', 1000, 'fig_height', 250);
             saveimgname = [ciCohChangesfile_prefix '_' basepd  '_' num2str(f_AOI(1)) '-' num2str(f_AOI(2)) 'Hz' '_' event '_' pdcond '_align2' char(align2) '.' image_type];
             saveas(gcf, fullfile(saveimgfolder, saveimgname), image_type);
             clear titlename  saveimgname

@@ -1,4 +1,4 @@
-function plot_ciCohHistogram(ciCoh_flatten, chnPairNames, f_selected, titlename, histClim, varargin)
+function plot_ciCohHistogram(ciCoh_flatten, chnPairNames, f_selected, titlename, varargin)
 %
 %   Inputs:
 %       ciCoh_flatten:
@@ -9,25 +9,36 @@ function plot_ciCohHistogram(ciCoh_flatten, chnPairNames, f_selected, titlename,
 %
 %       Name-Value: 
 %           'codesavefolder' - code saved folder
+%           'histClim' - ciCoh histogram clim (default [0 1])
+%           'fig_left' - figure position left (default 50)
+%           'fig_bottom' - figure position bottom (default 50)
+%           'fig_width' - figure position width (default 1200)
+%           'fig_height' - figure position height (default 60)
 
 
 % parse params
 p = inputParser;
 addParameter(p, 'codesavefolder', '', @isstr);
+addParameter(p, 'histClim', [0 1], @(x) assert(isnumeric(x) && isvector(x) && length(x)==2));
+addParameter(p, 'fig_left', 50, @(x) assert(isnumeric(x) && isscalar(x)));
+addParameter(p, 'fig_bottom', 50, @(x) assert(isnumeric(x) && isscalar(x)));
 addParameter(p, 'fig_width', 1200, @(x) assert(isnumeric(x) && isscalar(x)));
 addParameter(p, 'fig_height', 600, @(x) assert(isnumeric(x) && isscalar(x)));
+
 parse(p,varargin{:});
+codesavefolder = p.Results.codesavefolder;
+histClim = p.Results.histClim;
+fig_left = p.Results.fig_left;
+fig_bottom = p.Results.fig_bottom;
+fig_width = p.Results.fig_width;
+fig_height = p.Results.fig_height;
+
 
 % copy code to savefolder if not empty
-codesavefolder = p.Results.codesavefolder;
 if ~isempty(codesavefolder) 
     copyfile2folder(mfilename('fullpath'), codesavefolder);
 end
 
-fig_left = 50;
-fig_bottom = 50;
-fig_width = p.Results.fig_width;
-fig_height = p.Results.fig_height;
 
 
 % plot

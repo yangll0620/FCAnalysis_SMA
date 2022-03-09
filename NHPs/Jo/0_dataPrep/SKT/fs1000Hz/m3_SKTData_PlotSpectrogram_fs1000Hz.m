@@ -84,8 +84,14 @@ savefig_format = 'tif';
 
 %% save setup
 savefolder = codecorresfolder;
+savecodefolder = fullfile(savefolder, 'code');
+if ~exist(savecodefolder, 'dir')
+    mkdir(savefolder_trials);
+end
+
 
 %% starting: narrow filter the lfp data of all the files
+copyfile2folder(mfilename('fullpath'), codesavefolder);
 
 % save trials 
 reply = input('save trials or no y/n [n] ', 's');
@@ -103,7 +109,7 @@ end
 
 noisy_chns = noisy_chns_extract(animal);
 chnsOfI = chnsOfInterest_extract(animal);
-for i = 1 : length(cond_cell)
+for i = 2 : length(cond_cell)
     pdcond = cond_cell{i};
     
     files = dir(fullfile(inputfolder, ['*_' pdcond '_*.mat']));
@@ -114,7 +120,7 @@ for i = 1 : length(cond_cell)
     
     
     %%% plot spectrogram across all trials  
-    [lfptrials, fs, T_chnsarea] = lfp_goodTrials_align2(files, align2, tdur_trial, t_minmax_reach);
+    [lfptrials, fs, T_chnsarea] = lfp_goodTrials_align2(files, align2, tdur_trial, t_minmax_reach, 'codesavefolder', savecodefolder);
     mask_noisyChns = cellfun(@(x) contains(x, noisy_chns), T_chnsarea.brainarea);
     mask_chnsOfI= cellfun(@(x) contains(x, chnsOfI), T_chnsarea.brainarea);
     mask_notDBS_notM1 = ~strcmp(T_chnsarea.brainarea, 'M1') & ~strcmp(T_chnsarea.electype, 'DBS');
