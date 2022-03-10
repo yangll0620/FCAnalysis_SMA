@@ -27,7 +27,7 @@ if isequal(f_AOI, [8 40])
     if strcmpi(animal,'jo')
         clim_Spectrogram_STN = [-30 -15];
         clim_Spectrogram_GP = [-30 -15];
-        clim_Spectrogram_Others = [-30 -15];
+        clim_Spectrogram_Others = [-30 -10];
     end
     if strcmpi(animal,'kitty')
         clim_Spectrogram_STN = [-40 0];

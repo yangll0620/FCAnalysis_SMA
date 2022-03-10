@@ -3,8 +3,9 @@ savecodefolder = '';
 animal = 'Kitty';
 
 folder_video = 'H:\My Drive\NMRC_umn\Projects\FCAnalysis\exp\data\Animals\Kitty\KittyMinMaxPSD';
+
+
 fname_video = 'Kitty20150408_2-1394 Desktop Video Camera.avi';
-file_video = fullfile(folder_video, fname_video);
 
 folder_timexls = 'H:\My Drive\NMRC_umn\Projects\FCAnalysis\exp\data\Animals\Kitty\KittyMinMaxPSD';
 fname_timexls = 'KittyTrialTime.xlsx';
@@ -26,58 +27,87 @@ opts = setvaropts(opts, 'date', 'type','string');
 tb_trialstime = readtable(file_timexls, opts);
 clear opts
 
-
-% extract dateofexp
-tmp = regexp(fname_video, '[0-9]{8}_[0-9]{1}', 'match');
-dateofexp = datenum(tmp{1}(1:8), 'yyyymmdd');
-bk = str2num(tmp{1}(end));
-
-% load malfp data
-pdcond = parsePDCondition(dateofexp, animal); 
-fname_malfp = [animal '_TrialsWMarkers_' pdcond '_' datestr(dateofexp, 'yyyymmdd') '_bktdt' num2str(bk) '.mat'];
-file_malfp = fullfile(folder_malfp, fname_malfp);
-dataloaded = load(file_malfp, 'lfpdata', 'smoothWspeed_trial', 'Wrist_smooth_trial', 'T_idxevent_ma', 'T_idxevent_lfp', 'T_chnsarea', 'fs_lfp', 'fs_ma');
-
-% select dateofexp-bk trialtime
-tb_times_1daybk = tb_trialstime(tb_trialstime.date == datestr(dateofexp, 'yyyymmdd') & tb_trialstime.bk == bk, :);
-
-% read dateofexp-bk video
-obj = VideoReader(file_video);
-vidframes = read(obj);
-vidFrate = obj.FrameRate;
-clear obj
-
-
 global lfpdata T_chnsarea fs_lfp T_idxevent_lfp
 global smoothWspeed_trial  Wrist_smooth_trial T_idxevent_ma  fs_ma
 global tri;
+global filevideos file_video fvi;
+global vidframes vidFrate;
+global mask_chnOfI;
+global tb_times_1daybk;
+global fig;
 
 
+filevideos = dir(fullfile(folder_video, [animal '*.avi']));
 
-lfpdata = dataloaded.lfpdata;
-T_chnsarea = dataloaded.T_chnsarea; 
-fs_lfp = dataloaded.fs_lfp; 
-T_idxevent_lfp = dataloaded.T_idxevent_lfp;
-smoothWspeed_trial = dataloaded.smoothWspeed_trial;
-Wrist_smooth_trial = dataloaded.Wrist_smooth_trial; 
-T_idxevent_ma = dataloaded.T_idxevent_ma; 
-fs_ma = dataloaded.fs_ma;
-clear dataloaded
-
-
-chnsOfI = chnsOfInterest_extract(animal, 'codesavefolder', savecodefolder);
-mask_chnOfI = cellfun(@(x) any(strcmp(chnsOfI, x)), T_chnsarea.brainarea);
-T_chnsarea = T_chnsarea(mask_chnOfI, :);
 
 %%% plot start here  %%%
-fig = figure('Name',[pdcond ', ' datestr(dateofexp, 'yyyymmdd') '-bktdt' num2str(bk)]);
-set(fig, 'PaperUnits', 'points',  'Position', [fig_left fig_bottom fig_width fig_height], 'PaperPositionMode', 'auto');
+
+fvi = 1;
+plot_1datebk();
+
+function plot_1datebk()
+    fname_video = filevideos(fvi).name;
+    file_video = fullfile(folder_video, fname_video);
+    
+    % extract dateofexp
+    tmp = regexp(fname_video, '[0-9]{8}_[0-9]{1}', 'match');
+    dateofexp = datenum(tmp{1}(1:8), 'yyyymmdd');
+    bk = str2num(tmp{1}(end));
+    clear tmp
 
 
-tri = 1;
-plot_play_1trial(tri)
+    % load malfp data
+    pdcond = parsePDCondition(dateofexp, animal); 
+    fname_malfp = [animal '_TrialsWMarkers_' pdcond '_' datestr(dateofexp, 'yyyymmdd') '_bktdt' num2str(bk) '.mat'];
+    file_malfp = fullfile(folder_malfp, fname_malfp);
+    dataloaded = load(file_malfp, 'lfpdata', 'smoothWspeed_trial', 'Wrist_smooth_trial', 'T_idxevent_ma', 'T_idxevent_lfp', 'T_chnsarea', 'fs_lfp', 'fs_ma');
+
+    % select dateofexp-bk trialtime
+    tb_times_1daybk = tb_trialstime(tb_trialstime.date == datestr(dateofexp, 'yyyymmdd') & tb_trialstime.bk == bk, :);
+
+    % read dateofexp-bk video
+    obj = VideoReader(file_video);
+    vidframes = read(obj);
+    vidFrate = obj.FrameRate;
+    clear obj
+
+    
+    lfpdata = dataloaded.lfpdata;
+    T_chnsarea = dataloaded.T_chnsarea; 
+    fs_lfp = dataloaded.fs_lfp; 
+    T_idxevent_lfp = dataloaded.T_idxevent_lfp;
+    smoothWspeed_trial = dataloaded.smoothWspeed_trial;
+    Wrist_smooth_trial = dataloaded.Wrist_smooth_trial; 
+    T_idxevent_ma = dataloaded.T_idxevent_ma; 
+    fs_ma = dataloaded.fs_ma;
+    clear dataloaded
 
 
+    chnsOfI = chnsOfInterest_extract(animal, 'codesavefolder', savecodefolder);
+    mask_chnOfI = cellfun(@(x) any(strcmp(chnsOfI, x)), T_chnsarea.brainarea);
+    T_chnsarea = T_chnsarea(mask_chnOfI, :);
+
+    if exist('fig', 'var') && ishandle(fig)
+        close(fig)
+    end
+    fig = figure('Name',[pdcond ', ' datestr(dateofexp, 'yyyymmdd') '-bktdt' num2str(bk)]);
+    set(fig, 'PaperUnits', 'points',  'Position', [fig_left fig_bottom fig_width fig_height], 'PaperPositionMode', 'auto');
+    disp([pdcond ', ' datestr(dateofexp, 'yyyymmdd') '-bktdt' num2str(bk)])
+    
+    tri = 1;
+    plot_play_1trial(tri)
+end
+
+
+function plot_play_1trial(tri)
+    lfp_1trial = lfpdata{tri}(mask_chnOfI, :);
+    tinVid_str = tb_times_1daybk.tStrInVideo(tb_times_1daybk.triali == tri);
+    tinVid_end = tb_times_1daybk.tEndInVideo(tb_times_1daybk.triali == tri);
+    vidframe_1trial = vidframes(:, :, :, tinVid_str*vidFrate: tinVid_end*(vidFrate +1));
+    
+    plot_1trial_MA_Spectrogram(fig, lfp_1trial, smoothWspeed_trial, Wrist_smooth_trial, T_idxevent_ma, T_idxevent_lfp, T_chnsarea, fs_lfp, fs_ma, tri);
+    play_1trial_video(vidframe_1trial, vidFrate);  
+end
 
 function plot_1trial_MA_Spectrogram(fig, lfp_1trial, smoothWspeed_trial, Wrist_smooth_trial, T_idxevent_ma, T_idxevent_lfp, T_chnsarea, fs_lfp, fs_ma, tri)
 align2 = SKTEvent.ReachOnset;
@@ -113,11 +143,18 @@ pos_BtnNext_bottom = (1-margin_top/2) * fig_height - btn_height/2;
 pos_BtnPrev_left = (margin_left * fig_width)/2 - btn_width/2;
 pos_BtnPrev_bottom = pos_BtnNext_bottom;
 
+pos_BtnNextFile_left = fig_width - btn_width;
+pos_BtnNextFile_bottom = (1-margin_top * 2) * fig_height - btn_height/2;
+
 eventline_colors = ['c', 'r', 'g', 'y', 'k'];
 sktEvents = {'TargetOnset', 'ReachOnset', 'Touch', 'ReturnOnset', 'Mouth'};
 
 %% Start Plot
 clf(fig)
+
+% btn_nextfile
+btn_nextfile = uicontrol(fig, 'Style','pushbutton', 'String', 'Next File', 'Position', [pos_BtnNextFile_left pos_BtnNextFile_bottom btn_width btn_height]);
+btn_nextfile.Callback = @btn_nextFile;
 
 % draw btn_next and btn_prev
 btn_next = uicontrol(fig, 'Style','pushbutton', 'String', 'Next', 'Position', [pos_BtnNext_left pos_BtnNext_bottom btn_width btn_height]);
@@ -262,6 +299,11 @@ end
 
 end
 
+function btn_nextFile(src,event)
+    fvi = fvi +1;
+    plot_1datebk();
+end
+
 function btn_nextTrial(src,event)
 tri = tri + 1;
 plot_play_1trial(tri);
@@ -279,16 +321,6 @@ function play_1trial_video(frames, fps)
         close(figs)
     end
     implay(frames, fps);
-end
-
-function plot_play_1trial(tri)
-    lfp_1trial = lfpdata{tri}(mask_chnOfI, :);
-    tinVid_str = tb_times_1daybk.tStrInVideo(tb_times_1daybk.triali == tri);
-    tinVid_end = tb_times_1daybk.tEndInVideo(tb_times_1daybk.triali == tri);
-    vidframe_1trial = vidframes(:, :, :, tinVid_str*vidFrate: tinVid_end*vidFrate);
-    
-    plot_1trial_MA_Spectrogram(fig, lfp_1trial, smoothWspeed_trial, Wrist_smooth_trial, T_idxevent_ma, T_idxevent_lfp, T_chnsarea, fs_lfp, fs_ma, tri);
-    play_1trial_video(vidframe_1trial, vidFrate);  
 end
 
 end
