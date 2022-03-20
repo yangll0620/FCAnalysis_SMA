@@ -34,34 +34,6 @@ animal = animal_extract(codecorresfolder);
 % input folder: extracted raw rest data with grayMatter 
 inputfolder = fullfile(codecorresParentfolder, 'm2_segSKTData_SelectTrials_goodReach');
 
-cond_cell = cond_cell_extract(animal);
-[t_minmax_reach_normal, t_minmax_return_normal, t_minmax_reach_mild, t_minmax_return_mild, t_minmax_reach_moderate, t_minmax_return_moderate] ...
-    = goodSKTTrials_reachReturn_tcritiria(animal);
-
-if strcmpi(animal, 'bug')
-    tdur_trial_normal = [-0.6 1];
-    tdur_trial_mild = [-0.6 1];
-    tdur_trial_moderate = [-0.6 1];
-end
-if strcmpi(animal, 'jo') 
-    
-    tdur_trial_normal = [-0.8 0.8];
-    tdur_trial_mild = [-0.8 0.8];
-    tdur_trial_moderate = [-0.8 0.8];
-    
-end
-
-if strcmpi(animal, 'kitty') % Kitty not have mild
-    tdur_trial_normal = [-0.6 1];
-    tdur_trial_moderate = [-0.6 1];
-    
-end
-
-if strcmpi(animal, 'pinky')
-    tdur_trial_normal = [-0.6 1];
-    tdur_trial_mild = [-0.6 1];
-    tdur_trial_moderate = [-.6 1];
-end
 
 % align to event
 align2 = SKTEvent.ReachOnset;
@@ -86,7 +58,7 @@ savecodefolder = fullfile(savefolder, 'code');
 copyfile2folder(codefilepath, savecodefolder);
 
 %% Start Code Here
-
+cond_cell = cond_cell_extract(animal);
 chnsOfI = chnsOfInterest_extract(animal, 'codesavefolder', savecodefolder);
 for i = 1 : length(cond_cell)
     pdcond = cond_cell{i};

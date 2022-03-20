@@ -135,6 +135,10 @@ clim = [-40 0];
 areaName_left = 0.003;
 
 
+phtime = diff(T_idxevent_ma{:,:},[], 2);
+
+phtime(tri, :) / fs_ma
+
 % position of Next and previous button
 btn_width = 50;
 btn_height = 30;
@@ -166,6 +170,7 @@ annotation(gcf,'textbox',...
     [0.75 1-margin_top 0.21 0.03],...
     'String', ['triali = ' num2str(tri)], ...
     'LineStyle', 'none', 'FontWeight', 'bold', 'FitBoxToText', 'off');
+
 
 
 % calc subp_height subp_width
