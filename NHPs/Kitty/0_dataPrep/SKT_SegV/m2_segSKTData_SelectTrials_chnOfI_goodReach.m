@@ -178,7 +178,8 @@ while(filei <=  fi_end)
     selectedTrials = check_chnOfI_spectrogram(filename, lfpdata, T_idxevent_lfp, T_chnsarea, fs_lfp,... 
         madata, madata2, maName, fs_ma, T_idxevent_ma,showname, ...
         'mask_goodReach', mask_goodreach, 'inSelectedTrials', selectedTrials, 'savefolder', savefolder_trials, ...
-        'fig_left', 50, 'fig_bottom', 50,  'fig_width', 1200, 'fig_height', 600);
+        'fig_left', 200, 'fig_bottom', 200,  'fig_width', 1200, 'fig_height', 600, ...
+        'autoSaveMode', autoSaveMode);
 
 
     save(savefile_selectedTrialsMarkers, 'selectedTrials', 'lfpdata', 'T_idxevent_lfp', 'fs_lfp', 'T_chnsarea',...
@@ -398,6 +399,8 @@ function selectedTrials = check_chnOfI_spectrogram(filename, lfpdata, T_idxevent
 %                                default set to be all ones
 %           'mask_goodReach' -- input array for each trial good (1) or not (0), default ([])
 %           'savefolder' -- savefolder, default pwd
+%           't_showmaxbef' - max show duration before align to (negative, default [], i.e show all) 
+%           't_showmaxaft' - max show duration after align to (positive, default [], i.e show all) 
 %
 %      Return:
 %           selectedTrials: logical array for each trial selected (1) or
@@ -415,6 +418,8 @@ addParameter(p, 'fig_height', 600, @(x) assert(isnumeric(x) && isscalar(x)));
 addParameter(p, 'inSelectedTrials', [], @(x) assert(isempty(x)||(islogical(x)&&isvector(x) &&size(x,1)==ntrials)));
 addParameter(p, 'mask_goodReach', [], @(x) assert(isempty(x)||(isnumeric(x)&&isvector(x) &&length(x)==ntrials)));
 addParameter(p, 'savefolder', pwd, @(x) assert(ischar(x)));
+addParameter(p, 't_showmaxbef', [], @(x) assert(isempty(x)||(isnumeric(x) && isscalar(x) && x < 0)));
+addParameter(p, 't_showmaxaft', [], @(x) assert(isempty(x)||(isnumeric(x) && isscalar(x)) && x > 0));
 
 parse(p,varargin{:});
 autoSaveMode =  p.Results.autoSaveMode;
@@ -425,6 +430,8 @@ fig_height = p.Results.fig_height;
 inSelectedTrials = p.Results.inSelectedTrials;
 mask_goodReach = p.Results.mask_goodReach;
 savefolder = p.Results.savefolder;
+t_showmaxbef =  p.Results.t_showmaxbef;
+t_showmaxaft =  p.Results.t_showmaxaft;
 
 if ~strcmpi(autoSaveMode, 'y')
     autoSaveMode =  'n';
@@ -465,16 +472,40 @@ supb_deltaY = 0.05;
 ntrials_pSubplot = floor((subp_endLeft - subp_startLeft - subp_width)/(subp_width + supb_deltaX )) + 1;
 
 
-% position of Next and previous button
+
 btn_width = 50;
 btn_height = 30;
-pos_btn_next_left = (subp_endLeft) * fig_width;
-pos_btn_next_bottom = (0.05) * fig_height;
-pos_btn_prev_left = pos_btn_next_left;
-pos_btn_prev_bottom = pos_btn_next_bottom + btn_height + 10;
-% Finish Button
-pos_btn_finish_left = (subp_endLeft) * fig_width;
-pos_btn_finish_bottom = 0.5 * fig_height;
+
+% Next button pos
+btnNext_pos_left = (subp_endLeft) * fig_width;
+btnNext_pos_bottom = (0.05) * fig_height;
+
+% Prev button pos
+btnPrev_pos_left = btnNext_pos_left;
+btnPrev_pos_bottom = btnNext_pos_bottom + btn_height + 10;
+
+% Finish Button pos
+btnFinish_pos_left = (subp_endLeft) * fig_width;
+btnFinish_pos_bottom = btnPrev_pos_bottom + btn_height + 20;
+
+% buttons for check/uncheck trials on current page pos
+btnCheck_width = 100;
+btnCheckPage_pos_left = btnNext_pos_left - btnCheck_width - 50;
+btnCheckPage_pos_bottom = btnNext_pos_bottom;
+btnUncheckPage_pos_left = btnCheckPage_pos_left - btnCheck_width - 10;
+btnUncheckPage_pos_bottom = btnNext_pos_bottom;
+
+% buttons for check/uncheck buttons all trials pos
+btnCheckAll_pos_left = btnUncheckPage_pos_left - btnCheck_width - 30;
+btnCheckAll_pos_bottom = btnNext_pos_bottom;
+btnUncheckAll_pos_left = btnCheckAll_pos_left - btnCheck_width - 10;
+btnUncheckAll_pos_bottom = btnNext_pos_bottom;
+
+% checkbox for showing/not showing threshold line for MA 
+cbxShowThre_pos_left = btnNext_pos_left - 70;
+cbxShowThre_pos_bottom = btnNext_pos_bottom + 450;
+cbxShowThre_pos_width = 150;
+cbxShowThre_pos_height = 20;
 
 eventline_colors = ['c', 'r', 'g', 'y', 'k'];
 
@@ -519,7 +550,7 @@ checkedAllGs = zeros(nSubplots, 1);
 gi = 0;
 clf(fig);
 % add btn_next button
-c_next = uicontrol(fig, 'Style','pushbutton', 'String', 'Next', 'Position', [pos_btn_next_left pos_btn_next_bottom btn_width btn_height]);
+c_next = uicontrol(fig, 'Style','pushbutton', 'String', 'Next', 'Position', [btnNext_pos_left btnNext_pos_bottom btn_width btn_height]);
 c_next.Callback = @btn_nextTrials;
 title(['gi = ' num2str(gi + 1) '/' num2str(nSubplots)])
 
@@ -551,25 +582,23 @@ end
             'String', {showname}, ...
             'LineStyle', 'none', 'FontWeight', 'bold', 'FitBoxToText', 'off');
         
-%         % add checked this page and unChecked this page buttons
-%         c_checkedThisFig = uicontrol(fig, 'Style','pushbutton','String','checked this page', 'Position', [1800 900 100 20]);
-%         c_checkedThisFig.Callback = @btn_checkedThisFig;
-%         c_unCheckedThisFig = uicontrol(fig, 'Style','pushbutton','String','unchecked this page', 'Position', [1800 870 100 20]);
-%         c_unCheckedThisFig.Callback = @btn_uncheckedThisFig;
-%         
-%         % add checked this page and unChecked this page buttons
-%         c_checkedAll = uicontrol(fig, 'Style','pushbutton','String','checked all', 'Position', [1800 800 100 20]);
-%         c_checkedAll.Callback = @btn_checkedAll;
-%         c_unCheckedAll = uicontrol(fig, 'Style','pushbutton','String','unchecked all', 'Position', [1800 770 100 20]);
-%         c_unCheckedAll.Callback = @btn_uncheckedAll;
+        % add checked this page and unChecked this page buttons
+        c_checkedThisFig = uicontrol(fig, 'Style','pushbutton','String','checked this page', 'Position', [btnCheckPage_pos_left btnCheckPage_pos_bottom btnCheck_width btn_height]);
+        c_checkedThisFig.Callback = @btn_checkedThisFig;
+        c_unCheckedThisFig = uicontrol(fig, 'Style','pushbutton','String','unchecked this page', 'Position', [btnUncheckPage_pos_left btnUncheckPage_pos_bottom btnCheck_width btn_height]);
+        c_unCheckedThisFig.Callback = @btn_uncheckedThisFig;
+        
+        % add checked this page and unChecked this page buttons
+        c_checkedAll = uicontrol(fig, 'Style','pushbutton','String','checked all', 'Position', [btnCheckAll_pos_left btnCheckAll_pos_bottom btnCheck_width btn_height]);
+        c_checkedAll.Callback = @btn_checkedAll;
+        c_unCheckedAll = uicontrol(fig, 'Style','pushbutton','String','unchecked all', 'Position', [btnUncheckAll_pos_left btnUncheckAll_pos_bottom btnCheck_width btn_height]);
+        c_unCheckedAll.Callback = @btn_uncheckedAll;
         
         
         % add checkbox for showing/not showing ma threshold = 30 line
-        cbx_showMAThreshold = uicontrol('Style','checkbox','Value', 0, 'Position', [1800 400 100 20], 'String', 'Show Threshold = 30');
+        cbx_showMAThreshold = uicontrol('Style','checkbox','Value', 0, 'Position', [cbxShowThre_pos_left cbxShowThre_pos_bottom cbxShowThre_pos_width cbxShowThre_pos_height], 'String', 'Show Threshold = 30');
         cbx_showMAThreshold.Callback = @checkbox_showMAThreshold;
         
-        t_maxbef = -5;
-        t_maxaft = 5;
         for tri = tri_str: tri_end
             lfp_1trial = lfpdata{tri};
             
@@ -685,13 +714,17 @@ end
                 end
                 clear eventi
                 
-                % adjust to [t_maxbef t_maxaft] if too long
+                % adjust to [t_maxbef t_maxaft] if too long 
                 xlim_t = get(gca, 'xlim');
-                if xlim_t(1) < t_maxbef
-                    xlim_t(1) = t_maxbef;
+                if ~isempty(t_showmaxbef)
+                    if xlim_t(1) < t_showmaxbef
+                        xlim_t(1) = t_showmaxbef;
+                    end
                 end
-                if xlim_t(2) > t_maxaft
-                    xlim_t(2) = t_maxaft;
+                if ~isempty(t_showmaxaft)
+                    if xlim_t(2) > t_showmaxaft
+                        xlim_t(2) = t_showmaxaft;
+                    end
                 end
                 set(gca, 'xlim', xlim_t)
                 clear xlim _t
@@ -832,12 +865,12 @@ end
         clf(fig);
         
         if(gi < nSubplots-1)
-            c_next = uicontrol(fig, 'Style','pushbutton', 'String', 'Next', 'Position', [pos_btn_next_left pos_btn_next_bottom btn_width btn_height]);
+            c_next = uicontrol(fig, 'Style','pushbutton', 'String', 'Next', 'Position', [btnNext_pos_left btnNext_pos_bottom btn_width btn_height]);
             c_next.Callback = @btn_nextTrials;
         end
         
         if(gi > 0)
-            c_prev = uicontrol(fig, 'Style','pushbutton', 'String', 'Previous', 'Position', [pos_btn_prev_left pos_btn_prev_bottom btn_width btn_height]);
+            c_prev = uicontrol(fig, 'Style','pushbutton', 'String', 'Previous', 'Position', [btnPrev_pos_left btnPrev_pos_bottom btn_width btn_height]);
             c_prev.Callback = @btn_prevTrials;
         end
         
@@ -853,7 +886,7 @@ end
         
         checkedAllGs(gi + 1) = 1;
         if all(checkedAllGs)
-            c_Finish = uicontrol(fig, 'Style','pushbutton', 'String', 'Finish', 'Position', [pos_btn_finish_left pos_btn_finish_bottom btn_width btn_height]);
+            c_Finish = uicontrol(fig, 'Style','pushbutton', 'String', 'Finish', 'Position', [btnFinish_pos_left btnFinish_pos_bottom btn_width btn_height]);
             c_Finish.Callback = @btn_finish;
         end
         
