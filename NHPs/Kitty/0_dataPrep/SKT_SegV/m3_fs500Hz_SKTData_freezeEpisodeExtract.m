@@ -143,25 +143,26 @@ for fi = 1 : length(files)
 
         
         % freeze during reach
-        if size(idxs_StrEnd_freeze, 1) > 1
+        for idFreei = 2: size(idxs_StrEnd_freeze, 1) 
             s = struct();
             freezeType = optFreezeTypes{cellfun(@(x) contains(x, 'React-Reach', 'IgnoreCase',true), optFreezeTypes)};
             s.freezeType = freezeType;
             s.triali = tri;
             s.filename = filename;
             s.folder = inputfolder;
-            s.freezeTPhaseS = idxs_StrEnd_freeze(2:end, :) / fs_ma;
+            s.freezeTPhaseS = idxs_StrEnd_freeze(idFreei, :) / fs_ma;
             s.discription = discrip_inside;
             freezEpisodes{end + 1, 1} = s;
             clear s freezeType 
         end
+        clear idFreei
         
         clear idxs_StrEnd_freeze tri
     end
     clear idxs_freeze_reaction times_reaction
     
     
-    
+    %%% --- extract freezing episodes during Reach phase
     times_reach = (T_idxevent_ma.ReachTimeix - T_idxevent_ma.TargetTimeix) / fs_ma;
     idxs_freeze_reach = find(times_reach >= tThes_Reach);
     for idi = 1 : length(idxs_freeze_reach)
@@ -203,7 +204,7 @@ for fi = 1 : length(files)
         clear speeds_inReaction idxs_move
         
         % freeze during reach
-        if size(idxs_StrEnd_freeze, 1) >= 1
+        for idFreei = 1: size(idxs_StrEnd_freeze, 1) 
             s = struct();
             freezeType = optFreezeTypes{cellfun(@(x) contains(x, 'freeze during Reach', 'IgnoreCase',true), optFreezeTypes)};
             s.freezeType = freezeType;
@@ -215,6 +216,7 @@ for fi = 1 : length(files)
             freezEpisodes{end + 1, 1} = s;
             clear s freezeType 
         end
+        clear idFreei
         
         clear idxs_StrEnd_freeze tri
     end
