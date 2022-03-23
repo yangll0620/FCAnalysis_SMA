@@ -35,12 +35,11 @@ animal = animal_extract(codecorresfolder);
 inputfolder = fullfile(codecorresParentfolder, 'm2_segSKTData_SelectTrials_chnOfI_goodReach');
 
 
-optFreezeTypes = {'freeze during init Move', 'freeze during React-Reach', 'freeze during Reach', 'freeze during Manipulation'};
-
 pdcond = 'moderate';
 
 speedThres_Move = 30;
 tThes_Reaction = 5;
+tThes_Reach = 5;
 tThesFreeze_mani  = 5;
 
 
@@ -51,6 +50,8 @@ copyfile2folder(codefilepath, savecodefolder);
 
 
 %% Code Start Here
+
+optFreezeTypes = optFreezeTypes_extract('codesavefolder', savecodefolder);
 
 % description stored inside and outside
 discrip_out = ['optFreezeTypes: optional ' num2str(length(optFreezeTypes)) ' freezing Types; ' ...
@@ -73,6 +74,9 @@ for fi = 1 : length(files)
     %%% init freezStruct
     freezStruct = struct();
     freezStruct.optFreezeTypes = optFreezeTypes;
+    freezStruct.speedThres_Move = speedThres_Move;
+    freezStruct.tThes_Reaction = tThes_Reaction;
+    freezStruct.tThes_Reach = tThes_Reach;
     freezStruct.tThesFreeze_mani = tThesFreeze_mani;
     freezStruct.discription = discrip_out;
     
@@ -155,6 +159,67 @@ for fi = 1 : length(files)
         clear idxs_StrEnd_freeze tri
     end
     clear idxs_freeze_reaction times_reaction
+    
+    
+    
+    times_reach = (T_idxevent_ma.ReachTimeix - T_idxevent_ma.TargetTimeix) / fs_ma;
+    idxs_freeze_reach = find(times_reach >= tThes_Reach);
+    for idi = 1 : length(idxs_freeze_reach)
+        tri = idxs_freeze_reach(idi);
+        
+        % extract speed vector during reaction phase
+        speeds_inReach = smoothWspeed_trial{tri}(T_idxevent_ma.ReachTimeix(tri):T_idxevent_ma.TouchTimeix(tri), 1);
+        idxs_move = find(speeds_inReach >= speedThres_Move); % idxs for moving
+        if isempty(idxs_move)
+            idxs_StrEnd_freeze = [1 length(speeds_inReach)];
+        else
+            % extract idxs_StrEnd_moves
+            diffIdxs = [0; diff(idxs_move)];
+            idxs_str = find(diffIdxs ~=1); % move start index for each move phase
+            if length(idxs_str) > 1
+                idxs_end = [idxs_str(2:end) - 1; length(idxs_move)];
+            else
+                idxs_end = length(idxs_move);
+            end
+            idxs_StrEnd_moves = [idxs_move(idxs_str), idxs_move(idxs_end)];
+            
+            % extract idxs_StrEnd_freeze
+            idxs_StrEnd_freeze = [];
+            for idi = 1 : size(idxs_StrEnd_moves, 1)
+                if idi == 1 &&  idxs_StrEnd_moves(idi, 1) ~=1 % first one
+                    idxs_StrEnd_freeze = [idxs_StrEnd_freeze;1 idxs_StrEnd_moves(idi, 1)-1];
+                end
+                
+                if idi > 1
+                    idxs_StrEnd_freeze = [idxs_StrEnd_freeze;idxs_StrEnd_moves(idi-1, 2)+1 idxs_StrEnd_moves(idi, 1)-1];
+                end
+                
+                if idi == size(idxs_StrEnd_moves, 1) && idxs_StrEnd_moves(idi, 2) ~= length(speeds_inReach) % last one
+                    idxs_StrEnd_freeze = [idxs_StrEnd_freeze;idxs_StrEnd_moves(idi, 2)+1 length(speeds_inReach)];
+                end
+            end
+            clear diffIdxs idxs_str idxs_end idxs_StrEnd_moves
+        end
+        clear speeds_inReaction idxs_move
+        
+        % freeze during reach
+        if size(idxs_StrEnd_freeze, 1) >= 1
+            s = struct();
+            freezeType = optFreezeTypes{cellfun(@(x) contains(x, 'freeze during Reach', 'IgnoreCase',true), optFreezeTypes)};
+            s.freezeType = freezeType;
+            s.triali = tri;
+            s.filename = filename;
+            s.folder = inputfolder;
+            s.freezeTPhaseS = idxs_StrEnd_freeze/ fs_ma;
+            s.discription = discrip_inside;
+            freezEpisodes{end + 1, 1} = s;
+            clear s freezeType 
+        end
+        
+        clear idxs_StrEnd_freeze tri
+    end
+    clear idxs_freeze_reach times_reach
+    
     
     
     %%% --- extract freezing episodes during manupation phase
