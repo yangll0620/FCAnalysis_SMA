@@ -1,4 +1,4 @@
-function m4_fs500Hz_freezSKTData_PlotSpectrogram()
+function m4_fs1000Hz_freezSKTData_PlotSpectrogram()
 %
 %
 %% folders generate
@@ -27,10 +27,12 @@ pdcond = 'moderate';
 t_ThreFreeze = 3;
 tdur = [-1 t_ThreFreeze];
 
+f_AOI = [100 400];
+
 %%  input setup
 
 % input folder: extracted raw rest data with grayMatter
-inputfolder = fullfile(codecorresParentfolder, 'm3_fs500Hz_freezeSKTData_EpisodeExtract');
+inputfolder = fullfile(codecorresParentfolder, 'm3_fs1000Hz_freezeSKTData_EpisodeExtract');
 
 
 %% save setup
@@ -54,11 +56,10 @@ for frei = 1 : length(combFreeTypes)
     
     title_prefix = [animal ' ' freezType];
     savefilename_prefix = [animal '_' freezType];
-    
-    plot_Spectrogram_acrossSegs(lfpsegs, T_chnsarea, tdur, fs, 't_AOI', tdur, ...
+    plot_Spectrogram_acrossSegs(lfpsegs, T_chnsarea, tdur, fs, 't_AOI', tdur, 'f_AOI', f_AOI, ...
         'title_prefix', title_prefix, 'savefilename_prefix', savefilename_prefix, 'savefolder', savefolder);
     
-    clear freezType lfpsegs title_prefix savefilename_prefix clim
+    clear freezType lfpsegs title_prefix savefilename_prefix
 end
    
 end
@@ -247,16 +248,6 @@ end
 [nf, nt, nchns] = size(psd_allchns);
 for chi = 1: nchns
     brainarea = T_chnsarea.brainarea{chi};
-    if strcmp(brainarea, 'M1')
-        clim = [-35 -10];
-    end
-    if contains(brainarea, 'stn')
-        clim = [-30 -10];
-    end
-    if contains(brainarea, 'gp')
-        clim = [-35 -15];
-    end
-    
     figure();
     ax = gca;
     imagesc(ax,times_plot, freqs_plot, psd_allchns(:, :, chi));

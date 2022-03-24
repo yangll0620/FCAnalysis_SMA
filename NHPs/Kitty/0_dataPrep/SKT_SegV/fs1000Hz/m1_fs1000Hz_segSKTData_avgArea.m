@@ -1,4 +1,4 @@
-function m1_segSKTData_avgArea_fs1000Hz()
+function m1_fs1000Hz_segSKTData_avgArea()
 %% average lfp across each area
 %
 %
@@ -47,7 +47,7 @@ animal = codecorresfolder(fi + length('NHPs') + 1:j);
 %%  input setup
 
 % input folder: extracted raw STK data 
-inputfolder = fullfile(codecorresParentfolder, 'm0_NormalCOTModerateSKTData_extract_Kitty_fs1000Hz');
+inputfolder = fullfile(codecorresParentfolder, 'm0_fs1000Hz_NormalCOTModerateSKTData_extract_Kitty');
 
 unwanted_DBS = unwanted_DBS_extract(animal);
 

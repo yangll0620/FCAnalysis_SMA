@@ -1,4 +1,4 @@
-function m3_segSKTData_PlotSpectrogram_goodReach_fs1000()
+function m3_fs1000Hz_segSKTData_PlotSpectrogram_goodReach()
 %  extract lfp data respect to reachonset_fs1000
 % 
 %  return:
@@ -44,7 +44,7 @@ animal = codecorresfolder(fi + length('NHPs') + 1:j);
 %%  input setup
 
 % input folder: extracted raw rest data with grayMatter 
-inputfolder = fullfile(codecorresParentfolder, 'm2_segSKTData_SelectTrials_goodReach_fs1000Hz');
+inputfolder = fullfile(codecorresParentfolder, 'm2_fs1000Hz_segSKTData_SelectTrials_goodReach');
 
 cond_cell = cond_cell_extract(animal);
 [t_minmax_reach_normal, t_minmax_return_normal, t_minmax_reach_mild, t_minmax_return_mild, t_minmax_reach_moderate, t_minmax_return_moderate] ...

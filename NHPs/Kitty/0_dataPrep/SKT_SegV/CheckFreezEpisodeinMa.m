@@ -1,4 +1,5 @@
-load('H:\My Drive\NMRC_umn\Projects\FCAnalysis\exp\pipeline\NHPs\Kitty\0_dataPrep\SKT_SegV\m3_fs500Hz_SKTData_freezeEpisodeExtract\Kitty_freezeEpisodes_moderate_20150408_bktdt2.mat')
+load('H:\My Drive\NMRC_umn\Projects\FCAnalysis\exp\pipeline\NHPs\Kitty\0_dataPrep\SKT_SegV\m3_fs500Hz_freezeSKTData_EpisodeExtract\Kitty_freezeEpisodes_moderate_20150408_bktdt2.mat')
+savefolder = 'H:\My Drive\NMRC_umn\Projects\FCAnalysis\exp\pipeline\NHPs\Kitty\0_dataPrep\SKT_SegV\m3_fs500Hz_freezeSKTData_EpisodeExtract';
 
 freezEpisodes = freezStruct.freezEpisodes;
 
@@ -25,4 +26,6 @@ for frzi = 1: 5
         ys = [ys(1) ys(2)*2/3];
         plot([freeTphase(fti) freeTphase(fti)], ys)
     end
+    saveas(gcf, fullfile(savefolder, [num2str(frzi) '-' freezeType '.tif']))
+    close gcf
 end

@@ -1,4 +1,4 @@
-function m4_fs500Hz_FreezeSKT_imCohUsingFFT_EqualDurSegnum(varargin)
+function m4_fs1000Hz_FreezeSKT_imCohUsingFFT_EqualDurSegnum(varargin)
 % 
 %   Input
 %       Name-Value: 
@@ -52,8 +52,8 @@ else
 end
 
 %%  input setup
-inputfolder_Freeze = fullfile(codecorresParentfolder, 'm3_fs500Hz_freezeSKTData_EpisodeExtract');
-inputfolder_SKT = fullfile(codecorresParentfolder, 'm4_imCohPhaseUsingFFT_EventPhase_unifiedNHP');
+inputfolder_Freeze = fullfile(codecorresParentfolder, 'm3_fs1000Hz_freezeSKTData_EpisodeExtract');
+inputfolder_SKT = fullfile(codecorresParentfolder,'..' ,'m4_imCohPhaseUsingFFT_EventPhase_unifiedNHP');
 
 
 twin = 0.2;
@@ -141,7 +141,7 @@ if(~exist(ciCohPhasefile, 'file'))
 end
 
 
-load(ciCohPhasefile, 'ciCohs', 'T_chnsarea', 'nsegs', 'f_selected', 'combFreeTypes', 'psedociCohs');
+load(ciCohPhasefile,'combFreeTypes', 'psedociCohs');
 if ~exist('psedociCohs','var')
     files = dir(fullfile(inputfolder_Freeze, ['*_' pdcond '_*.mat']));
     [lfpsegs_freeze, fs, T_chnsarea]= seg2ShortSegments(files, twin);
@@ -181,6 +181,7 @@ if ~exist('psedociCohs','var')
     clear files lfpsegs_freeze fs 
 end
 
+load(ciCohPhasefile,  'combFreeTypes', 'psedociCohs');
 for frTi = 1 : length(combFreeTypes)
     freezType = combFreeTypes{frTi};
     disp(['freezType = ' freezType])

@@ -1,4 +1,4 @@
-function m3_fs500Hz_freezeSKTData_EpisodeExtract()
+function m3_fs1000Hz_freezeSKTData_EpisodeExtract()
 % Objective:
 %       extract freezing episode
 %       data structure
@@ -32,13 +32,13 @@ animal = animal_extract(codecorresfolder);
 %%  input setup
 
 % input folder: extracted raw rest data with grayMatter
-inputfolder = fullfile(codecorresParentfolder, 'm2_segSKTData_SelectTrials_chnOfI_goodReach');
+inputfolder = fullfile(codecorresParentfolder, 'm2_fs1000Hz_segSKTData_SelectTrials_chnOfI_goodReach');
 
 
 pdcond = 'moderate';
 
 speedThres_Move = 30;
-tThes_Reaction = 10;
+tThes_Reaction = 5;
 tThes_Reach = 5;
 tThesFreeze_mani  = 5;
 

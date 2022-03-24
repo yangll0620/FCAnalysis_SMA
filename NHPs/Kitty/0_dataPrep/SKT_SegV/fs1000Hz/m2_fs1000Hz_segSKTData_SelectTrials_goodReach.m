@@ -1,4 +1,4 @@
-function m2_segSKTData_SelectTrials_goodReach_fs1000Hz()
+function m2_fs1000Hz_segSKTData_SelectTrials_goodReach()
 %  select trials for fs1000 using fs500 data
 % 
 
@@ -25,7 +25,7 @@ addpath(genpath(fullfile(codefolder,'NHPs')));
 %%  input setup
 
 % input folder: extracted raw rest data with grayMatter 
-inputfolder_fs1000 = fullfile(codecorresParentfolder, 'm1_segSKTData_avgArea_fs1000Hz');
+inputfolder_fs1000 = fullfile(codecorresParentfolder, 'm1_fs1000Hz_segSKTData_avgArea');
 
 
 inputfolder_fs500 = 'H:\My Drive\NMRC_umn\Projects\FCAnalysis\exp\pipeline\NHPs\Kitty\0_dataPrep\SKT_SegV';

@@ -1,4 +1,4 @@
-function m0_NormalCOTModerateSKTData_extract_Kitty_fs1000Hz()
+function m0_fs1000Hz_NormalCOTModerateSKTData_extract_Kitty()
     %% extract the SKT Data (normal COT and moderate STK data for Kitty)
     %
     %	Inputs:
