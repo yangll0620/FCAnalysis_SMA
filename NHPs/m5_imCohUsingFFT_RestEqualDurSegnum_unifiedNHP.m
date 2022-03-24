@@ -1,10 +1,11 @@
-function m5_imCohUsingFFT_RestEqualDurSegnum_unifiedNHP(varargin)
-if nargin < 1
-    animal = 'Jo';
-else
-    animal = varargin{1};
-end
+function m5_imCohUsingFFT_RestEqualDurSegnum_unifiedNHP(animal, varargin)
+% 
+%   Input
+%       animal
+%
 
+%% folders generate
+% the full path and the name of code file without suffix
 codefilepath = mfilename('fullpath');
 
 % find the codefolder
@@ -12,22 +13,18 @@ idx = strfind(codefilepath, 'code');
 codefolder = codefilepath(1:idx + length('code')-1);
 clear idx
 
-
-% add path
+% add util path
 addpath(genpath(fullfile(codefolder,'util')));
 addpath(genpath(fullfile(codefolder,'NHPs')));
-addpath(genpath(fullfile(codefolder,'connAnalyTool')));
 
-% find animal corresponding folder
-[~, codefilename]= fileparts(codefilepath);
-SKTSubfolder = 'SKT';
-if strcmpi(animal, 'Kitty')
-    SKTSubfolder = 'SKT_SegV';
-end
 
-NHPCodefilepath = fullfile(codefolder, 'NHPs', animal, '0_dataPrep' , SKTSubfolder, codefilename);
-[codecorresfolder, ~] = code_corresfolder(NHPCodefilepath, true, false);
+% codecorresfolder, codecorresParentfolder
+[codecorresfolder, codecorresParentfolder] = code_corresfolder(codefilepath, true, false);
 
+%% global variables
+
+% animal
+animal = animal_extract(codecorresfolder);
 
 %% save setup
 savefolder = codecorresfolder;

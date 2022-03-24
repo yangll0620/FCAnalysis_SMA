@@ -1,4 +1,4 @@
-function m3_fs500Hz_SKTData_freezeEpisodeExtract()
+function m3_fs500Hz_freezeSKTData_EpisodeExtract()
 % Objective:
 %       extract freezing episode
 %       data structure
@@ -127,7 +127,6 @@ for fi = 1 : length(files)
             end
             clear diffIdxs idxs_str idxs_end idxs_StrEnd_moves
         end
-        clear speeds_inReaction idxs_move
         
         % freeze during init move
         s = struct();
@@ -136,7 +135,7 @@ for fi = 1 : length(files)
         s.triali = tri;
         s.filename = filename;
         s.folder = inputfolder;
-        s.freezeTPhaseS = idxs_StrEnd_freeze(1, :) / fs_ma;
+        s.freezeTPhaseS = (idxs_StrEnd_freeze(1, :) + T_idxevent_ma.TargetTimeix(tri) - 1)/ fs_ma;
         s.discription = discrip_inside;
         freezEpisodes{end + 1, 1} = s;
         clear s freezeType 
@@ -150,7 +149,7 @@ for fi = 1 : length(files)
             s.triali = tri;
             s.filename = filename;
             s.folder = inputfolder;
-            s.freezeTPhaseS = idxs_StrEnd_freeze(idFreei, :) / fs_ma;
+            s.freezeTPhaseS = (idxs_StrEnd_freeze(idFreei, :) + T_idxevent_ma.TargetTimeix(tri)-1)/ fs_ma;
             s.discription = discrip_inside;
             freezEpisodes{end + 1, 1} = s;
             clear s freezeType 
@@ -158,8 +157,9 @@ for fi = 1 : length(files)
         clear idFreei
         
         clear idxs_StrEnd_freeze tri
+        clear speeds_inReaction idxs_move t0
     end
-    clear idxs_freeze_reaction times_reaction
+    clear idxs_freeze_reaction times_reaction 
     
     
     %%% --- extract freezing episodes during Reach phase
@@ -211,7 +211,7 @@ for fi = 1 : length(files)
             s.triali = tri;
             s.filename = filename;
             s.folder = inputfolder;
-            s.freezeTPhaseS = idxs_StrEnd_freeze/ fs_ma;
+            s.freezeTPhaseS = (idxs_StrEnd_freeze(idFreei, :) + T_idxevent_ma.ReachTimeix(tri)-1)/ fs_ma;
             s.discription = discrip_inside;
             freezEpisodes{end + 1, 1} = s;
             clear s freezeType 
@@ -237,7 +237,7 @@ for fi = 1 : length(files)
         s.triali = tri;
         s.filename = filename;
         s.folder = inputfolder;
-        s.freezeTPhaseS = [T_idxevent_ma.TouchTimeix(tri) T_idxevent_ma.ReturnTimeix(tri)] / fs_ma;
+        s.freezeTPhaseS = [T_idxevent_ma.TouchTimeix(tri) T_idxevent_ma.ReturnTimeix(tri)]/ fs_ma;
         s.discription = discrip_inside;
         
         freezEpisodes{end + 1, 1} = s;
