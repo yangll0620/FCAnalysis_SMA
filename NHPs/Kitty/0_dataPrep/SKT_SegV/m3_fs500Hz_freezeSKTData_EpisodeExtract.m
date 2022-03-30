@@ -38,15 +38,23 @@ inputfolder = fullfile(codecorresParentfolder, 'm2_segSKTData_SelectTrials_chnOf
 pdcond = 'moderate';
 
 speedThres_Move = 30;
-tThes_Reaction = 10;
-tThes_Reach = 5;
+
+tThesFreeze_init = 5;
+tThesFreeze_reach  = 0.1;
 tThesFreeze_mani  = 5;
+tThes_Reaction = 1;
+tThes_Reach = 5;
+
 
 
 %% save setup
 savefolder = codecorresfolder;
 savecodefolder = fullfile(savefolder, 'code');
+saveFreezTrialsfolder = fullfile(savefolder, 'freezedTrials');
 copyfile2folder(codefilepath, savecodefolder);
+if ~exist(saveFreezTrialsfolder, 'dir')
+    mkdir(saveFreezTrialsfolder);
+end
 
 
 %% Code Start Here
@@ -77,197 +85,311 @@ for fi = 1 : length(files)
     freezStruct.speedThres_Move = speedThres_Move;
     freezStruct.tThes_Reaction = tThes_Reaction;
     freezStruct.tThes_Reach = tThes_Reach;
+    freezStruct.tThesFreeze_init = tThesFreeze_init;
     freezStruct.tThesFreeze_mani = tThesFreeze_mani;
     freezStruct.discription = discrip_out;
     
     
+    %%% extract freezEpisodes %%%
     freezEpisodes = {};
-    
-    
-    
-    %%% --- extract freezing episodes during reaction phase
-    times_reaction = (T_idxevent_ma.ReachTimeix - T_idxevent_ma.TargetTimeix) / fs_ma;
-    idxs_freeze_reaction = find(times_reaction >= tThes_Reaction);
-    for idi = 1 : length(idxs_freeze_reaction)
-        tri = idxs_freeze_reaction(idi);
+    for tri = 1: length(smoothWspeed_trial)    
         
+        %%% --- extract freezing episodes during reaction phase: initFreeze and reachFreeze
+        idx_strInTrial = T_idxevent_ma.TargetTimeix(tri);
+        idx_endInTrial = T_idxevent_ma.ReachTimeix(tri);
+        speeds_inReaction = smoothWspeed_trial{tri}(idx_strInTrial:idx_endInTrial, 1);
+        idxs_nomove = find(speeds_inReaction < speedThres_Move); % idxs for not moving
         
-        %%% --- find the init move freezing and reach freezing seperately -- %%%
-        
-        % extract speed vector during reaction phase
-        speeds_inReaction = smoothWspeed_trial{tri}(T_idxevent_ma.TargetTimeix(tri):T_idxevent_ma.ReachTimeix(tri), 1);
-        idxs_move = find(speeds_inReaction >= speedThres_Move); % idxs for moving
-        if isempty(idxs_move)
-            idxs_StrEnd_freeze = [1 length(speeds_inReaction)];
-        else
-            % extract idxs_StrEnd_moves
-            diffIdxs = [0; diff(idxs_move)];
-            idxs_str = find(diffIdxs ~=1); % move start index for each move phase
+        if ~isempty(idxs_nomove)
+            % seprate into nomove intervals
+            diffIdxs = [0; diff(idxs_nomove)];
+            idxs_str = find(diffIdxs ~=1);
             if length(idxs_str) > 1
-                idxs_end = [idxs_str(2:end) - 1; length(idxs_move)];
+                idxs_end = [idxs_str(2:end) - 1; length(idxs_nomove)];
             else
-                idxs_end = length(idxs_move);
+                idxs_end = length(idxs_nomove);
             end
-            idxs_StrEnd_moves = [idxs_move(idxs_str), idxs_move(idxs_end)];
+            idxs_StrEnd_moves = [idxs_nomove(idxs_str), idxs_nomove(idxs_end)];
             
-            % extract idxs_StrEnd_freeze
-            idxs_StrEnd_freeze = [];
-            for idi = 1 : size(idxs_StrEnd_moves, 1)
-                if idi == 1 &&  idxs_StrEnd_moves(idi, 1) ~=1 % first one
-                    idxs_StrEnd_freeze = [idxs_StrEnd_freeze;1 idxs_StrEnd_moves(idi, 1)-1];
-                end
+            % append freeze episode, separate into initFreeze and reachFreeze
+            for idxi = 1 : size(idxs_StrEnd_moves, 1)
+                t_freeze = (idxs_StrEnd_moves(idxi, 2) - idxs_StrEnd_moves(idxi, 1)) / fs_ma;
                 
-                if idi > 1
-                    idxs_StrEnd_freeze = [idxs_StrEnd_freeze;idxs_StrEnd_moves(idi-1, 2)+1 idxs_StrEnd_moves(idi, 1)-1];
+                % separate into initFreeze and reachFreeze
+                if idxi == 1 && idxs_StrEnd_moves(idxi, 1) == 1
+                    if t_freeze >= tThesFreeze_init % init Freeze case
+                        freezeType = optFreezeTypes{cellfun(@(x) contains(x, 'init Move', 'IgnoreCase',true), optFreezeTypes)};
+                        
+                        s = struct();
+                        s.freezeType = freezeType;
+                        s.triali = tri;
+                        s.filename = filename;
+                        s.folder = inputfolder;
+                        s.freezeTPhaseS = (idxs_StrEnd_moves(idxi, :) + idx_strInTrial -1)/ fs_ma;
+                        s.discription = discrip_inside;
+                        
+                        freezEpisodes{end + 1, 1} = s;
+                        
+                        clear freezeType s
+                    end
+                    
+                else
+                    if t_freeze >= tThesFreeze_reach % reach freeze in reaction phase case
+                        freezeType = optFreezeTypes{cellfun(@(x) contains(x, 'freeze during React-Reach', 'IgnoreCase',true), optFreezeTypes)};
+                        
+                        s = struct();
+                        s.freezeType = freezeType;
+                        s.triali = tri;
+                        s.filename = filename;
+                        s.folder = inputfolder;
+                        s.freezeTPhaseS = (idxs_StrEnd_moves(idxi, :) + idx_strInTrial -1)/ fs_ma;
+                        s.discription = discrip_inside;
+                        
+                        freezEpisodes{end + 1, 1} = s;
+                        
+                        clear freezeType s
+                    end
+                    clear t_freeze
                 end
-                
-                if idi == size(idxs_StrEnd_moves, 1) && idxs_StrEnd_moves(idi, 2) ~= length(speeds_inReaction) % last one
-                    idxs_StrEnd_freeze = [idxs_StrEnd_freeze;idxs_StrEnd_moves(idi, 2)+1 length(speeds_inReaction)];
-                end
+                clear t_freeze
             end
-            clear diffIdxs idxs_str idxs_end idxs_StrEnd_moves
+            clear diffIdxs idxs_str idxs_end idxs_StrEnd_moves idxi
         end
+        clear idx_strInTrial idx_endInTrial speeds_inReaction idxs_nomove
         
-        % freeze during init move
-        s = struct();
-        freezeType = optFreezeTypes{cellfun(@(x) contains(x, 'init Move', 'IgnoreCase',true), optFreezeTypes)};
-        s.freezeType = freezeType;
-        s.triali = tri;
-        s.filename = filename;
-        s.folder = inputfolder;
-        s.freezeTPhaseS = (idxs_StrEnd_freeze(1, :) + T_idxevent_ma.TargetTimeix(tri) - 1)/ fs_ma;
-        s.discription = discrip_inside;
-        freezEpisodes{end + 1, 1} = s;
-        clear s freezeType 
-
+        %%% --- extract freezing episodes during Reach phase
+        idx_strInTrial = T_idxevent_ma.ReachTimeix(tri);
+        idx_endInTrial = T_idxevent_ma.TouchTimeix(tri);
+        speeds_inReach = smoothWspeed_trial{tri}(idx_strInTrial:idx_endInTrial, 1);
+        idxs_nomove = find(speeds_inReach < speedThres_Move); % idxs for not moving
         
-        % freeze during reach
-        for idFreei = 2: size(idxs_StrEnd_freeze, 1) 
+        if ~isempty(idxs_nomove)
+            % seprate into nomove intervals
+            diffIdxs = [0; diff(idxs_nomove)];
+            idxs_str = find(diffIdxs ~=1);
+            if length(idxs_str) > 1
+                idxs_end = [idxs_str(2:end) - 1; length(idxs_nomove)];
+            else
+                idxs_end = length(idxs_nomove);
+            end
+            idxs_StrEnd_moves = [idxs_nomove(idxs_str), idxs_nomove(idxs_end)];
+            
+            % append freeze during Reach episode
+            for idxi = 1 : size(idxs_StrEnd_moves, 1)
+                t_freeze = (idxs_StrEnd_moves(idxi, 2) - idxs_StrEnd_moves(idxi, 1)) / fs_ma;
+                if t_freeze >= tThesFreeze_reach
+                    freezeType = optFreezeTypes{cellfun(@(x) contains(x, 'freeze during Reach', 'IgnoreCase',true), optFreezeTypes)};
+                    
+                    s = struct();
+                    s.freezeType = freezeType;
+                    s.triali = tri;
+                    s.filename = filename;
+                    s.folder = inputfolder;
+                    s.freezeTPhaseS = (idxs_StrEnd_moves(idxi, :) + idx_strInTrial -1)/ fs_ma;
+                    s.discription = discrip_inside;
+                    
+                    freezEpisodes{end + 1, 1} = s;
+                    
+                    clear freezeType s
+                end
+                clear t_freeze
+            end
+            clear diffIdxs idxs_str idxs_end idxs_StrEnd_moves idxi
+        end
+        clear idx_strInTrial idx_endInTrial speeds_inReach idxs_nomove
+        
+        
+        %%% --- extract freezing episodes during manupation phase
+        t_mani = (T_idxevent_ma.ReturnTimeix(tri) - T_idxevent_ma.TouchTimeix(tri)) / fs_ma;
+        if t_mani >= tThesFreeze_mani % append manipulation freeze episode
+            freezeType = optFreezeTypes{cellfun(@(x) contains(x, 'manipulation', 'IgnoreCase',true), optFreezeTypes)};
+            
             s = struct();
-            freezeType = optFreezeTypes{cellfun(@(x) contains(x, 'React-Reach', 'IgnoreCase',true), optFreezeTypes)};
             s.freezeType = freezeType;
             s.triali = tri;
             s.filename = filename;
             s.folder = inputfolder;
-            s.freezeTPhaseS = (idxs_StrEnd_freeze(idFreei, :) + T_idxevent_ma.TargetTimeix(tri)-1)/ fs_ma;
+            s.freezeTPhaseS = [T_idxevent_ma.TouchTimeix(tri) T_idxevent_ma.ReturnTimeix(tri)]/ fs_ma;
             s.discription = discrip_inside;
-            freezEpisodes{end + 1, 1} = s;
-            clear s freezeType 
-        end
-        clear idFreei
-        
-        clear idxs_StrEnd_freeze tri
-        clear speeds_inReaction idxs_move t0
-    end
-    clear idxs_freeze_reaction times_reaction 
-    
-    
-    %%% --- extract freezing episodes during Reach phase
-    times_reach = (T_idxevent_ma.ReachTimeix - T_idxevent_ma.TargetTimeix) / fs_ma;
-    idxs_freeze_reach = find(times_reach >= tThes_Reach);
-    for idi = 1 : length(idxs_freeze_reach)
-        tri = idxs_freeze_reach(idi);
-        
-        % extract speed vector during reaction phase
-        speeds_inReach = smoothWspeed_trial{tri}(T_idxevent_ma.ReachTimeix(tri):T_idxevent_ma.TouchTimeix(tri), 1);
-        idxs_move = find(speeds_inReach >= speedThres_Move); % idxs for moving
-        if isempty(idxs_move)
-            idxs_StrEnd_freeze = [1 length(speeds_inReach)];
-        else
-            % extract idxs_StrEnd_moves
-            diffIdxs = [0; diff(idxs_move)];
-            idxs_str = find(diffIdxs ~=1); % move start index for each move phase
-            if length(idxs_str) > 1
-                idxs_end = [idxs_str(2:end) - 1; length(idxs_move)];
-            else
-                idxs_end = length(idxs_move);
-            end
-            idxs_StrEnd_moves = [idxs_move(idxs_str), idxs_move(idxs_end)];
             
-            % extract idxs_StrEnd_freeze
-            idxs_StrEnd_freeze = [];
-            for idi = 1 : size(idxs_StrEnd_moves, 1)
-                if idi == 1 &&  idxs_StrEnd_moves(idi, 1) ~=1 % first one
-                    idxs_StrEnd_freeze = [idxs_StrEnd_freeze;1 idxs_StrEnd_moves(idi, 1)-1];
-                end
-                
-                if idi > 1
-                    idxs_StrEnd_freeze = [idxs_StrEnd_freeze;idxs_StrEnd_moves(idi-1, 2)+1 idxs_StrEnd_moves(idi, 1)-1];
-                end
-                
-                if idi == size(idxs_StrEnd_moves, 1) && idxs_StrEnd_moves(idi, 2) ~= length(speeds_inReach) % last one
-                    idxs_StrEnd_freeze = [idxs_StrEnd_freeze;idxs_StrEnd_moves(idi, 2)+1 length(speeds_inReach)];
-                end
-            end
-            clear diffIdxs idxs_str idxs_end idxs_StrEnd_moves
-        end
-        clear speeds_inReaction idxs_move
-        
-        % freeze during reach
-        for idFreei = 1: size(idxs_StrEnd_freeze, 1) 
-            s = struct();
-            freezeType = optFreezeTypes{cellfun(@(x) contains(x, 'freeze during Reach', 'IgnoreCase',true), optFreezeTypes)};
-            s.freezeType = freezeType;
-            s.triali = tri;
-            s.filename = filename;
-            s.folder = inputfolder;
-            s.freezeTPhaseS = (idxs_StrEnd_freeze(idFreei, :) + T_idxevent_ma.ReachTimeix(tri)-1)/ fs_ma;
-            s.discription = discrip_inside;
             freezEpisodes{end + 1, 1} = s;
-            clear s freezeType 
+            
+            clear s freezeType
         end
-        clear idFreei
-        
-        clear idxs_StrEnd_freeze tri
+        clear t_mani
     end
-    clear idxs_freeze_reach times_reach
-    
-    
-    
-    %%% --- extract freezing episodes during manupation phase
-    freezeType = optFreezeTypes{cellfun(@(x) contains(x, 'manipulation', 'IgnoreCase',true), optFreezeTypes)};
-    times_mani = (T_idxevent_ma.ReturnTimeix - T_idxevent_ma.TouchTimeix) / fs_ma;
-    idxs_freeze_mani = find(times_mani >= tThesFreeze_mani);
-    for idi = 1 : length(idxs_freeze_mani)
-        tri = idxs_freeze_mani(idi);
-        
-        s = struct();
-        
-        s.freezeType = freezeType;
-        s.triali = tri;
-        s.filename = filename;
-        s.folder = inputfolder;
-        s.freezeTPhaseS = [T_idxevent_ma.TouchTimeix(tri) T_idxevent_ma.ReturnTimeix(tri)]/ fs_ma;
-        s.discription = discrip_inside;
-        
-        freezEpisodes{end + 1, 1} = s;
-        
-        clear s tri
-    end
-    clear freezeType times_mani idxs_freeze_mani
     
     %%% assign to freezStruct.freezEpisodes
     freezStruct.freezEpisodes = freezEpisodes;
+    clear freezEpisodes
     
+    
+    %%% save part %%%
     tmp = regexp(filename, '\d{8}', 'match');
-    dateofexp_str = tmp{1};
+    datebktdt_str = tmp{1};
     tmp = regexp(filename, 'bktdt\d{1}', 'match');
     bktdt_str = tmp{1};
     clear tmp
     
-    save(fullfile(savefolder, [animal '_freezeEpisodes_' pdcond '_' dateofexp_str '_' bktdt_str '.mat']), 'lfpdata', 'T_chnsarea', 'T_idxevent_lfp', 'fs_lfp',  ...
+    save(fullfile(savefolder, [animal '_freezeEpisodes_' pdcond '_' datebktdt_str '_' bktdt_str '.mat']), 'lfpdata', 'T_chnsarea', 'T_idxevent_lfp', 'fs_lfp',  ...
         'Wpos_smooth_trial', 'Wrist_smooth_trial', 'smoothWspeed_trial', 'T_idxevent_ma', 'fs_ma', ...
         'selectedTrials', 'freezStruct');
     
+    
+    %%% final clear
     clear('lfpdata', 'T_chnsarea', 'T_idxevent_lfp', 'fs_lfp',  ...
         'Wpos_smooth_trial', 'Wrist_smooth_trial', 'smoothWspeed_trial', 'T_idxevent_ma', 'fs_ma', ...
         'selectedTrials');
-    
     clear filename freezStruct dateofexp_str bktdt_str
     
 end
 
 
+%%% -- Plot and check some of the extracted Freezed trials --
+eveNames = {'cueonset', 'reachonset', 'touch', 'returnonset', 'mouth'};
+initfrezPhaNames = {'cueonset', 'initFreezeEnd'};
+reachfrezPhaNames = {'reachFreezStart', 'reachFreezEnd'};
+manifrezPhaNames = {'touch', 'maniFreezEnd'};
+freezCols = {'k', 'b', 'r'};
+frezfiles = dir(fullfile(savefolder, ['*' pdcond '*.mat']));
+for fi = 1 : length(frezfiles)
+    filename = frezfiles(fi).name;
+    load(fullfile(savefolder, filename), 'freezStruct', ...
+        'fs_ma', 'smoothWspeed_trial', 'T_idxevent_ma');
+    
+    datebktdt_str = regexp(filename, '\d{8}_bktdt\d{1}', 'match');
+    datebktdt_str = strrep(datebktdt_str{1}, '_', '-');
+    
+    freezEpisodes = freezStruct.freezEpisodes;
+    tri_pre = 0;
+    
+    for frzi = 1: length(freezEpisodes)
+        tri = freezEpisodes{frzi}.triali;
+        
+        if tri ~= tri_pre % new trial
+            if tri_pre ~= 0 % save and close previous trial
+                legend(hlegshows, 'Orientation', 'horizontal', 'Location', 'north')
+                saveas(gcf, fullfile(saveFreezTrialsfolder, [animal '-' datebktdt_str '-trial' num2str(tri_pre) '.tif']));
+                clear ax
+                close gcf
+                clear hlegshows reachLegExist
+                clear frzi_InTrial  
+            end
+            
+            tri_pre = tri;
+            hlegshows = []; % store the objects whose legend to show
+            reachLegExist = false;
+            
+            
+            figure('Position', [50 150 1800 600]);
+            ax = axes(gcf);
+            
+            % plot smoothWspeed_trial
+            ma = smoothWspeed_trial{tri};
+            hp = plot(ax, [1: length(ma)]/fs_ma, ma, 'DisplayName','speed'); hold on
+            hlegshows = [hlegshows hp];
+            hp = plot(xlim, [speedThres_Move speedThres_Move], 'b-.', 'DisplayName','speedThres');
+            hlegshows = [hlegshows hp];
+            clear ma hp
+            
+            
+            % plot event line
+            xtks = xticks(ax);
+            xtklabs = xticklabels(ax);
+            tevents_ma = T_idxevent_ma{tri_pre, :} / fs_ma;
+            for tei = 1 : length(tevents_ma)
+                tevent = tevents_ma(tei);
+                plot([tevent tevent], ylim, '--');
+                xtks = [xtks tevent];
+                xtklabs = [xtklabs; eveNames{tei}];
+                clear tevent
+            end
+            [xtks, idxs]= sort(xtks);
+            xtklabs = xtklabs(idxs);
+            set(ax,'XTick', xtks, 'XTickLabel', xtklabs, 'XTickLabelRotation', 45);
+            clear xtks xtklabs tevents_ma tei
+            
+            % title
+            title([animal '-' datebktdt_str ', tri = ' num2str(tri)])
+            
+            frzi_InTrial = 1;
+        else
+            frzi_InTrial = frzi_InTrial + 1;
+        end
+        
+        
+        %%% plot start and end freeze lines
+        ys = ylim;
+        freezeType = freezEpisodes{frzi}.freezeType;
+        idx = find(cellfun(@(x) contains(freezeType, x), {'init', 'Reach', 'Manipulation'}));
+        Tphase = freezEpisodes{frzi}.freezeTPhaseS;
+        switch idx
+            case 1
+                frezPhaNames = initfrezPhaNames;
+                ys = [ys(1) ys(2)*2/3];
+                
+                % plot lines
+                hp = plot([Tphase(1) Tphase(1)], ys, [freezCols{idx} '-'], 'DisplayName', 'initFreeze');
+                plot([Tphase(2) Tphase(2)], ys, [freezCols{idx} '-']);
+                hlegshows = [hlegshows hp];
+                
+                clear hp
+            case 2
+                frezPhaNames = reachfrezPhaNames;
+                ys = [ys(1) ys(2)*1/2];
+                
+                % plot lines
+                hp = plot([Tphase(1) Tphase(1)], ys, [freezCols{idx} '-'], 'DisplayName', 'reachFreeze');
+                plot([Tphase(2) Tphase(2)], ys, [freezCols{idx} '-']);
+                if ~reachLegExist
+                    hlegshows = [hlegshows hp];
+                    reachLegExist = true;
+                end
+            case 3
+                frezPhaNames = manifrezPhaNames;
+                ys = [ys(1) ys(2)*1/3];
+                
+                % plot lines
+                hp = plot([Tphase(1) Tphase(1)], ys, [freezCols{idx} '-'], 'DisplayName', 'maniFreeze');
+                plot([Tphase(2) Tphase(2)], ys, [freezCols{idx} '-']);
+                hlegshows = [hlegshows hp];
+                
+                clear hp
+            otherwise
+                disp(['freeze type is not right: ' freezeType])
+        end
+         
+        % plot texts
+        str = ['fStart' num2str(frzi_InTrial)];
+        ht = text(ax, Tphase(1), ys(2), str);
+        set(ht, 'Units', 'points')
+        pos_points = get(ht, 'Position');
+        set(ht, 'Position', [pos_points(1)-length(str)/2*5  pos_points(2)+10]);
+        str = ['fEnd' num2str(frzi_InTrial)];
+        ht = text(ax, Tphase(2), ys(2) + 2, str);
+        set(ht, 'Units', 'points')
+        pos_points = get(ht, 'Position');
+        set(ht, 'Position', [pos_points(1)-length(str)/2*5  pos_points(2)+10]);
+        clear ht str
+        
+        
+        if frzi == length(freezEpisodes) % last frzi
+            legend(hlegshows, 'Orientation', 'horizontal','Location', 'north')
+            saveas(gcf, fullfile(saveFreezTrialsfolder, [animal '-' datebktdt_str '-trial' num2str(tri) '.tif']));
+            clear ax
+            close gcf
+            clear hlegshows reachLegExist
+            clear frzi_InTrial
+        end
+        
+        clear frezPhaNames idx freezeType
+    end
+    
+    clear filename freezStruct 
+    clear('freezStruct', 'fs_ma', 'smoothWspeed_trial', 'T_idxevent_ma');
+    clear datebktdt_str 
+    clear freezEpisodes tri_pre
+end
 
 
 
