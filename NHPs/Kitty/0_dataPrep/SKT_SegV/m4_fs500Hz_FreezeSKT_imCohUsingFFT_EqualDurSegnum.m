@@ -32,31 +32,18 @@ animal = animal_extract(codecorresfolder);
 % parse params
 p = inputParser;
 addParameter(p, 'matchSKT', false, @(x)isscalar(x)&&islogical(x));
-addParameter(p, 'ntrialsUsed', 100, @(x)isscalar(x)&&isnumeric(x));
+addParameter(p, 'ntrialsUsed', [], @(x)isscalar(x)&&isnumeric(x));
 parse(p,varargin{:});
 matchSKT = p.Results.matchSKT;
 ntrialsUsed = p.Results.ntrialsUsed;
 
-
-%% save setup
-savefolder = codecorresfolder;
-savecodefolder = fullfile(savefolder, 'code');
-copyfile2folder(codefilepath, savecodefolder);
-
-
-ciCohPhasefile_prefix =[animal '_Freeze_ciCoh'];
-if ~matchSKT
-   ciCohPhasefile_prefix = [ciCohPhasefile_prefix '_ntrial' num2str(ntrialsUsed)];
-else
-    ciCohPhasefile_prefix = [ciCohPhasefile_prefix '_matchSKT'];
-end
 
 %%  input setup
 inputfolder_Freeze = fullfile(codecorresParentfolder, 'm3_fs500Hz_freezeSKTData_EpisodeExtract');
 inputfolder_SKT = fullfile(codecorresParentfolder, 'm4_imCohPhaseUsingFFT_EventPhase_unifiedNHP');
 
 
-twin = 0.2;
+twin = 1;
 
 image_type = 'tif';
 
@@ -65,6 +52,30 @@ f_AOI = [8 40];
 pdcond = 'moderate';
 
 shuffleN_psedoTest = 500;
+ignoreReachFreeze = true;
+combiFreeName = 'combinedfreezTypes';
+
+%% save setup
+savefolder = codecorresfolder;
+savecodefolder = fullfile(savefolder, 'code');
+copyfile2folder(codefilepath, savecodefolder);
+
+file_prefix = [animal '_Freeze'];
+ciCohPhasefile_prefix =[file_prefix '_ciCoh'];
+saveimgfile_prefix = [file_prefix '_ciCohHist'];
+
+if ~matchSKT
+    if isempty(ntrialsUsed)
+        ciCohPhasefile_prefix = [ciCohPhasefile_prefix '_alltrials'];
+        saveimgfile_prefix = [saveimgfile_prefix '_alltrials'];
+    else
+        ciCohPhasefile_prefix = [ciCohPhasefile_prefix '_ntrial' num2str(ntrialsUsed)];
+        saveimgfile_prefix = [saveimgfile_prefix '_ntrial' num2str(ntrialsUsed)];
+    end
+else
+    ciCohPhasefile_prefix = [ciCohPhasefile_prefix '_matchSKT'];
+    saveimgfile_prefix = [saveimgfile_prefix '_matchSKT'];
+end
 
 
 %% Code start here
@@ -93,8 +104,9 @@ if(~exist(ciCohPhasefile, 'file'))
     
     
     ciCohs = struct();
+    nsegs = struct();
     
-    % for each freeze type calculate cicoh and psedoCicoh
+    %%% for each freeze type calculate cicoh and psedoCicoh
     for frTi = 1 : length(combFreeTypes)
         freezType = combFreeTypes{frTi};
         disp(['freezType = ' freezType])
@@ -115,9 +127,12 @@ if(~exist(ciCohPhasefile, 'file'))
             lfpsegs = lfpsegs(:, :, randomSKTInds);
             clear ntrials nsegs randomSKTInds
         else
-            nsegs = size(lfpsegs, 3);
-            randomSKTInds =  randsample(nsegs,ntrialsUsed);
-            lfpsegs = lfpsegs(:, :, randomSKTInds);
+            if ~isempty(ntrialsUsed)
+                nsegs = size(lfpsegs, 3);
+                randomSKTInds =  randsample(nsegs,ntrialsUsed);
+                lfpsegs = lfpsegs(:, :, randomSKTInds);
+                clear nsegs randomSKTInds
+            end
         end
         
         
@@ -126,7 +141,7 @@ if(~exist(ciCohPhasefile, 'file'))
         
         
         % save
-        nsegs = size(lfpsegs, 3);
+        nsegs.(freezType) = size(lfpsegs, 3);
         ciCohs.(freezType) = ciCoh;
         save(ciCohPhasefile, 'ciCohs', 'nsegs', 'f_selected', '-append');
         
@@ -134,19 +149,66 @@ if(~exist(ciCohPhasefile, 'file'))
         %  extract and save psedociCohs
         psedoFreeCiCoh_extract_save(shuffleN_psedoTest, lfpsegs, fs, f_AOI, ciCohPhasefile, freezType, 'codesavefolder', savecodefolder);
         
-        clear lfpsegs nsegs ciCoh f_selected freezType
+        clear lfpsegs ciCoh f_selected freezType
     end
     
-    clear files lfpsegs_freeze fs T_chnsarea combFreeTypes cicohs
+    
+    %%% calculate cicoh and psedoCicoh using combined lfp from all freeze types
+    disp(['Using combined freeze type lfp'])
+    lfpsegs = [];
+    for frTi = 1 : length(combFreeTypes) % combine lfp
+        if ignoreReachFreeze && strcmp(combFreeTypes{frTi}, 'ReachFreeze')
+            continue;
+        end
+        lfpsegs = cat(3, lfpsegs, lfpsegs_freeze.(freezType));
+    end
+    % remove unused chns
+    removedChns_mask = cellfun(@(x) contains(x, removed_chns), T_chnsarea.brainarea);
+    lfpsegs = lfpsegs(~removedChns_mask, :, :);
+    T_chnsarea = T_chnsarea(~removedChns_mask, :);
+    clear files removedChns_mask
+    
+    % select matchSKT or ntrialsUsed trials
+    if matchSKT
+        % match the trial number in rest and SKT
+        load(fullfile(inputfolder_SKT, [animal ' ciCohPhasefile_' pdcond '_earlyReach_align2ReachOnset.mat']), 'ntrials')
+        nsegs = size(lfpsegs, 3);
+        randomSKTInds =  randsample(nsegs,ntrials);
+        lfpsegs = lfpsegs(:, :, randomSKTInds);
+        clear ntrials nsegs randomSKTInds
+    else
+        if ~isempty(ntrialsUsed)
+            nsegs = size(lfpsegs, 3);
+            randomSKTInds =  randsample(nsegs,ntrialsUsed);
+            lfpsegs = lfpsegs(:, :, randomSKTInds);
+            clear nsegs randomSKTInds
+        end
+    end
+             
+    %  extract and save deltaphis_allChnsTrials and cicoh
+    [~, ciCoh, f_selected]= ciCoh_trialDeltaPhi(lfpsegs, fs, f_AOI);
+            
+    % save
+    nsegs.(combiFreeName) = size(lfpsegs, 3);
+    ciCohs.(combiFreeName) = ciCoh;
+    save(ciCohPhasefile, 'ciCohs', 'nsegs', 'f_selected', '-append');     
+        
+    %  extract and save psedociCohs
+    psedoFreeCiCoh_extract_save(shuffleN_psedoTest, lfpsegs, fs, f_AOI, ciCohPhasefile, combiFreeName, 'codesavefolder', savecodefolder);
+        
+    clear lfpsegs ciCoh f_selected 
+    
+    %%% final clear
+    clear files lfpsegs_freeze fs T_chnsarea combFreeTypes cicohs nsegs
 end
 
 
-load(ciCohPhasefile, 'ciCohs', 'T_chnsarea', 'nsegs', 'f_selected', 'combFreeTypes', 'psedociCohs');
+load(ciCohPhasefile, 'ciCohs', 'nsegs', 'combFreeTypes', 'psedociCohs');
 if ~exist('psedociCohs','var')
     files = dir(fullfile(inputfolder_Freeze, ['*_' pdcond '_*.mat']));
     [lfpsegs_freeze, fs, T_chnsarea]= seg2ShortSegments(files, twin);
     
-    % for each freeze type calculate cicoh and psedoCicoh
+    %%% for each freeze type calculate cicoh and psedoCicoh
     for frTi = 1 : length(combFreeTypes)
         freezType = combFreeTypes{frTi};
         disp(['freezType = ' freezType])
@@ -178,7 +240,54 @@ if ~exist('psedociCohs','var')
         clear lfpsegs nsegs ciCoh f_selected freezType
     end
     
-    clear files lfpsegs_freeze fs 
+    %%% calculate cicoh and psedoCicoh using combined lfp from all freeze types
+    disp(['Using combined freeze type lfp'])
+    lfpsegs = [];
+    for frTi = 1 : length(combFreeTypes) % combine lfp
+        if ignoreReachFreeze && strcmp(combFreeTypes{frTi}, 'ReachFreeze')
+            continue;
+        end
+        lfpsegs = cat(3, lfpsegs, lfpsegs_freeze.(freezType));
+    end
+    % remove unused chns
+    removedChns_mask = cellfun(@(x) contains(x, removed_chns), T_chnsarea.brainarea);
+    lfpsegs = lfpsegs(~removedChns_mask, :, :);
+    T_chnsarea = T_chnsarea(~removedChns_mask, :);
+    clear files removedChns_mask
+    
+    % select matchSKT or ntrialsUsed trials
+    if matchSKT
+        % match the trial number in rest and SKT
+        load(fullfile(inputfolder_SKT, [animal ' ciCohPhasefile_' pdcond '_earlyReach_align2ReachOnset.mat']), 'ntrials')
+        nsegs = size(lfpsegs, 3);
+        randomSKTInds =  randsample(nsegs,ntrials);
+        lfpsegs = lfpsegs(:, :, randomSKTInds);
+        clear ntrials nsegs randomSKTInds
+    else
+        if ~isempty(ntrialsUsed)
+            nsegs = size(lfpsegs, 3);
+            randomSKTInds =  randsample(nsegs,ntrialsUsed);
+            lfpsegs = lfpsegs(:, :, randomSKTInds);
+            clear nsegs randomSKTInds
+        end
+    end
+             
+    %  extract and save deltaphis_allChnsTrials and cicoh
+    [~, ciCoh, f_selected]= ciCoh_trialDeltaPhi(lfpsegs, fs, f_AOI);
+            
+    % save
+    nsegs.(combiFreeName) = size(lfpsegs, 3);
+    ciCohs.(combiFreeName) = ciCoh;
+    save(ciCohPhasefile, 'ciCohs', 'nsegs', 'f_selected', '-append');     
+        
+    %  extract and save psedociCohs
+    psedoFreeCiCoh_extract_save(shuffleN_psedoTest, lfpsegs, fs, f_AOI, ciCohPhasefile, combiFreeName, 'codesavefolder', savecodefolder);
+        
+    clear lfpsegs ciCoh f_selected
+    
+    
+    %%% final clear
+    clear files lfpsegs_freeze fs  T_chnsarea
 end
 
 for frTi = 1 : length(combFreeTypes)
@@ -218,8 +327,61 @@ for frTi = 1 : length(combFreeTypes)
 end
 
 
-% plot and save
+%%% calculate cicoh and psedoCicoh using combined lfp from all freeze types
+if ~isfield(psedociCohs, combiFreeName) || size(psedociCohs.(combiFreeName), 4) < shuffleN_psedoTest
+    files = dir(fullfile(inputfolder_Freeze, ['*_' pdcond '_*.mat']));
+    [lfpsegs_freeze, fs, T_chnsarea]= seg2ShortSegments(files, twin);
+
+    disp(['Using combined freeze type lfp'])
+    lfpsegs = [];
+    for frTi = 1 : length(combFreeTypes) % combine lfp
+        if ignoreReachFreeze && strcmp(combFreeTypes{frTi}, 'ReachFreeze')
+            continue;
+        end
+        lfpsegs = cat(3, lfpsegs, lfpsegs_freeze.(freezType));
+    end
+    % remove unused chns
+    removedChns_mask = cellfun(@(x) contains(x, removed_chns), T_chnsarea.brainarea);
+    lfpsegs = lfpsegs(~removedChns_mask, :, :);
+    T_chnsarea = T_chnsarea(~removedChns_mask, :);
+    clear files removedChns_mask
+    
+    % select matchSKT or ntrialsUsed trials
+    if matchSKT
+        % match the trial number in rest and SKT
+        load(fullfile(inputfolder_SKT, [animal ' ciCohPhasefile_' pdcond '_earlyReach_align2ReachOnset.mat']), 'ntrials')
+        nsegs = size(lfpsegs, 3);
+        randomSKTInds =  randsample(nsegs,ntrials);
+        lfpsegs = lfpsegs(:, :, randomSKTInds);
+        clear ntrials nsegs randomSKTInds
+    else
+        if ~isempty(ntrialsUsed)
+            nsegs = size(lfpsegs, 3);
+            randomSKTInds =  randsample(nsegs,ntrialsUsed);
+            lfpsegs = lfpsegs(:, :, randomSKTInds);
+            clear nsegs randomSKTInds
+        end
+    end
+    
+    %  extract and save deltaphis_allChnsTrials and cicoh
+    [~, ciCoh, f_selected]= ciCoh_trialDeltaPhi(lfpsegs, fs, f_AOI);
+    
+    % save
+    nsegs.(combiFreeName) = size(lfpsegs, 3);
+    ciCohs.(combiFreeName) = ciCoh;
+    save(ciCohPhasefile, 'ciCohs', 'nsegs', 'f_selected', '-append');
+    
+    %  extract and save psedociCohs
+    psedoFreeCiCoh_extract_save(shuffleN_psedoTest, lfpsegs, fs, f_AOI, ciCohPhasefile, combiFreeName, 'codesavefolder', savecodefolder);
+    
+    clear lfpsegs ciCoh f_selected
+end
+
+
+%% plot and save
 load(ciCohPhasefile, 'ciCohs', 'T_chnsarea', 'nsegs', 'f_selected', 'combFreeTypes', 'psedociCohs');
+
+% plot cicoh from each freeze type
 for frTi = 1 : length(combFreeTypes)
     freezType = combFreeTypes{frTi};
     [sigciCoh]= sigciCoh_extract(psedociCohs.(freezType), ciCohs.(freezType));
@@ -227,14 +389,35 @@ for frTi = 1 : length(combFreeTypes)
     [sigciCoh_flatten, chnPairNames] = ciCohFlatten_chnPairNames_extract(sigciCoh, T_chnsarea);
     
     nshuffle = size(psedociCohs.(freezType), 4);
-    titlename = [animal ' Freeze -'  freezType ', nsegs = ' num2str(nsegs) ', nshuffle= ' num2str(nshuffle)];
+    titlename = [animal ' Freeze -'  freezType ', nsegs = ' num2str(nsegs.(freezType)) ', nshuffle= ' num2str(nshuffle)];
     plot_ciCohHistogram(sigciCoh_flatten, chnPairNames, f_selected, titlename);
-    saveimgname = [animal '_Freeze' freezType '.' image_type];
+    saveimgname = [saveimgfile_prefix '_Freeze' freezType '.' image_type];
     saveas(gcf, fullfile(savefolder, saveimgname), image_type);
     
     clear titlename  saveimgname 
     clear freeType sigciCoh sigciCoh_flatten chnPairNames
 end
+
+% plot cicoh from all combined freeze types
+[sigciCoh]= sigciCoh_extract(psedociCohs.(combiFreeName), ciCohs.(combiFreeName));
+[sigciCoh_flatten, chnPairNames] = ciCohFlatten_chnPairNames_extract(sigciCoh, T_chnsarea);
+
+nshuffle = size(psedociCohs.(combiFreeName), 4);
+if ignoreReachFreeze
+    imgtitle_prefix = [file_prefix '-' combiFreeName '-noReach'];
+    saveimgfile_prefix = [saveimgfile_prefix '_' combiFreeName '-noReach'];
+else
+    imgtitle_prefix = [file_prefix '-' combiFreeName];
+    saveimgfile_prefix = [saveimgfile_prefix '_' combiFreeName];
+end
+titlename = [imgtitle_prefix  ', nsegs = ' num2str(nsegs.(combiFreeName)) ', nshuffle= ' num2str(nshuffle)];
+plot_ciCohHistogram(sigciCoh_flatten, chnPairNames, f_selected, titlename);
+saveimgname = [saveimgfile_prefix '.' image_type];
+saveas(gcf, fullfile(savefolder, saveimgname), image_type);
+clear titlename  saveimgname
+clear freeType sigciCoh sigciCoh_flatten chnPairNames
+
+close all
 
 
 
@@ -251,7 +434,6 @@ if isempty(files)
     return;
 end
 
-t_ThreFreeze = 3;
 optFreezeTypes = optFreezeTypes_extract();
 
 combFreeTypes = {'InitFreeze', 'ReachFreeze', 'ManipuFreeze'}; % combined {'freeze during React-Reach'}  and  {'freeze during Reach'} 
@@ -297,7 +479,7 @@ for fi = 1: length(files)
         
         t_str = freezEpisodes{frzi}.freezeTPhaseS(1);
         t_end = freezEpisodes{frzi}.freezeTPhaseS(2);
-        if t_end - t_str < t_ThreFreeze
+        if t_end - t_str < twin
             clear tri t_str t_end
             continue;
         end
