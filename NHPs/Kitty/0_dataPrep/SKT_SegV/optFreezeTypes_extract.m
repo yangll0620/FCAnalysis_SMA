@@ -1,4 +1,4 @@
-function optFreezeTypes = optFreezeTypes_extract(varargin)
+function [optFreezeTypes, combFreeTypes] = optFreezeTypes_extract(varargin)
 %   Inputs:
 %       animal
 %
@@ -19,4 +19,5 @@ end
 
 
 optFreezeTypes = {'freeze during init Move', 'freeze during React-Reach', 'freeze during Reach', 'freeze during Manipulation'};
+combFreeTypes = {'initFreeze', 'reachFreeze', 'maniFreeze'}; % combined {'freeze during React-Reach'}  and  {'freeze during Reach'} 
 end

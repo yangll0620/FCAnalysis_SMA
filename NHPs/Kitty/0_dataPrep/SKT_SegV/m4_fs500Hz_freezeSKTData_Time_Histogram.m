@@ -3,7 +3,7 @@ function m4_fs500Hz_freezeSKTData_Time_Histogram()
 %       extract freezing episode
 %       data structure
 %           episodes{}
-% 1. manupulation time > 5s
+
 
 %% folders generate
 % the full path and the name of code file without suffix
@@ -34,8 +34,7 @@ animal = animal_extract(codecorresfolder);
 inputfolder = fullfile(codecorresParentfolder, 'm3_fs500Hz_freezeSKTData_EpisodeExtract');
 pdcond = 'moderate';
 
-tThre_freeze = 2;
-img_format = '.jpg';
+img_format = 'jpg';
 
 %% save setup
 savefolder = codecorresfolder;
@@ -57,14 +56,17 @@ for fi = 1 : length(files)
     datebkstr = strrep(datebkstr, '_bktdt', '-bk');
     clear tmp
     
-    load(fullfile(inputfolder, filename), 'freezStruct');
+    load(fullfile(inputfolder, filename), 'freezStruct', 'selectedTrials');
     freezEpisodes = freezStruct.freezEpisodes;
-    for freezi = 1 : length(freezEpisodes)
-        freezeType = freezEpisodes{freezi}.freezeType;
-        t_freeze = freezEpisodes{freezi}.freezeTPhaseS(:, 2) - freezEpisodes{freezi}.freezeTPhaseS(:, 1);
-        if t_freeze < tThre_freeze
+    for frzi = 1 : length(freezEpisodes)
+        tri = freezEpisodes{frzi}.triali;
+        if ~selectedTrials(tri)
+            clear tri
             continue;
         end
+        
+        freezeType = freezEpisodes{frzi}.freezeType;
+        t_freeze = freezEpisodes{frzi}.freezeTPhaseS(:, 2) - freezEpisodes{frzi}.freezeTPhaseS(:, 1);
         mask_freeze = strcmp(freezeType, optFreezeTypes);
         tmp = zeros(1, length(optFreezeTypes));
         tmp(mask_freeze) = t_freeze;
@@ -95,13 +97,13 @@ for ui = 1 : length(uniq_datebkstrs)
 end
 
 % add up React-Reach and Reach
-freezeTypes_plot = {'InitFreeze', 'ReachFreeze', 'ManipuFreeze'};
+freezeTypes_plot = {'initFreeze', 'reachFreeze', 'maniFreeze'};
 tdur_sumDates_freeze= [tdursum_freeze_datestrs(:, 1) tdursum_freeze_datestrs(:, 2) + tdursum_freeze_datestrs(:, 3) tdursum_freeze_datestrs(:, 4)];
 tdur_sum_freeze = [tdur_sumDates_freeze; sum(tdur_sumDates_freeze,1)];
 tbl_sumDateFreezeT = array2table(tdur_sum_freeze, 'VariableNames', freezeTypes_plot, 'RowNames', [uniq_datebkstrs; {'Sum'}]);
 clear tdur_sumDates_freeze tdur_sum_freeze
 
-% plot bar chart for each day and sum
+%%% plot bar chart for each day and sum
 datPlot = tbl_sumDateFreezeT{:, :};
 bar(datPlot, 'stacked')
 xticklabels(tbl_sumDateFreezeT.Properties.RowNames)
@@ -128,23 +130,39 @@ end
 saveas(gcf, fullfile(savefolder, [animal '_FreezeTimeAcc.' img_format]));
 
 
-%
+
 ts_freezInit = tbl_DateFreezeT{:, 2}(tbl_DateFreezeT{:, 2}~= 0); 
 tmp1 = tbl_DateFreezeT{:, 3}(tbl_DateFreezeT{:, 3}~= 0);
 tmp2 = tbl_DateFreezeT{:, 4}(tbl_DateFreezeT{:, 4}~= 0);
 ts_freezReach = [tmp1;tmp2]; 
-ts_freezMani = tbl_DateFreezeT{:, 5}(tbl_DateFreezeT{:,5}~= 0); 
-
-x = [ts_freezInit; ts_freezReach; ts_freezMani];
-freeTypes = cell(size(x));
+ts_freezMani = tbl_DateFreezeT{:, 5}(tbl_DateFreezeT{:,5}~= 0);
 n_init = length(ts_freezInit);
 n_reach = length(ts_freezReach);
 n_mani = length(ts_freezMani);
+clear tmp1 tmp2
+
+% histogram plot freeze time
+figure
+subplot(3,1,1);
+histogram(ts_freezInit, 15); 
+title([animal ' init freeze histogram, init# =' num2str(n_init)])
+subplot(3,1,2);
+histogram(ts_freezReach, 15)
+title([animal ' reach freeze histogram, init# =' num2str(n_reach)])
+subplot(3,1,3);
+histogram(ts_freezMani, 15)
+title([animal ' manipulate freeze histogram, init# =' num2str(n_mani)])
+saveas(gcf, fullfile(savefolder, [animal '_FreezeTimeHist.' img_format]));
+
+% box plot freeze time
+x = [ts_freezInit; ts_freezReach; ts_freezMani];
+freeTypes = cell(size(x));
 freeTypes(1 : n_init) = {'freezInit'};
 freeTypes(n_init+1 : n_init+n_reach) = {'freezReach'};
 freeTypes(n_init+n_reach+1 : n_init+n_reach+n_mani) = {'freezMani'};
+figure;
 boxplot(x, freeTypes)
-title([animal ' freeze time, #init=' num2str(n_init) ' #reach=' num2str(n_reach) ' #mani=' num2str(n_mani)])
+title([animal ' freeze time, init# =' num2str(n_init) ', reach# =' num2str(n_reach) ', mani# =' num2str(n_mani)])
 ylabel('freeze duration time/s')
 saveas(gcf, fullfile(savefolder, [animal '_FreezeTimePlot.' img_format]));
 

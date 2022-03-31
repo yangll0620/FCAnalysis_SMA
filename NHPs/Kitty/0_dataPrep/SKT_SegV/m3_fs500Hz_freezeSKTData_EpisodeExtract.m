@@ -42,8 +42,6 @@ speedThres_Move = 30;
 tThesFreeze_init = 5;
 tThesFreeze_reach  = 0.1;
 tThesFreeze_mani  = 5;
-tThes_Reaction = 1;
-tThes_Reach = 5;
 
 
 
@@ -83,8 +81,6 @@ for fi = 1 : length(files)
     freezStruct = struct();
     freezStruct.optFreezeTypes = optFreezeTypes;
     freezStruct.speedThres_Move = speedThres_Move;
-    freezStruct.tThes_Reaction = tThes_Reaction;
-    freezStruct.tThes_Reach = tThes_Reach;
     freezStruct.tThesFreeze_init = tThesFreeze_init;
     freezStruct.tThesFreeze_mani = tThesFreeze_mani;
     freezStruct.discription = discrip_out;
@@ -255,7 +251,7 @@ frezfiles = dir(fullfile(savefolder, ['*' pdcond '*.mat']));
 for fi = 1 : length(frezfiles)
     filename = frezfiles(fi).name;
     load(fullfile(savefolder, filename), 'freezStruct', ...
-        'fs_ma', 'smoothWspeed_trial', 'T_idxevent_ma');
+        'fs_ma', 'smoothWspeed_trial', 'T_idxevent_ma', 'selectedTrials');
     
     datebktdt_str = regexp(filename, '\d{8}_bktdt\d{1}', 'match');
     datebktdt_str = strrep(datebktdt_str{1}, '_', '-');
@@ -265,6 +261,10 @@ for fi = 1 : length(frezfiles)
     
     for frzi = 1: length(freezEpisodes)
         tri = freezEpisodes{frzi}.triali;
+        if ~selectedTrials(tri)
+            clear tri
+            continue;
+        end
         
         if tri ~= tri_pre % new trial
             if tri_pre ~= 0 % save and close previous trial

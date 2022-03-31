@@ -33,9 +33,12 @@ tdur = [-1 t_ThreFreeze];
 inputfolder = fullfile(codecorresParentfolder, 'm3_fs500Hz_freezeSKTData_EpisodeExtract');
 
 
+f_AOI = [8 40];
+
 %% save setup
 savefolder = codecorresfolder;
 savecodefolder = fullfile(savefolder, 'code');
+savetrialfolder = fullfile(savefolder, 'trialSpectrogram');
 copyfile2folder(codefilepath, savecodefolder);
 
 %% Code Start Here
@@ -45,70 +48,57 @@ if isempty(files)
 end
     
     
-% extract freeze lfpsegs
-[lfpsegs_freeze, fs, T_chnsarea, combFreeTypes]= freez_lfpsegs(files, 't_ThreFreeze', t_ThreFreeze, 'tdur', tdur);
+% extract freeze tbl_freezEpisodes
+[tbl_freezEpisodes]= tbl_freezEpisodes_extract(files, 't_bef', 0.8, 't_aft', 1);
 
-for frei = 1 : length(combFreeTypes)
-    freezType = combFreeTypes{frei};
-    lfpsegs = lfpsegs_freeze.(freezType);
-    
-    title_prefix = [animal ' ' freezType];
-    savefilename_prefix = [animal '_' freezType];
-    
-    plot_Spectrogram_acrossSegs(lfpsegs, T_chnsarea, tdur, fs, 't_AOI', tdur, ...
-        'title_prefix', title_prefix, 'savefilename_prefix', savefilename_prefix, 'savefolder', savefolder);
-    
-    clear freezType lfpsegs title_prefix savefilename_prefix clim
-end
-   
+
+
+[~, combFreeTypes] = optFreezeTypes_extract();
+freezeType = combFreeTypes{3};
+plot_spectrogram_acrossTrials(tbl_freezEpisodes, freezeType, f_AOI, savefolder);
+plot_spectrogram_trialbytrial(tbl_freezEpisodes, freezeType, f_AOI, savetrialfolder);
+
 end
 
 
-
-function [lfpsegs_freeze, fs, T_chnsarea, combFreeTypes]= freez_lfpsegs(files, varargin)
+function [tbl_freezEpisodes]= tbl_freezEpisodes_extract(files, varargin)
+% extract tbl_freezEpisodes from all files, not include the bad trials
 %
+% 
 %   Inputs
 %       Name-Value: 
-%           't_ThreFreeze': time threshold for extracted freezing phase,
-%                           only extract the segs longer than the threshold (default = 5)
+%           't_bef': including t_bef before freeze start time (default = 0.8),
 %
-%           'tdur': extracted seg duration, default = [0 t_ThreFreeze], 0
-%                   is the freeze time onset
+%           't_aft': including t_aft after freeze end time (default = 1),
 
 if isempty(files)
     disp('files for seg2ShortSegments empty!')
     
-    lfpsegs_freeze = [];
-    fs = [];
-    T_chnsarea = [];
-    combFreeTypes = [];
+    tbl_freezEpisodes = [];
     
     return;
 end
 
 
 p = inputParser;
-addParameter(p, 'tdur', [], @(x)isempty(x)||(isnumeric(x)&&isvector(x)&&length(x)==2));
-addParameter(p, 't_ThreFreeze',5, @(x)isscalar(x)&&isnumeric(x));
+addParameter(p, 't_bef',0.8, @(x)isscalar(x)&&isnumeric(x));
+addParameter(p, 't_aft',1, @(x)isscalar(x)&&isnumeric(x));
 parse(p,varargin{:});
-tdur = p.Results.tdur;
-t_ThreFreeze = p.Results.t_ThreFreeze;
-if isempty(tdur)
-    tdur = [0 t_ThreFreeze];
-end
+t_bef = p.Results.t_bef;
+t_aft = p.Results.t_aft;
 
 
-optFreezeTypes = optFreezeTypes_extract();
-combFreeTypes = {'InitFreeze', 'ReachFreeze', 'ManipuFreeze'}; % combined {'freeze during React-Reach'}  and  {'freeze during Reach'} 
+[~, combFreeTypes] = optFreezeTypes_extract();
 
-lfpsegs_freeze = struct();
-for frTi = 1 : length(combFreeTypes)
-    lfpsegs_freeze.(combFreeTypes{frTi}) = [];
-end
+
+tblvarNames = {'datebk_str', 'freezi', 'freezType', 'triali', 'lfp', 'idx_strendFreez', 'fs_lfp', 'T_chnsarea'};
 
 for fi = 1: length(files)
     loadfilename = files(fi).name;
     load(fullfile(files(fi).folder, loadfilename), 'lfpdata', 'fs_lfp', 'T_chnsarea', 'freezStruct', 'selectedTrials');
+    
+    datebk_str = regexp(loadfilename, '\d{8}_bktdt\d*', 'match');
+    datebk_str = datebk_str{1};
     
     % check fs and T_chnsarea same across files
     if ~exist('fs_unit', 'var')
@@ -124,6 +114,7 @@ for fi = 1: length(files)
     else
         if(~isequal(T_chnsarea_unit, T_chnsarea))
             disp(['T_chnsarea_unit ~= T_chnsarea for file ' loadfilename])
+            continue;
         end
     end
     
@@ -137,146 +128,171 @@ for fi = 1: length(files)
             continue;
         end
         
-        t_str = freezEpisodes{frzi}.freezeTPhaseS(1);
-        t_end = freezEpisodes{frzi}.freezeTPhaseS(2);
-        if t_end - t_str < t_ThreFreeze
-            clear tri t_str t_end
-            continue;
-        end
-        idx_dur = round((tdur + t_str) * fs_lfp);
-        if idx_dur(1) == 0
-            idx_dur(1) = 1;
-        end
-        seglfp  = lfpdata{tri}(:, idx_dur(1): idx_dur(2));
+        % extract lfp data in freeze phase (including t_bef to t_aft)
+        n_bef = round(t_bef * fs_lfp);
+        n_aft = round(t_aft * fs_lfp);
+        idx_durFreez = round(freezEpisodes{frzi}.freezeTPhaseS * fs_lfp);
+        idx_dur = [idx_durFreez(1) - n_bef idx_durFreez(2) + n_aft];
+        lfpfreez  = lfpdata{tri}(:, idx_dur(1): idx_dur(2));
+        idx_freezeInExtract = [n_bef+1 length(lfpfreez)-n_aft];
+        clear n_bef n_aft idx_durFreez idx_dur
+        
+        % extract freezType
+        idx_freez = find(cellfun(@(x) contains(freezEpisodes{frzi}.freezeType, x), {'init', 'Reach', 'Manipulation'}));  
+        freezType = combFreeTypes{idx_freez};
+        clear idx_freeze
 
         
-        %%% append to lfpsegs_freeze
-        freezeType = freezEpisodes{frzi}.freezeType;
-        frTi = find(strcmp(freezeType, optFreezeTypes));
-        if frTi ==3 || frTi == 4
-            frTi = frTi -1;
+        %%% append to tbl_freezEpisodes
+        tbl = table(string(datebk_str), frzi, string(freezType), tri, {lfpfreez}, {idx_freezeInExtract}, fs_lfp, {T_chnsarea}, 'VariableNames', tblvarNames);
+        if ~exist('tbl_freezEpisodes', 'var')
+            tbl_freezEpisodes = tbl;
+        else
+            tbl_freezEpisodes = [tbl_freezEpisodes; tbl];
         end
-        lfpsegs_freeze.(combFreeTypes{frTi}) = cat(3, lfpsegs_freeze.(combFreeTypes{frTi}), seglfp);
-        
-        clear tri t_str t_end freezeType frTi seglfp
-        clear idx_dur
+        clear tbl tri freezType lfpfreez idx_freezeInExtract
+       
     end   
     clear freezEpisodes
+    clear('lfpdata', 'fs_lfp', 'T_chnsarea', 'freezStruct', 'selectedTrials');
 end
-fs = fs_unit;
-T_chnsarea = T_chnsarea_unit;
-end
-
-
-function plot_Spectrogram_acrossSegs(lfpsegs, T_chnsarea, tdur, fs, varargin)
-% plot lfpdata of all the channels: nchns * ntemp * nsegs
-
-
-
-
-twin = 0.2;
-toverlap = 0.18;
-
-nwin = round(twin * fs);
-noverlap = round(toverlap * fs);
-
-
-% parse params
-p = inputParser;
-addParameter(p, 'f_AOI', [8 40], @(x)isnumeric(x)&&isvector(x)&&length(x)==2);
-addParameter(p, 't_AOI', [-0.5 0.5], @(x)isnumeric(x)&&isvector(x)&&length(x)==2);
-addParameter(p, 'clim', [], @(x)isnumeric(x)&&isvector(x)&&length(x)==2);
-addParameter(p, 'title_prefix', '', @isstr);
-addParameter(p, 'savefilename_prefix', '', @isstr);
-addParameter(p, 'savefolder', '', @isstr);
-addParameter(p, 'img_format', 'tif', @isstr);
-
-parse(p,varargin{:});
-f_AOI = p.Results.f_AOI;
-t_AOI = p.Results.t_AOI;
-clim = p.Results.clim;
-img_format = p.Results.img_format;
-title_prefix = p.Results.title_prefix;
-savefilename_prefix = p.Results.savefilename_prefix;
-savefolder = p.Results.savefolder;
-if isempty(title_prefix)
-    title_prefix = 'spectrogram';
-end
-if isempty(savefilename_prefix)
-    savefilename_prefix = 'spectrogram';
-end
-if isempty(savefolder)
-    savefolder = pwd;
 end
 
 
-% calculate psd for each chn across trials
-[nchns, ~, nsegs] = size(lfpsegs);
-psd_allchns = [];
-for chi = 1 : nchns
-    psds = []; %  psds: nf * nt * ntrials
-    for segi = 1: nsegs
-        x = lfpsegs(chi, :, segi);
-        [~, freqs, times, ps] = spectrogram(x, nwin, noverlap,[],fs); % ps: nf * nt
-        psds = cat(3, psds, ps);
-        
-        clear x ps
-    end
-    % convert into dB
-    psds = 10 * log10(psds);
-    psd = mean(psds, 3); % psd: nf * nt
+function plot_spectrogram_trialbytrial(tbl_freezEpisodes, freezeType, f_AOI, savefolder)
+if ~exist(savefolder, 'dir')
+    mkdir(savefolder)
+end
+
+img_format = 'tif';
+tbl_subfreezEpi = tbl_freezEpisodes(tbl_freezEpisodes.freezType == freezeType, :);
+
+switch freezeType
+    case 'initFreeze'
+        time0name = 'cueonset';
+        timeEndname = 'freezeEnd';
+    case 'reachFreeze'
+        time0name = 'freezeStart';
+        timeEndname = 'freezeEnd';
+    case 'maniFreeze'
+        time0name = 'touch';
+        timeEndname = 'mouth';
+end
+
+% plot each freeze phase
+for tbi = 1 : height(tbl_subfreezEpi)
+    lfp = tbl_subfreezEpi.lfp{tbi};
+    fs = tbl_subfreezEpi.fs_lfp(tbi);
+    T_chnsarea = tbl_subfreezEpi.T_chnsarea{tbi};
+    datebkstr = tbl_subfreezEpi.datebk_str{tbi};
+    datebkstr = strrep(datebkstr, '_', '-');
+    tri = tbl_subfreezEpi.triali(tbi);
+    idx_strendFreez = tbl_subfreezEpi.idx_strendFreez{tbi};
     
-    % select freqs/times and corresponding psd
+    t_freeze = (idx_strendFreez(2) - idx_strendFreez(1))/fs;
+    
+    % calc psd
+    [psds, freqs, times] = calc_psd_allchns(lfp, fs);
+    
+    % extract based on f_AOI and align times with t_freezstr as time 0s
     idx_f = (freqs >= f_AOI(1) &  freqs <=f_AOI(2));
     freqs_plot =  freqs(idx_f);
-    
-    times = times + tdur(1);
-    idx_t = (times >= t_AOI(1) &  times <=t_AOI(2));
-    times_plot = times(idx_t);
-    
-    psd_plot = psd(idx_f, idx_t);
+    psd_AOI = psds(idx_f, :, :);
+    idx_freezstr = idx_strendFreez(1);
+    times_plot = times - idx_freezstr/fs;
+    clear idx_f idx_freezstr
     
     % gauss filted
-    psd_plot = imgaussfilt(psd_plot,'FilterSize',[3,11]);
+    psd_plot = imgaussfilt(psd_AOI,'FilterSize',[3,11]);
+    clear psd_AOI
     
-    psd_allchns = cat(3, psd_allchns, psd_plot); % psd_allchns: nf * nt * nchns
-    clear psds psd psd_plot idx_t idx_f
+    % plot spectrogram
+    title_prefix = [freezeType '-tfreez' num2str(round(t_freeze)) 's-' datebkstr '-trial' num2str(tri)];
+    [nf, nt, nchns] = size(psd_plot);
+    for chi = 1: nchns
+        brainarea = T_chnsarea.brainarea{chi};
+        if strcmp(brainarea, 'M1')
+            clim = [-35 -10];
+        end
+        if contains(brainarea, 'stn')
+            clim = [-30 -10];
+        end
+        if contains(brainarea, 'gp')
+            clim = [-35 -15];
+        end
+        
+        figure();
+        ax = gca;
+        imagesc(ax,times_plot, freqs_plot, psd_plot(:, :, chi));hold on
+        
+        if ~exist('clim', 'var')|| isempty(clim)
+            set(ax,'YDir','normal')
+        else
+            set(ax,'YDir','normal', 'CLim', clim)
+        end
+        
+        colormap(jet)
+        colorbar
+        
+        xlabel('time/s')
+        ylabel('Frequency(Hz)')
+        
+        % change time 0 name 
+        xtklabels = xticklabels;
+        xtklabels{find(cellfun(@(x) strcmp(x,'0'), xtklabels))} = time0name;
+        xticklabels(xtklabels);
+        plot([0 0], ylim, 'k--')
+        
+        title(ax, [title_prefix '-' brainarea])
+        savefile = fullfile(savefolder, [title_prefix '_' brainarea]);
+        saveas(gcf, savefile, img_format);
+        close all
+    end
+end
 end
 
-% plot spectrogram
-[nf, nt, nchns] = size(psd_allchns);
-for chi = 1: nchns
-    brainarea = T_chnsarea.brainarea{chi};
-    if strcmp(brainarea, 'M1')
-        clim = [-35 -10];
-    end
-    if contains(brainarea, 'stn')
-        clim = [-30 -10];
-    end
-    if contains(brainarea, 'gp')
-        clim = [-35 -15];
-    end
-    
-    figure();
-    ax = gca;
-    imagesc(ax,times_plot, freqs_plot, psd_allchns(:, :, chi));
-    
-    if ~exist('clim', 'var')|| isempty(clim)
-        set(ax,'YDir','normal')
-    else
-        set(ax,'YDir','normal', 'CLim', clim)
-    end
-    
-    colormap(jet)
-    colorbar
-    
-    xlabel('time/s')
-    ylabel('Frequency(Hz)')
-    
-    title(ax, [title_prefix '-' brainarea, ', nsegs=' num2str(nsegs)])
-    savefile = fullfile(savefolder, [savefilename_prefix '_' brainarea]);
-    saveas(gcf, savefile, img_format);
-    close all
-end
 
+function [psd_allchns, freqs, times] = calc_psd_allchns(lfp, fs, varargin)
+% calculate psd of lfp 
+%
+%   Input:
+%       lfp: nchns * ntemp
+%       fs: sample rate
+%
+%       Name-Value:
+%               twin: used in spectrogram, time window for segment (default 0.2 s)
+%               toverlap: used in spectrogram, time window for overlap (default 0.18 s)
+%
+%   Return:
+%       psd_allchns: nf * nt * nchns
+%       freqs: nf * 1
+%       times: 1 * nt
+
+
+% parse 
+p = inputParser;
+addParameter(p, 'twin',0.2, @(x)isscalar(x)&&isnumeric(x));
+addParameter(p, 'toverlap',0.18, @(x)isscalar(x)&&isnumeric(x));
+parse(p,varargin{:});
+twin = p.Results.twin;
+toverlap = p.Results.toverlap;
+
+
+% calculate psd for each chn 
+nwin = round(twin * fs);
+noverlap = round(toverlap * fs);
+[nchns, ~] = size(lfp);
+psd_allchns = [];
+for chi = 1 : nchns
+    x = lfp(chi, :);
+    [~, freqs, times, psd] = spectrogram(x, nwin, noverlap,[],fs); % ps: nf * nt
+    
+    % convert into dB
+    psd = 10 * log10(psd);
+    
+    % append
+    psd_allchns = cat(3, psd_allchns, psd); % psd_allchns: nf * nt * nchns
+    
+    clear x psd
+end
 end
