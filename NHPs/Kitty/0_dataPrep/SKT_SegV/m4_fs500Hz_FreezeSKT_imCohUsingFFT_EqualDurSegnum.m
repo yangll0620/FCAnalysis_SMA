@@ -483,8 +483,8 @@ for fi = 1: length(files)
             clear tri t_str t_end
             continue;
         end
-        idx_str = round(t_str * fs_lfp);
-        idx_end = round(t_end * fs_lfp);
+        idx_str = round((t_str + 0.5) * fs_lfp);
+        idx_end = round((t_end - 0.5) * fs_lfp);
         seglfp  = lfpdata{tri}(:, idx_str: idx_end);
 
         
