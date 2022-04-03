@@ -51,7 +51,7 @@ f_AOI = [8 40];
 
 pdcond = 'moderate';
 
-shuffleN_psedoTest = 500;
+shuffleN_psedoTest = 280;
 ignoreReachFreeze = true;
 combiFreeName = 'combinedfreezTypes';
 
@@ -157,6 +157,7 @@ if(~exist(ciCohPhasefile, 'file'))
     disp(['Using combined freeze type lfp'])
     lfpsegs = [];
     for frTi = 1 : length(combFreeTypes) % combine lfp
+        freezType = combFreeTypes{frTi};
         if ignoreReachFreeze && strcmp(combFreeTypes{frTi}, 'ReachFreeze')
             continue;
         end
@@ -244,6 +245,7 @@ if ~exist('psedociCohs','var')
     disp(['Using combined freeze type lfp'])
     lfpsegs = [];
     for frTi = 1 : length(combFreeTypes) % combine lfp
+        freezType = combFreeTypes{frTi};
         if ignoreReachFreeze && strcmp(combFreeTypes{frTi}, 'ReachFreeze')
             continue;
         end
@@ -335,6 +337,7 @@ if ~isfield(psedociCohs, combiFreeName) || size(psedociCohs.(combiFreeName), 4) 
     disp(['Using combined freeze type lfp'])
     lfpsegs = [];
     for frTi = 1 : length(combFreeTypes) % combine lfp
+        freezType = combFreeTypes{frTi};
         if ignoreReachFreeze && strcmp(combFreeTypes{frTi}, 'ReachFreeze')
             continue;
         end

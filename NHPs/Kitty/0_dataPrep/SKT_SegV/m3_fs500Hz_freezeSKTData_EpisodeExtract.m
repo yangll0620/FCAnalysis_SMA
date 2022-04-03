@@ -40,7 +40,7 @@ pdcond = 'moderate';
 speedThres_Move = 30;
 
 tThesFreeze_init = 5;
-tThesFreeze_reach  = 0.1;
+tThesFreeze_reach  = 0.5;
 tThesFreeze_mani  = 5;
 
 
@@ -82,6 +82,7 @@ for fi = 1 : length(files)
     freezStruct.optFreezeTypes = optFreezeTypes;
     freezStruct.speedThres_Move = speedThres_Move;
     freezStruct.tThesFreeze_init = tThesFreeze_init;
+    freezStruct.tThesFreeze_reach = tThesFreeze_reach;
     freezStruct.tThesFreeze_mani = tThesFreeze_mani;
     freezStruct.discription = discrip_out;
     
