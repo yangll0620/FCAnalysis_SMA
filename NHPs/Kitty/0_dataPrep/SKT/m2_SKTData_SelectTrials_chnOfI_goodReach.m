@@ -36,7 +36,7 @@ animal = animal_extract(codecorresfolder);
 %%  input setup
 
 % input folder: extracted raw rest data with grayMatter
-inputfolder = fullfile(codecorresParentfolder, 'm1_segSKTData_avgArea');
+inputfolder = fullfile(codecorresParentfolder, 'm1_SKTData_avgArea');
 
 cond_cell = cond_cell_extract(animal);
 [t_minmax_reach_normal, t_minmax_return_normal, t_minmax_reach_mild, t_minmax_return_mild, t_minmax_reach_moderate, t_minmax_return_moderate] = ...

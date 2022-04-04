@@ -40,7 +40,7 @@ pdcond = 'moderate';
 speedThres_Move = 30;
 
 tThesFreeze_init = 5;
-tThesFreeze_reach  = 0.5;
+tThesFreeze_reach  = 3;
 tThesFreeze_mani  = 5;
 
 
@@ -48,12 +48,12 @@ tThesFreeze_mani  = 5;
 %% save setup
 savefolder = codecorresfolder;
 savecodefolder = fullfile(savefolder, 'code');
-saveFreezTrialsfolder = fullfile(savefolder, 'freezedTrials');
+saveFreezTrialsfolder = fullfile(savefolder, ['freezedTrials-tThesFreezeReach' num2str(tThesFreeze_reach) 's']);
 copyfile2folder(codefilepath, savecodefolder);
 if ~exist(saveFreezTrialsfolder, 'dir')
     mkdir(saveFreezTrialsfolder);
 end
-
+savefilename_prefix = [animal '_freezeEpisodes_' pdcond '-tThesFreezeReach' num2str(tThesFreeze_reach) 's'];
 
 %% Code Start Here
 
@@ -228,7 +228,7 @@ for fi = 1 : length(files)
     bktdt_str = tmp{1};
     clear tmp
     
-    save(fullfile(savefolder, [animal '_freezeEpisodes_' pdcond '_' datebktdt_str '_' bktdt_str '.mat']), 'lfpdata', 'T_chnsarea', 'T_idxevent_lfp', 'fs_lfp',  ...
+    save(fullfile(savefolder, [savefilename_prefix '_' datebktdt_str '_' bktdt_str '.mat']), 'lfpdata', 'T_chnsarea', 'T_idxevent_lfp', 'fs_lfp',  ...
         'Wpos_smooth_trial', 'Wrist_smooth_trial', 'smoothWspeed_trial', 'T_idxevent_ma', 'fs_ma', ...
         'selectedTrials', 'freezStruct');
     
@@ -248,7 +248,7 @@ initfrezPhaNames = {'cueonset', 'initFreezeEnd'};
 reachfrezPhaNames = {'reachFreezStart', 'reachFreezEnd'};
 manifrezPhaNames = {'touch', 'maniFreezEnd'};
 freezCols = {'k', 'b', 'r'};
-frezfiles = dir(fullfile(savefolder, ['*' pdcond '*.mat']));
+frezfiles = dir(fullfile(savefolder, [savefilename_prefix '*.mat']));
 for fi = 1 : length(frezfiles)
     filename = frezfiles(fi).name;
     load(fullfile(savefolder, filename), 'freezStruct', ...
@@ -269,6 +269,12 @@ for fi = 1 : length(frezfiles)
         
         if tri ~= tri_pre % new trial
             if tri_pre ~= 0 % save and close previous trial
+                
+                annotation(gcf,'textbox',[0.01 0.8 0.1 0.2], 'LineStyle','none', ...
+                    'String',{['tThesFreeze-init = ' num2str(freezStruct.tThesFreeze_init) 's'], ...
+                              ['tThesFreeze-reach = ' num2str(freezStruct.tThesFreeze_reach) 's'], ...
+                              ['tThesFreeze-mani = ' num2str(freezStruct.tThesFreeze_mani) 's']});
+                
                 legend(hlegshows, 'Orientation', 'horizontal', 'Location', 'north')
                 saveas(gcf, fullfile(saveFreezTrialsfolder, [animal '-' datebktdt_str '-trial' num2str(tri_pre) '.tif']));
                 clear ax
@@ -375,6 +381,10 @@ for fi = 1 : length(frezfiles)
         
         
         if frzi == length(freezEpisodes) % last frzi
+            annotation(gcf,'textbox',[0.01 0.8 0.1 0.2], 'LineStyle','none', ...
+                    'String',{['tThesFreeze-init = ' num2str(freezStruct.tThesFreeze_init) 's'], ...
+                              ['tThesFreeze-reach = ' num2str(freezStruct.tThesFreeze_reach) 's'], ...
+                              ['tThesFreeze-mani = ' num2str(freezStruct.tThesFreeze_mani) 's']});
             legend(hlegshows, 'Orientation', 'horizontal','Location', 'north')
             saveas(gcf, fullfile(saveFreezTrialsfolder, [animal '-' datebktdt_str '-trial' num2str(tri) '.tif']));
             clear ax
