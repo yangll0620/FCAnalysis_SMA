@@ -2,6 +2,8 @@ function m1_SKTData_avgArea(animal)
 %% average lfp across each area
 %
 %
+%   prestep:
+%       transfer lfpdata from ntemp*nchns into nchns * ntemp
 %   1. remove chns marked with multiple areas or GP/STN in Gray Matter
 %   2. average across each GM area (no DBS)
 %   3. change STN/GP into stn0-1, stn1-2... gp0-1, gp1-2 et.al
@@ -58,6 +60,14 @@ for fi = 1 : nfiles
     load(fullfile(files(fi).folder, filename), 'lfpdata', 'fs_lfp', 'mask_goodreach', 'mask_goodreturn', 'T_chnsarea', 'T_idxevent_lfp', ...
                                                'fs_ma', 'T_idxevent_ma', 'smoothWspeed_trial', 'Wpos_smooth_trial', 'Wrist_smooth_trial');
     
+    % transfer lfpdata from ntemp * nchns into nchns * ntemp
+    for tri = 1: length(lfpdata)
+        lfp_1trial = lfpdata{tri};
+        lfp_1trial = lfp_1trial';
+        lfpdata{tri} = lfp_1trial;
+        clear lfp_1trial
+    end
+                                           
     % remove chns marked with multiple areas or GP/STN in Gray Matter
     mask_multipleAreas = cellfun(@(x) contains(x, '/'), T_chnsarea.brainarea);
     mask_GPSTNinGM = cellfun(@(x) contains(x, 'GP'), T_chnsarea.brainarea) & ~strcmp(T_chnsarea.electype, 'DBS');
