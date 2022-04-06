@@ -41,7 +41,7 @@ function m0_NormalCOTModerateSKTData_extract_Kitty()
     animal = animal_extract(correspipelinefolder);
 
     % Input dir:  preprocessed folder in root2
-    server_NHP = fullfile('Z:', 'root2', 'Animals');
+    server_NHP = fullfile('Y:', 'root2', 'Animals');
     folder_datadatabase = fullfile(server_NHP, animal, 'Recording', 'Processed', 'DataDatabase');
 
     % master sheet

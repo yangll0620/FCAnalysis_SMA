@@ -16,6 +16,21 @@ function m2_SKTData_SelectTrials_chnOfI(inputanimal, varargin)
 %
 %       Only chnOfI are shown and saved
 
+
+%% parse parameters
+if ~exist('inputanimal', 'var')
+    inputanimal = input('animal = ', 's');
+end
+p = inputParser;
+addParameter(p, 'fi_str', 1, @isscalar);
+addParameter(p, 'fi_end', [], @(x)isempty(x)||isscalar(x));
+addParameter(p, 'autoSaveMode', 'n', @(x) isscalar(x)&&ischar(x));
+parse(p,varargin{:});
+fi_str = p.Results.fi_str;
+fi_end = p.Results.fi_end;
+autoSaveMode =  p.Results.autoSaveMode;
+
+%% folders
 codefilepath = mfilename('fullpath');
 
 % codefolder = '/home/lingling/Insync/yang7003@umn.edu/NMRC_umn/Projects/FCAnalysis/exp/code'
@@ -26,25 +41,12 @@ addpath(genpath(fullfile(codefolder,'util')));
 addpath(genpath(fullfile(codefolder,'NHPs')));
 
 
-if ~exist('inputanimal', 'var')
-    inputanimal = input('animal = ', 's');
-end
 global animal
 animal = inputanimal;
 
 [~, codefilename]= fileparts(codefilepath);
 NHPCodefilepath = fullfile(codefolder, 'NHPs', animal, 'SKT', codefilename);
 [codecorresfolder, codecorresParentfolder] = code_corresfolder(NHPCodefilepath, true, false);
-
-%% parse parameters
-p = inputParser;
-addParameter(p, 'fi_str', 1, @isscalar);
-addParameter(p, 'fi_end', [], @(x)isempty(x)||isscalar(x));
-addParameter(p, 'autoSaveMode', 'n', @(x) isscalar(x)&&ischar(x));
-parse(p,varargin{:});
-fi_str = p.Results.fi_str;
-fi_end = p.Results.fi_end;
-autoSaveMode =  p.Results.autoSaveMode;
 
 
 %%  input setup
@@ -178,7 +180,7 @@ while(filei <=  fi_end)
     selectedTrials = check_chnOfI_spectrogram(filename, lfpdata, T_idxevent_lfp, T_chnsarea, fs_lfp,... 
         madata, madata2, maName, fs_ma, T_idxevent_ma,showname, ...
         'mask_goodReach', mask_goodreach, 'inSelectedTrials', selectedTrials, 'savefolder', savefolder_trials, ...
-        'fig_left', 200, 'fig_bottom', 200,  'fig_width', 1200, 'fig_height', 600, ...
+        'fig_left', 1000, 'fig_bottom', 300,  'fig_width', 1200, 'fig_height', 800, ...
         'autoSaveMode', autoSaveMode);
 
 
