@@ -1,5 +1,10 @@
-function m2_fs500Hz_SKTData_timeStatiscal(animal)
+function m3_fs500Hz_SKTData_timeStatiscal(animal)
 
+
+%% params
+if ~exist('animal', 'var')
+    animal = input('animal = ', 's');
+end
 
 %% folders generate
 % the full path and the name of code file without suffix
@@ -26,7 +31,14 @@ NHPCodefilepath = fullfile(codefolder, 'NHPs', animal, '0_dataPrep' , 'SKT', 'fs
 tasks = {'reaction','reach', 'return'};
 
 %% input
-folder_input = fullfile(codecorresParentfolder, 'm1_SKTData_avgArea');
+if strcmpi(animal, 'Kitty')
+    subfolder = 'm2_segSKTData_SelectTrials_chnOfI';
+end
+if strcmpi(animal, 'Jo')
+    subfolder = 'm2_SKTData_SelectTrials';
+end
+
+folder_input = fullfile(codecorresParentfolder, subfolder);
 
 
 %% save setup
@@ -54,11 +66,29 @@ for ci = 1 : length(cond_cell)
     files = dir(fullfile(folder_input, ['*' pdcond '_*.mat']));
     t_event = [];
     for fi = 1: length(files)
-        load(fullfile(folder_input, files(fi).name), 'T_idxevent_lfp', 'fs_lfp');
+        file = fullfile(folder_input, files(fi).name);
+        listOfVariables = who('-file', file);
+        if ismember('goodTrials', listOfVariables)
+            load(file, 'goodTrials');
+        else
+            if ismember('selectedTrials', listOfVariables)
+                load(file, 'selectedTrials');
+                goodTrials = selectedTrials;
+                clear selectedTrials
+            else
+                disp('no goodTrials or selectedTrials, skip!')
+                continue;
+            end
+        end
+        
+        load(file, 'T_idxevent_lfp', 'fs_lfp');
+        
+        % use only the good Trials
+        T_idxevent_lfp = T_idxevent_lfp(goodTrials, :);
         
         t_event = cat(1, t_event, T_idxevent_lfp{:, :}/ fs_lfp);
         
-        clear T_idxevent_lfp fs_lfp
+        clear T_idxevent_lfp fs_lfp listOfVariables goodTrials
     end
     t_reaction = t_event(:, coli_reachonset) - t_event(:, coli_targetonset);
     t_reach = t_event(:, coli_touch) - t_event(:, coli_reachonset);
@@ -127,6 +157,7 @@ for ti = 1 : length(tasks)
     subplot('Position', position);
     boxplot(ts, gs); hold on
     title([animal ':' task ' time comparison'])
+    ylabel('time/s')
     
     
     % --- text for 25% and 75% --- %

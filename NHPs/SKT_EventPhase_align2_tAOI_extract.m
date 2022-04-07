@@ -40,6 +40,11 @@ if strcmpi(event, 'lateReach')
     t_AOI = [-0.2 0];
 end
 
+if strcmpi(event, 'peakV')
+    align2 = 'peakV';
+    t_AOI = [-0.1 0.1];
+end
+
 
 align2name = char(align2);
 

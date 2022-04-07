@@ -20,12 +20,8 @@ addpath(genpath(fullfile(codefolder,'NHPs')));
 
 %% global variables
 
-% animal
-animal = animal_extract(codecorresfolder);
-
 pdcond = 'moderate';
-t_ThreFreeze = 3;
-tdur = [-1 t_ThreFreeze];
+plotTrialbyTrial = false;
 
 %%  input setup
 
@@ -38,11 +34,10 @@ f_AOI = [8 40];
 %% save setup
 savefolder = codecorresfolder;
 savecodefolder = fullfile(savefolder, 'code');
-savetrialfolder = fullfile(savefolder, 'trialSpectrogram');
 copyfile2folder(codefilepath, savecodefolder);
 
 %% Code Start Here
-files = dir(fullfile(inputfolder, ['*_' pdcond '_*.mat']));
+files = dir(fullfile(inputfolder, ['*' pdcond '*.mat']));
 if isempty(files)
     return;
 end
@@ -51,13 +46,16 @@ end
 % extract freeze tbl_freezEpisodes
 [tbl_freezEpisodes]= tbl_freezEpisodes_extract(files, 't_bef', 0.8, 't_aft', 1);
 
-
-
+if plotTrialbyTrial
+    savetrialfolder = fullfile(savefolder, 'trialSpectrogram');
+end
 [~, combFreeTypes] = optFreezeTypes_extract();
 for cfi = 1: length(combFreeTypes)
     freezeType = combFreeTypes{cfi};
-    plot_spectrogram_acrossTrials(tbl_freezEpisodes, freezeType, f_AOI, savefolder);
-    plot_spectrogram_trialbytrial(tbl_freezEpisodes, freezeType, f_AOI, savetrialfolder);
+    plot_spectrogramMA_acrossTrials(tbl_freezEpisodes, freezeType, f_AOI, savefolder);
+    if plotTrialbyTrial
+        plot_spectrogram_trialbytrial(tbl_freezEpisodes, freezeType, f_AOI, savetrialfolder);
+    end
     clear freezeType
 end
 
@@ -95,11 +93,12 @@ t_aft = p.Results.t_aft;
 [~, combFreeTypes] = optFreezeTypes_extract();
 
 
-tblvarNames = {'datebk_str', 'freezi', 'freezType', 'triali', 'lfp', 'idx_strendFreez', 'fs_lfp', 'T_chnsarea'};
+tblvarNames = {'datebk_str', 'freezi', 'freezType', 'triali', 'lfp', 'idx_lfpStrendFreez', 'fs_lfp', 'T_chnsarea', 'wSpeed', 'idx_wSpeedStrendFreez', 'fs_ma'};
+
 
 for fi = 1: length(files)
     loadfilename = files(fi).name;
-    load(fullfile(files(fi).folder, loadfilename), 'lfpdata', 'fs_lfp', 'T_chnsarea', 'freezStruct', 'selectedTrials');
+    load(fullfile(files(fi).folder, loadfilename), 'lfpdata', 'fs_lfp', 'T_chnsarea', 'freezStruct', 'selectedTrials', 'smoothWspeed_trial', 'fs_ma');
     
     datebk_str = regexp(loadfilename, '\d{8}_bktdt\d*', 'match');
     datebk_str = datebk_str{1};
@@ -138,8 +137,18 @@ for fi = 1: length(files)
         idx_durFreez = round(freezEpisodes{frzi}.freezeTPhaseS * fs_lfp);
         idx_dur = [idx_durFreez(1) - n_bef idx_durFreez(2) + n_aft];
         lfpfreez  = lfpdata{tri}(:, idx_dur(1): idx_dur(2));
-        idx_freezeInExtract = [n_bef+1 length(lfpfreez)-n_aft];
+        idx_lfpfreezeInExtract = [n_bef+1 length(lfpfreez)-n_aft];
         clear n_bef n_aft idx_durFreez idx_dur
+        
+        % extract ma data in freeze phase (including t_bef to t_aft)
+        n_bef = round(t_bef * fs_ma);
+        n_aft = round(t_aft * fs_ma);
+        idx_durFreez = round(freezEpisodes{frzi}.freezeTPhaseS * fs_ma);
+        idx_dur = [idx_durFreez(1) - n_bef idx_durFreez(2) + n_aft];
+        wSpeedfreez  = smoothWspeed_trial{tri}(idx_dur(1): idx_dur(2), :);
+        idx_wSpeedfreezeInExtract = [n_bef+1 length(lfpfreez)-n_aft];
+        clear n_bef n_aft idx_durFreez idx_dur
+        
         
         % extract freezType
         idx_freez = find(cellfun(@(x) contains(freezEpisodes{frzi}.freezeType, x), {'init', 'Reach', 'Manipulation'}));  
@@ -148,7 +157,7 @@ for fi = 1: length(files)
 
         
         %%% append to tbl_freezEpisodes
-        tbl = table(string(datebk_str), frzi, string(freezType), tri, {lfpfreez}, {idx_freezeInExtract}, fs_lfp, {T_chnsarea}, 'VariableNames', tblvarNames);
+        tbl = table(string(datebk_str), frzi, string(freezType), tri, {lfpfreez}, {idx_lfpfreezeInExtract}, fs_lfp, {T_chnsarea}, {wSpeedfreez}, {idx_wSpeedfreezeInExtract}, fs_ma, 'VariableNames', tblvarNames);
         if ~exist('tbl_freezEpisodes', 'var')
             tbl_freezEpisodes = tbl;
         else
@@ -162,7 +171,9 @@ for fi = 1: length(files)
 end
 end
 
-function plot_spectrogram_acrossTrials(tbl_freezEpisodes, freezeType, f_AOI, savefolder)
+function plot_spectrogramMA_acrossTrials(tbl_freezEpisodes, freezeType, f_AOI, savefolder)
+% plot spectrogram and MA
+
 if ~exist(savefolder, 'dir')
     mkdir(savefolder)
 end
@@ -185,46 +196,65 @@ end
 tdur = 5;
 
 % calc each freeze phase
-psds_alltrials = [];
+psds_alltrials_AOI = []; % nf * nt * nchns * ntrials
+wSpeeds = []; % wSpeeds: ntemp * ntrials
 for tbi = 1 : height(tbl_subfreezEpi)
-    lfp = tbl_subfreezEpi.lfp{tbi}; % lfp: nchns * ntemp
-    fs = tbl_subfreezEpi.fs_lfp(tbi);
-    T_chnsarea = tbl_subfreezEpi.T_chnsarea{tbi};
-
-    idx_strendFreez = tbl_subfreezEpi.idx_strendFreez{tbi};
     
-    t_freeze = (idx_strendFreez(2) - idx_strendFreez(1))/fs;
+    % extract lfp_freeze duration
+    lfp = tbl_subfreezEpi.lfp{tbi}; % lfp: nchns * ntemp
+    fs_lfp = tbl_subfreezEpi.fs_lfp(tbi);
+
+    idx_lfpStrendFreez = tbl_subfreezEpi.idx_lfpStrendFreez{tbi};
+    
+    t_freeze = (idx_lfpStrendFreez(2) - idx_lfpStrendFreez(1))/fs_lfp;
     if t_freeze < tdur
         disp(['less than ' num2str(tdur)])
         continue;
     end
-    lfp = lfp(:,1: round(idx_strendFreez(1)+fs*tdur));
+    lfp = lfp(:,1: round(idx_lfpStrendFreez(1)+fs_lfp*tdur));
+    
+    % extract wSpeed_freeze duration
+    fs_ma = tbl_subfreezEpi.fs_ma(tbi);
+    idx_wSpeedStrendFreez = tbl_subfreezEpi.idx_wSpeedStrendFreez{tbi};
+    wSpeed = tbl_subfreezEpi.wSpeed{tbi};
+    wSpeed = wSpeed(1: round(idx_wSpeedStrendFreez(1)+fs_ma*tdur), 1); % wSpeed: ntemp * 1
+    wSpeeds = cat(2, wSpeeds, wSpeed);
+    clear fs_ma  idx_wSpeedStrendFreez wSpeed
     
     % calc psd
-    [psds, freqs, times] = calc_psd_allchns(lfp, fs);% psds: nf * nt * nchns
+    [psd, freqs, times] = calc_psd_allchns(lfp, fs_lfp);% psds: nf * nt * nchns
+    
+    if tbi == 1
+        % extract based on f_AOI and align times with t_lfpfreezstr as time 0s
+        idx_f = (freqs >= f_AOI(1) &  freqs <=f_AOI(2));
+        freqs_plot =  freqs(idx_f);
+        idx_lfpfreezstr = idx_lfpStrendFreez(1);
+        times_plot = times - idx_lfpfreezstr/fs_lfp;
+        clear idx_lfpfreezstr   
+    end
+    psd_AOI = psd(idx_f, :, :);
     
     % append
-    psds_alltrials = cat(4,psds_alltrials,psds);
+    psds_alltrials_AOI = cat(4,psds_alltrials_AOI,psd_AOI);
    
-    clear psds lfp
+    clear psds lfp idx_lfpStrendFreez psd_AOI freqs times fs_lfp
 end
-psds = mean(psds_alltrials, 4);
-    
-% extract based on f_AOI and align times with t_freezstr as time 0s
-idx_f = (freqs >= f_AOI(1) &  freqs <=f_AOI(2));
-freqs_plot =  freqs(idx_f);
-psd_AOI = psds(idx_f, :, :);
-idx_freezstr = idx_strendFreez(1);
-times_plot = times - idx_freezstr/fs;
-clear idx_f idx_freezstr
-    
+psds_AOI = mean(psds_alltrials_AOI, 4);
+
+
+wSpeed = mean(wSpeeds, 2);
+fs_ma = tbl_freezEpisodes.fs_ma(1);
+idx_wSpeedfreezstr = tbl_subfreezEpi.idx_wSpeedStrendFreez{tbi}(1);
+times_wSpeed = [1:length(wSpeed)]/fs_ma - idx_wSpeedfreezstr/fs_ma;
+
 % gauss filted
-psd_plot = imgaussfilt(psd_AOI,'FilterSize',[3,11]);
-clear psd_AOI
-    
+psds_plot = imgaussfilt(psds_AOI,'FilterSize',[3,11]);
+clear psds_AOI
+
 % plot spectrogram
+T_chnsarea = tbl_subfreezEpi.T_chnsarea{1};
 title_prefix = [freezeType '-spectrogram-acrossTrials'];
-[~, ~, nchns] = size(psd_plot);
+[~, ~, nchns] = size(psds_plot);
 for chi = 1: nchns
     brainarea = T_chnsarea.brainarea{chi};
     if strcmp(brainarea, 'M1')
@@ -238,13 +268,16 @@ for chi = 1: nchns
     end
     
     figure();
-    ax = gca;
-    imagesc(ax,times_plot, freqs_plot, psd_plot(:, :, chi));hold on
+    
+    % plot spectrogram
+    subplot(4,1,[2,3,4])
+    ax1 = gca;
+    imagesc(ax1,times_plot, freqs_plot, psds_plot(:, :, chi));hold on
     
     if ~exist('clim', 'var')|| isempty(clim)
-        set(ax,'YDir','normal')
+        set(ax1,'YDir','normal')
     else
-        set(ax,'YDir','normal', 'CLim', clim)
+        set(ax1,'YDir','normal', 'CLim', clim)
     end
     
     colormap(jet)
@@ -258,12 +291,39 @@ for chi = 1: nchns
     xtklabels{find(cellfun(@(x) strcmp(x,'0'), xtklabels))} = time0name;
     xticklabels(xtklabels);
     plot([0 0], ylim, 'k--')
+    pos_ax = get(ax1, 'Position');
+
     
-    title(ax, [title_prefix '-' brainarea])
+    % plot wSpeed
+    subplot(4,1,1)
+    ax2 = gca;
+    pos = get(ax2, 'Position');
+    pos(3) = pos_ax(3);
+    h1 = plot(times_wSpeed, wSpeed, 'DisplayName', 'wristSpeed');
+    hold on
+    h2 = plot(xlim, [30 30], 'r--', 'DisplayName', 'MoveThres');
+    set(ax2, 'Position', pos);
+    xlim(get(ax1, 'XLim'));
+    ylimit = ylim;
+    if ylimit(2) < 32
+        ylim([0 32])
+    end    
+    plot([0 0], ylim, 'k--')
+    set(gca, 'XTick', get(ax1, 'XTick'), 'XTickLabel', get(ax1, 'XTickLabel'))
+    ylabel('speed')
+    legend([h1 h2], 'Position', [0.82 0.85 0.14 0.07])
+    clear pos_ax pos
+    
+    
+    title(ax2, [title_prefix '-' brainarea])
     savefile = fullfile(savefolder, [title_prefix '_' brainarea]);
     saveas(gcf, savefile, img_format);
     close all
+    clear ax1 ax2
 end
+
+
+
 end
 
 function plot_spectrogram_trialbytrial(tbl_freezEpisodes, freezeType, f_AOI, savefolder)
@@ -294,9 +354,9 @@ for tbi = 1 : height(tbl_subfreezEpi)
     datebkstr = tbl_subfreezEpi.datebk_str{tbi};
     datebkstr = strrep(datebkstr, '_', '-');
     tri = tbl_subfreezEpi.triali(tbi);
-    idx_strendFreez = tbl_subfreezEpi.idx_strendFreez{tbi};
+    idx_lfpStrendFreez = tbl_subfreezEpi.idx_lfpStrendFreez{tbi};
     
-    t_freeze = (idx_strendFreez(2) - idx_strendFreez(1))/fs;
+    t_freeze = (idx_lfpStrendFreez(2) - idx_lfpStrendFreez(1))/fs;
     
     % calc psd
     [psds, freqs, times] = calc_psd_allchns(lfp, fs);
@@ -305,7 +365,7 @@ for tbi = 1 : height(tbl_subfreezEpi)
     idx_f = (freqs >= f_AOI(1) &  freqs <=f_AOI(2));
     freqs_plot =  freqs(idx_f);
     psd_AOI = psds(idx_f, :, :);
-    idx_freezstr = idx_strendFreez(1);
+    idx_freezstr = idx_lfpStrendFreez(1);
     times_plot = times - idx_freezstr/fs;
     clear idx_f idx_freezstr
     

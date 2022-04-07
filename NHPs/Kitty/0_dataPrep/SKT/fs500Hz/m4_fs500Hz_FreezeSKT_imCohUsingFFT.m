@@ -1,4 +1,4 @@
-function m4_fs500Hz_FreezeSKT_imCohUsingFFT_EqualDurSegnum(varargin)
+function m4_fs500Hz_FreezeSKT_imCohUsingFFT(varargin)
 % 
 %   Input
 %       Name-Value: 
@@ -16,6 +16,7 @@ clear idx
 
 % add util path
 addpath(genpath(fullfile(codefolder,'util')));
+addpath(genpath(fullfile(codefolder,'toolbox')));
 addpath(genpath(fullfile(codefolder,'NHPs')));
 addpath(genpath(fullfile(codefolder,'connAnalyTool')));
 
@@ -40,10 +41,12 @@ ntrialsUsed = p.Results.ntrialsUsed;
 
 %%  input setup
 inputfolder_Freeze = fullfile(codecorresParentfolder, 'm3_fs500Hz_freezeSKTData_EpisodeExtract');
-inputfolder_SKT = fullfile(codecorresParentfolder, 'm4_imCohPhaseUsingFFT_EventPhase_unifiedNHP');
+if matchSKT
+    inputfolder_SKT = fullfile(codecorresParentfolder, 'm4_imCohPhaseUsingFFT_EventPhase_unifiedNHP');
+end
 
 
-twin = 1;
+tseg = 0.2;
 
 image_type = 'tif';
 
@@ -97,8 +100,8 @@ end
 ciCohPhasefile = fullfile(savefolder, [ciCohPhasefile_prefix  '_' pdcond  '.mat']);
 if(~exist(ciCohPhasefile, 'file'))
 
-    files = dir(fullfile(inputfolder_Freeze, ['*_' pdcond '_*.mat']));
-    [lfpsegs_freeze, fs, T_chnsarea, combFreeTypes]= seg2ShortSegments(files, twin);
+    files = dir(fullfile(inputfolder_Freeze, ['*' pdcond '*.mat']));
+    [lfpsegs_freeze, fs, T_chnsarea, combFreeTypes]= seg2ShortSegments(files, tseg);
     
     save(ciCohPhasefile, 'T_chnsarea', 'combFreeTypes');
     
@@ -207,7 +210,7 @@ end
 load(ciCohPhasefile, 'ciCohs', 'nsegs', 'combFreeTypes', 'psedociCohs');
 if ~exist('psedociCohs','var')
     files = dir(fullfile(inputfolder_Freeze, ['*_' pdcond '_*.mat']));
-    [lfpsegs_freeze, fs, T_chnsarea]= seg2ShortSegments(files, twin);
+    [lfpsegs_freeze, fs, T_chnsarea]= seg2ShortSegments(files, tseg);
     
     %%% for each freeze type calculate cicoh and psedoCicoh
     for frTi = 1 : length(combFreeTypes)
@@ -298,7 +301,7 @@ for frTi = 1 : length(combFreeTypes)
     
     if ~isfield(psedociCohs, freezType) || size(psedociCohs.(freezType), 4) < shuffleN_psedoTest
         files = dir(fullfile(inputfolder_Freeze, ['*_' pdcond '_*.mat']));
-        [lfpsegs_freeze, fs, T_chnsarea]= seg2ShortSegments(files, twin);
+        [lfpsegs_freeze, fs, T_chnsarea]= seg2ShortSegments(files, tseg);
         lfpsegs = lfpsegs_freeze.(freezType);
         
         % remove unused chns
@@ -332,7 +335,7 @@ end
 %%% calculate cicoh and psedoCicoh using combined lfp from all freeze types
 if ~isfield(psedociCohs, combiFreeName) || size(psedociCohs.(combiFreeName), 4) < shuffleN_psedoTest
     files = dir(fullfile(inputfolder_Freeze, ['*_' pdcond '_*.mat']));
-    [lfpsegs_freeze, fs, T_chnsarea]= seg2ShortSegments(files, twin);
+    [lfpsegs_freeze, fs, T_chnsarea]= seg2ShortSegments(files, tseg);
 
     disp(['Using combined freeze type lfp'])
     lfpsegs = [];
@@ -393,7 +396,7 @@ for frTi = 1 : length(combFreeTypes)
     
     nshuffle = size(psedociCohs.(freezType), 4);
     titlename = [animal ' Freeze -'  freezType ', nsegs = ' num2str(nsegs.(freezType)) ', nshuffle= ' num2str(nshuffle)];
-    plot_ciCohHistogram(sigciCoh_flatten, chnPairNames, f_selected, titlename);
+    plot_ciCohHistogram(sigciCoh_flatten, chnPairNames, f_selected, titlename, 'fig_width', 1000, 'fig_height', 250);
     saveimgname = [saveimgfile_prefix '_Freeze' freezType '.' image_type];
     saveas(gcf, fullfile(savefolder, saveimgname), image_type);
     
@@ -405,6 +408,7 @@ end
 [sigciCoh]= sigciCoh_extract(psedociCohs.(combiFreeName), ciCohs.(combiFreeName));
 [sigciCoh_flatten, chnPairNames] = ciCohFlatten_chnPairNames_extract(sigciCoh, T_chnsarea);
 
+
 nshuffle = size(psedociCohs.(combiFreeName), 4);
 if ignoreReachFreeze
     imgtitle_prefix = [file_prefix '-' combiFreeName '-noReach'];
@@ -414,25 +418,106 @@ else
     saveimgfile_prefix = [saveimgfile_prefix '_' combiFreeName];
 end
 titlename = [imgtitle_prefix  ', nsegs = ' num2str(nsegs.(combiFreeName)) ', nshuffle= ' num2str(nshuffle)];
-plot_ciCohHistogram(sigciCoh_flatten, chnPairNames, f_selected, titlename);
+plot_ciCohHistogram(sigciCoh_flatten, chnPairNames, f_selected, titlename, 'fig_width', 1000, 'fig_height', 250);
 saveimgname = [saveimgfile_prefix '.' image_type];
 saveas(gcf, fullfile(savefolder, saveimgname), image_type);
 clear titlename  saveimgname
 clear freeType sigciCoh sigciCoh_flatten chnPairNames
 
 close all
+end
+
+
+function plot_ciCohHistogram(ciCoh_flatten, chnPairNames, f_selected, titlename, varargin)
+%
+%   Inputs:
+%       ciCoh_flatten:
+%       chnPairNames
+%       f_selected
+%       titlename
+%       histClim
+%
+%       Name-Value: 
+%           'codesavefolder' - code saved folder
+
+
+% parse params
+p = inputParser;
+addParameter(p, 'codesavefolder', '', @isstr);
+addParameter(p, 'histClim', [0 1], @(x) assert(isnumeric(x) && isvector(x)));
+addParameter(p, 'fig_height', 600, @(x) assert(isnumeric(x) && isscalar(x)));
+addParameter(p, 'fig_width', 600, @(x) assert(isnumeric(x) && isscalar(x)));
+parse(p,varargin{:});
+
+% copy code to savefolder if not empty
+codesavefolder = p.Results.codesavefolder;
+if ~isempty(codesavefolder) 
+    copyfile2folder(mfilename('fullpath'), codesavefolder);
+end
+
+fig_left = 50;
+fig_bottom = 50;
+fig_width = p.Results.fig_width;
+fig_height = p.Results.fig_height;
+histClim = p.Results.histClim;
+
+
+% plot
+figure;
+set(gcf, 'PaperUnits', 'points',  'Position', [fig_left fig_bottom fig_width fig_height]);
+imagesc(ciCoh_flatten)
+colormap(jet)
+set(gca, 'Position', [0.15 0.2 0.75 0.7])
+[npairs, nf] = size(ciCoh_flatten);
+xticks([1:nf])
+xticklabels(round(f_selected))
+yticks([1:npairs]);
+set(gca,'YTickLabel',chnPairNames,'fontsize',12,'FontWeight','bold')
+xlabel('freqs')
+title(titlename, 'FontSize', 15, 'FontWeight', 'normal')
+set(gca,'CLim', histClim)
+colorbar
 
 
 
+chnPair_prev = '';
+for ci = 1: length(chnPairNames)
+    chnPair = chnPairNames{ci};
+    
+    % replace M1-stn0-1 to M1-STN
+    s_stn = regexp(chnPair, 'stn[0-9]*-[0-9]*', 'match');
+    if ~isempty(s_stn)
+        for si = 1 : length(s_stn)
+            chnPair = strrep(chnPair, s_stn{si}, 'STN');
+        end
+    end
+    % replace M1-stn0-1 to M1-STN
+    s_gp = regexp(chnPair, 'gp[0-9]*-[0-9]*', 'match');
+    if ~isempty(s_gp)
+        for si = 1 : length(s_gp)
+            chnPair = strrep(chnPair, s_gp{si}, 'GP');
+        end
+    end
+    
+    if ~strcmp(chnPair_prev, '') && ~strcmp(chnPair_prev, chnPair) % a new site pairs
+        hold on; plot(gca, xlim, [(ci + ci -1)/2 (ci + ci -1)/2], 'w--')
+        % Create line
+    end
+    chnPair_prev = chnPair;
+    
+    clear s_stn s_gp chnPair
+end
+end
 
    
-function [lfpsegs_freeze, fs, T_chnsarea, combFreeTypes]= seg2ShortSegments(files, twin)
+function [lfpsegs_freeze, fs, T_chnsarea, combFreeTypes]= seg2ShortSegments(files, tseg)
 if isempty(files)
     disp('files for seg2ShortSegments empty!')
     
     lfpsegs_freeze = [];
     fs = [];
     T_chnsarea = [];
+    combFreeTypes = [];
     
     return;
 end
@@ -468,7 +553,7 @@ for fi = 1: length(files)
         end
     end
     
-    nwin = round(twin * fs_unit);
+    nseg = round(tseg * fs_unit);
     
     freezEpisodes = freezStruct.freezEpisodes;
     for frzi = 1 : length(freezEpisodes) 
@@ -482,7 +567,7 @@ for fi = 1: length(files)
         
         t_str = freezEpisodes{frzi}.freezeTPhaseS(1);
         t_end = freezEpisodes{frzi}.freezeTPhaseS(2);
-        if t_end - t_str < twin
+        if t_end - t_str < tseg
             clear tri t_str t_end
             continue;
         end
@@ -495,10 +580,10 @@ for fi = 1: length(files)
         %%% segment freeze lfpdata into short leg: shortlfp
         shortlfp = [];
         len = size(seglfp, 2);
-        shortSegn = floor(len / nwin);
+        shortSegn = floor(len / nseg);
         for shortsegi = 1 : shortSegn
-            stri = (shortsegi - 1)* nwin + 1;
-            endi = shortsegi * nwin;
+            stri = (shortsegi - 1)* nseg + 1;
+            endi = shortsegi * nseg;
             shortlfp = cat(3, shortlfp, seglfp(:, stri : endi));
             clear stri endi
         end
@@ -513,6 +598,9 @@ for fi = 1: length(files)
         clear tri t_str t_end freezeType idxFreeT
         clear len shortSegn shortsegi
     end   
+    
+    clear nseg
 end
 fs = fs_unit;
 T_chnsarea = T_chnsarea_unit;
+end

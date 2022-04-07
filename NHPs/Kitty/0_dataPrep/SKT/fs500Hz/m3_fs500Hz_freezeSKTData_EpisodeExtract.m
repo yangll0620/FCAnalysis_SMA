@@ -32,7 +32,7 @@ animal = animal_extract(codecorresfolder);
 %%  input setup
 
 % input folder: extracted raw rest data with grayMatter
-inputfolder = fullfile(codecorresParentfolder, 'm2_segSKTData_SelectTrials_chnOfI_goodReach');
+inputfolder = fullfile(codecorresParentfolder, 'm2_segSKTData_SelectTrials_chnOfI');
 
 
 pdcond = 'moderate';
@@ -40,7 +40,7 @@ pdcond = 'moderate';
 speedThres_Move = 30;
 
 tThesFreeze_init = 5;
-tThesFreeze_reach  = 3;
+tThesFreeze_reach  = 5;
 tThesFreeze_mani  = 5;
 
 

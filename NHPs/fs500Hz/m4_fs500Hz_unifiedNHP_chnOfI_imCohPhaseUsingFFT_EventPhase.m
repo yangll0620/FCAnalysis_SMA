@@ -1,4 +1,4 @@
-function m4_fs500Hz_unifiedNHP_chnOfI_imCohPhaseUsingFFT_EventPhase(animal, varargin)
+function m4_fs500Hz_SKTData_imCohPhaseUsingFFT_EventPhase(animal, varargin)
 %
 %   Input:
 %       animal

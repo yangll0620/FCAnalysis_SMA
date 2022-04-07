@@ -55,7 +55,8 @@ NHPCodefilepath = fullfile(codefolder, 'NHPs', animal, 'SKT', codefilename);
 %% input setup
 
 % Input dir:  preprocessed folder in root2
-processedfolder_inroot2 = fullfile('H:', 'My Drive', 'NMRC_umn', 'Projects', 'FCAnalysis', 'exp',  'data', 'Animals', animal, 'Recording', 'Processed', 'DataDatabase');
+folder_root = 'H:\My Drive\NMRC_umn\Projects\FCAnalysis\exp\data';
+processedfolder = fullfile(folder_root, 'Animals', animal, 'Recording', 'Processed', 'DataDatabase');
 
 % master sheet
 if strcmpi(animal, 'Kitty')
@@ -166,7 +167,7 @@ for i = 1:nrecords
     end
     
     % one day path
-    onedaypath = fullfile(processedfolder_inroot2, [animal '_' datestr(dateofexp, 'mmddyy')]);
+    onedaypath = fullfile(processedfolder, [animal '_' datestr(dateofexp, 'mmddyy')]);
     if ~exist(onedaypath, 'dir')
         clear outputfoldername dateofexp tdtbk
         clear pdcond savefilename onedaypath

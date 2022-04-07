@@ -144,13 +144,13 @@ clear tmp1 tmp2
 % histogram plot freeze time
 figure
 subplot(3,1,1);
-histogram(ts_freezInit, 15); 
+histogram(ts_freezInit, 30); 
 title([animal ' init freeze histogram, init# =' num2str(n_init)])
 subplot(3,1,2);
-histogram(ts_freezReach, 50)
+histogram(ts_freezReach, 30)
 title([animal ' reach freeze histogram, init# =' num2str(n_reach)])
 subplot(3,1,3);
-histogram(ts_freezMani, 15)
+histogram(ts_freezMani, 30)
 title([animal ' manipulate freeze histogram, init# =' num2str(n_mani)])
 saveas(gcf, fullfile(savefolder, [animal '_FreezeTimeHist.' img_format]));
 
