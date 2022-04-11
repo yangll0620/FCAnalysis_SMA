@@ -20,6 +20,10 @@ addpath(genpath(fullfile(codefolder,'NHPs')));
 addpath(genpath(fullfile(codefolder,'connAnalyTool')));
 addpath(genpath(fullfile(codefolder,'toolbox')));
 
+if ~exist('animal', 'var')
+    animal = input('animal = ', 's');
+end
+
 
 % parse params
 
@@ -34,7 +38,7 @@ NHPCodefilepath = fullfile(codefolder, 'NHPs', animal, '0_dataPrep' , SKTSubfold
 [codecorresfolder, codecorresParentfolder] = code_corresfolder(NHPCodefilepath, true, false);
 
 %% Input setup
-inputfolder = fullfile(codecorresParentfolder, 'm4_imCohPhaseUsingFFT_EventPhase_unifiedNHP');
+inputfolder = fullfile(codecorresParentfolder, 'fs500Hz', 'm4_imCohPhaseUsingFFT_EventPhase_unifiedNHP');
 if strcmpi(animal, 'Kitty')
     ylimit_ftLag = [0 20];
 end
@@ -54,8 +58,8 @@ savecodefolder = fullfile(savefolder, 'code');
 
 
 %% Code start here
-runTFLag = true;
-runCicohHist = false;
+runTFLag = false;
+runCicohHist = true;
 runRosePlot = false;
 
 cond_cell = cond_cell_extract(animal);
@@ -67,7 +71,11 @@ for fi = 1 : length(files)
     
     filename = files(fi).name;
     pdcond = cond_cell{cellfun(@(x) contains(files(fi).name, x), cond_cell)};
-    ephase = EventPhases{cellfun(@(x) contains(files(fi).name, x), EventPhases)};
+    idx_phase = find(cellfun(@(x) contains(files(fi).name, x), EventPhases));
+    if isempty(idx_phase)
+        continue;
+    end
+    ephase = EventPhases{idx_phase};
     
     load(fullfile(inputfolder, filename), 'ciCoh', 'deltaphis_allChnsTrials', 'f_selected', 'psedociCohs', 'T_chnsarea');
     

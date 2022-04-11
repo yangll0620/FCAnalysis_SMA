@@ -14,6 +14,7 @@ function plot_ciCohHistogram(ciCoh_flatten, chnPairNames, f_selected, titlename,
 %           'fig_bottom' - figure position bottom (default 50)
 %           'fig_width' - figure position width (default 1200)
 %           'fig_height' - figure position height (default 60)
+%           'cbarTicks' - vector, default [0 0.5 1]
 
 
 % parse params
@@ -22,8 +23,9 @@ addParameter(p, 'codesavefolder', '', @isstr);
 addParameter(p, 'histClim', [0 1], @(x) assert(isnumeric(x) && isvector(x) && length(x)==2));
 addParameter(p, 'fig_left', 50, @(x) assert(isnumeric(x) && isscalar(x)));
 addParameter(p, 'fig_bottom', 50, @(x) assert(isnumeric(x) && isscalar(x)));
-addParameter(p, 'fig_width', 1200, @(x) assert(isnumeric(x) && isscalar(x)));
-addParameter(p, 'fig_height', 600, @(x) assert(isnumeric(x) && isscalar(x)));
+addParameter(p, 'fig_width', 1000, @(x) assert(isnumeric(x) && isscalar(x)));
+addParameter(p, 'fig_height', 250, @(x) assert(isnumeric(x) && isscalar(x)));
+addParameter(p, 'cbarTicks', [0 0.5 1], @(x) assert(isvector(x) && isnumeric(x)));
 
 parse(p,varargin{:});
 codesavefolder = p.Results.codesavefolder;
@@ -32,6 +34,7 @@ fig_left = p.Results.fig_left;
 fig_bottom = p.Results.fig_bottom;
 fig_width = p.Results.fig_width;
 fig_height = p.Results.fig_height;
+cbarTicks = p.Results.cbarTicks;
 
 
 % copy code to savefolder if not empty
@@ -62,8 +65,9 @@ title(titlename, 'FontSize', 10, 'FontWeight', 'normal')
 set(gca,'CLim', histClim)
 c = colorbar;
 c.Label.String = 'ciCoh';
-
-
+if ~isempty(cbarTicks)
+    c.Ticks = cbarTicks;
+end
 
 chnPair_prev = '';
 for ci = 1: length(chnPairNames)

@@ -1,4 +1,4 @@
-function m5_fs500Hz_uNHP_histFTLagPhase(animal, varargin)
+function m3_fs500Hz_uNHP_histFTLagPhase(animal, varargin)
 % plot cicoh Histogram, frequency time lag and phase of interested channels
 %
 %   Input:
@@ -195,7 +195,8 @@ for ei = ei_str: ei_end
             nshuffle = size(psedociCohs, 4);
             titlename = [animal '-'  pdcond '-'  event '['  num2str(t_AOI(1)) ' ' num2str(t_AOI(2))   ']s,' ' align2 = ' align2name ', ntrials = ' num2str(ntrials) ' nshuffle= ' num2str(nshuffle)];
             
-            plot_ciCohHistogram(ciCoh_flatten_used, chnPairNames_used, f_selected, titlename, 'codesavefolder', savecodefolder);
+            plot_ciCohHistogram(ciCoh_flatten_used, chnPairNames_used, f_selected, titlename, ...
+                'fig_width', 500, 'fig_height', 200, 'codesavefolder', savecodefolder);
             
             saveimgname = [animal '_' event '_' pdcond '_align2' char(align2) '.' image_type];
             saveas(gcf, fullfile(histsavefolder, saveimgname), image_type);
@@ -226,4 +227,222 @@ for ei = ei_str: ei_end
 
         close all
     end
+end
+end
+
+function plot_ciCohHistogram(ciCoh_flatten, chnPairNames, f_selected, titlename, varargin)
+%
+%   Inputs:
+%       ciCoh_flatten:
+%       chnPairNames
+%       f_selected
+%       titlename
+%       histClim
+%
+%       Name-Value: 
+%           'codesavefolder' - code saved folder
+%           'histClim' - ciCoh histogram clim (default [0 1])
+%           'fig_left' - figure position left (default 50)
+%           'fig_bottom' - figure position bottom (default 50)
+%           'fig_width' - figure position width (default 1200)
+%           'fig_height' - figure position height (default 60)
+%           'cbarTicks' - vector, default [0 0.5 1]
+
+
+% parse params
+p = inputParser;
+addParameter(p, 'codesavefolder', '', @isstr);
+addParameter(p, 'histClim', [0 1], @(x) assert(isnumeric(x) && isvector(x) && length(x)==2));
+addParameter(p, 'fig_left', 50, @(x) assert(isnumeric(x) && isscalar(x)));
+addParameter(p, 'fig_bottom', 50, @(x) assert(isnumeric(x) && isscalar(x)));
+addParameter(p, 'fig_width', 1000, @(x) assert(isnumeric(x) && isscalar(x)));
+addParameter(p, 'fig_height', 250, @(x) assert(isnumeric(x) && isscalar(x)));
+addParameter(p, 'cbarTicks', [0 0.5 1], @(x) assert(isvector(x) && isnumeric(x)));
+
+parse(p,varargin{:});
+codesavefolder = p.Results.codesavefolder;
+histClim = p.Results.histClim;
+fig_left = p.Results.fig_left;
+fig_bottom = p.Results.fig_bottom;
+fig_width = p.Results.fig_width;
+fig_height = p.Results.fig_height;
+cbarTicks = p.Results.cbarTicks;
+
+
+% copy code to savefolder if not empty
+if ~isempty(codesavefolder) 
+    copyfile2folder(mfilename('fullpath'), codesavefolder);
+end
+
+
+
+% plot
+dispix_outinpos = [80 30 15 40]; % left, top, right, bottom of distance between outer and inner position
+margin_outpos = [5 5 5 5]; % left, top, right, bottom margin of outer position
+outpos = [margin_outpos(1) margin_outpos(4) fig_width-margin_outpos(1)-margin_outpos(3) fig_height-margin_outpos(2)-margin_outpos(4)];
+innerpos = [outpos(1)+dispix_outinpos(1) outpos(2)+dispix_outinpos(4) outpos(3)-dispix_outinpos(1)-dispix_outinpos(3) outpos(4)-dispix_outinpos(2)-dispix_outinpos(4)];
+figure;
+set(gcf, 'PaperUnits', 'points',  'Position', [fig_left fig_bottom fig_width fig_height]);
+imagesc(ciCoh_flatten)
+colormap(jet)
+set(gca, 'Units', 'pixels');
+set(gca, 'OuterPosition', outpos, 'Position', innerpos)
+[npairs, nf] = size(ciCoh_flatten);
+xticks([1:nf])
+xticklabels(round(f_selected))
+yticks([1:npairs]);
+set(gca,'YTickLabel',chnPairNames,'fontsize',10,'FontWeight','normal')
+xlabel('freqs/Hz')
+title(titlename, 'FontSize', 10, 'FontWeight', 'normal')
+set(gca,'CLim', histClim)
+c = colorbar;
+c.Label.String = 'ciCoh';
+if ~isempty(cbarTicks)
+    c.Ticks = cbarTicks;
+end
+
+chnPair_prev = '';
+for ci = 1: length(chnPairNames)
+    chnPair = chnPairNames{ci};
+    
+    % replace M1-stn0-1 to M1-STN
+    s_stn = regexp(chnPair, 'stn[0-9]*-[0-9]*', 'match');
+    if ~isempty(s_stn)
+        for si = 1 : length(s_stn)
+            chnPair = strrep(chnPair, s_stn{si}, 'STN');
+        end
+    end
+    % replace M1-stn0-1 to M1-STN
+    s_gp = regexp(chnPair, 'gp[0-9]*-[0-9]*', 'match');
+    if ~isempty(s_gp)
+        for si = 1 : length(s_gp)
+            chnPair = strrep(chnPair, s_gp{si}, 'GP');
+        end
+    end
+    
+    if ~strcmp(chnPair_prev, '') && ~strcmp(chnPair_prev, chnPair) % a new site pairs
+        hold on; plot(gca, xlim, [(ci + ci -1)/2 (ci + ci -1)/2], 'w--')
+        % Create line
+    end
+    chnPair_prev = chnPair;
+    
+    clear s_stn s_gp chnPair
+end
+end
+
+
+function [lfptrials, fs_lfp, T_chnsarea] = lfpseg_selectedTrials_align2(files, align2, tdur_trial, varargin)
+% extract lfp seg data respect to targetonset, reachonset, reach and returnonset separately
+% [lfptrials, fs, T_chnsarea] = lfpseg_selectedTrials_align2PeakV(files, [t_AOI(1) t_AOI(2)], 'codesavefolder', savecodefolder);
+%
+%   not include trials with t_reach <0.2s
+% 
+%         Args:
+%             align2: the event to be aligned 
+% 
+%             tdur_trial: the duration of extracted trials respected to event(e.g. [-0.5 0.6])
+%             
+%
+%       Name-Value: 
+%           'codesavefolder' - code saved folder
+% 
+%         return:
+%             lfptrials: nchns * ntemp * ntrials
+% 
+%             chnAreas:
+% 
+%             fs:
+
+
+% parse params
+p = inputParser;
+addParameter(p, 'codesavefolder', '', @isstr);
+parse(p,varargin{:});
+
+% copy code to savefolder if not empty
+codesavefolder = p.Results.codesavefolder;
+if ~isempty(codesavefolder) 
+    copyfile2folder(mfilename('fullpath'), codesavefolder);
+end
+
+coli_align2 = uint32(align2);
+coli_reachonset = uint32(SKTEvent.ReachOnset);
+coli_reach = uint32(SKTEvent.Reach);
+
+t_minmax_reach = 0.2;
+
+load(fullfile(files(1).folder, files(1).name),  'fs_lfp', 'T_chnsarea');
+
+nfiles = length(files);
+lfptrials = [];
+for filei = 1 : nfiles
+    
+    % load data, lfpdata: [nchns, ntemps, ntrials]
+    filename = files(filei).name;
+    load(fullfile(files(filei).folder, filename), 'lfpdata', 'T_idxevent_lfp', 'selectedTrials', 'T_idxevent_ma', 'smoothWspeed_trial', 'fs_ma');
+    
+    if(height(T_idxevent_lfp) == 1)
+        disp([filename ' has only 1 trial, skip!']);
+        continue;
+    end
+    
+    
+    ntrials = length(lfpdata);
+    for tri = 1: ntrials
+        
+        % ignore trials marked with 0
+        if ~selectedTrials(tri)
+            continue
+        end
+        
+        % select trials based on reach duration
+        t_reach = (T_idxevent_lfp{tri, coli_reach} - T_idxevent_lfp{tri, coli_reachonset}) / fs_lfp;
+        if t_reach < t_minmax_reach 
+            clear t_reach
+            continue
+        end
+        
+        if align2 == SKTEvent.PeakV
+            % find peakV and its timepoint
+            idx_reachonset_ma = T_idxevent_ma{tri, coli_reachonset};
+            idx_reach_ma = T_idxevent_ma{tri, coli_reach};
+            [~, idx] = max(smoothWspeed_trial{tri}(idx_reachonset_ma: idx_reach_ma, 1));
+            idx_peakV_ma = idx + idx_reachonset_ma -1;
+            t_reachonset2peakV = (idx_peakV_ma - idx_reachonset_ma)/ fs_ma;
+            t_peakV2reach = (idx_reach_ma - idx_peakV_ma)/ fs_ma;
+            
+            if t_reachonset2peakV < abs(tdur_trial(1)) || t_peakV2reach < tdur_trial(2)
+                clear idx idx_reachonset_ma idx_reach_ma idx_peakV_ma
+                clear t_reachonset2peakV  t_peakV2reach
+                continue;
+            end
+            
+            % extract trial with t_dur
+            idx_peakV_lfp = round(idx_peakV_ma / fs_ma * fs_lfp);
+            idx_time0 = idx_peakV_lfp;
+            
+            clear idx idx_reachonset_ma idx_reach_ma idx_peakV_ma
+            clear t_reachonset2peakV  t_peakV2reach
+            clear idx_peakV_lfp
+        else
+            idx_time0 = T_idxevent_lfp{tri, coli_align2}; 
+        end
+        
+        
+        % extract phase for 1 trial
+        lfp_1trial = lfpdata{tri};
+        idxdur = round(tdur_trial * fs_lfp) + idx_time0;
+        if idxdur(1) == 0
+            idxdur(1) = 1;
+        else
+            idxdur(1) = idxdur(1) + 1;
+        end
+        lfp_phase_1trial = lfp_1trial(:,idxdur(1) :idxdur(2));
+           
+        % cat into lfptrials
+        lfptrials = cat(3, lfptrials, lfp_phase_1trial);
+        
+        clear t_reach idxdur lfp_phase_1trial lfp_1trial
+    end
+end
 end
