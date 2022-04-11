@@ -1,5 +1,7 @@
 function [align2, t_AOI, align2name] = SKT_EventPhase_align2_tAOI_extract(event, animal, pdcond, varargin)
 %
+%   
+% 
 %   Inputs:
 %       animal
 %
@@ -11,6 +13,12 @@ function [align2, t_AOI, align2name] = SKT_EventPhase_align2_tAOI_extract(event,
 p = inputParser;
 addParameter(p, 'codesavefolder', '', @isstr);
 parse(p,varargin{:});
+
+% copy code to savefolder if not empty
+codesavefolder = p.Results.codesavefolder;
+if ~isempty(codesavefolder) 
+    copyfile2folder(mfilename('fullpath'), codesavefolder);
+end
 
 % copy code to savefolder if not empty
 codesavefolder = p.Results.codesavefolder;
@@ -41,7 +49,7 @@ if strcmpi(event, 'lateReach')
 end
 
 if strcmpi(event, 'peakV')
-    align2 = 'peakV';
+    align2 = SKTEvent.PeakV;
     t_AOI = [-0.1 0.1];
 end
 

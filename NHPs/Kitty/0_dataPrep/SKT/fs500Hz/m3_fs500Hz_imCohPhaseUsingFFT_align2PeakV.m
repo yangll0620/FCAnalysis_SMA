@@ -42,7 +42,7 @@ addParameter(p, 'runCicohHist', true, @(x) assert(islogical(x) && isscalar(x)));
 addParameter(p, 'runRosePlot', false, @(x) assert(islogical(x) && isscalar(x)));
 addParameter(p, 'shuffleN_psedoTest', 500, @(x) assert(isnumeric(x) && isscalar(x)));
 
-
+EventPhases = SKT_eventPhases_extract();
 
 parse(p,varargin{:});
 ei_str = p.Results.ei_str;
@@ -76,7 +76,6 @@ end
 ciCohPhasefile_prefix =[animal ' ciCohPhasefile'];
 
 %%  input setup
-
 inputfolder = fullfile(codecorresParentfolder, 'm2_segSKTData_SelectTrials_chnOfI');
 
 image_type = 'tif';

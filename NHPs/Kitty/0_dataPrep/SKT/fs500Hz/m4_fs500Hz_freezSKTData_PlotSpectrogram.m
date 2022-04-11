@@ -181,7 +181,7 @@ end
 img_format = 'tif';
 tbl_subfreezEpi = tbl_freezEpisodes(tbl_freezEpisodes.freezType == freezeType, :);
 
-switch freezeType
+switch freezeType 
     case 'initFreeze'
         time0name = 'cueonset';
         timeEndname = 'freezeEnd';
@@ -299,9 +299,16 @@ for chi = 1: nchns
     ax2 = gca;
     pos = get(ax2, 'Position');
     pos(3) = pos_ax(3);
-    h1 = plot(times_wSpeed, wSpeed, 'DisplayName', 'wristSpeed');
+    hlegs = [];
+    h = plot(times_wSpeed, wSpeed, 'DisplayName', 'wristSpeed');
+    hlegs = [hlegs h]; clear h
     hold on
-    h2 = plot(xlim, [30 30], 'r--', 'DisplayName', 'MoveThres');
+    if ~strcmpi(freezeType, 'maniFreeze')
+        h = plot(xlim, [30 30], 'r--', 'DisplayName', 'MoveThres');
+        hlegs = [hlegs h];
+        clear h
+    end
+    
     set(ax2, 'Position', pos);
     xlim(get(ax1, 'XLim'));
     ylimit = ylim;
@@ -311,8 +318,8 @@ for chi = 1: nchns
     plot([0 0], ylim, 'k--')
     set(gca, 'XTick', get(ax1, 'XTick'), 'XTickLabel', get(ax1, 'XTickLabel'))
     ylabel('speed')
-    legend([h1 h2], 'Position', [0.82 0.85 0.14 0.07])
-    clear pos_ax pos
+    legend(hlegs, 'Position', [0.82 0.85 0.14 0.07])
+    clear pos_ax pos hlegs
     
     
     title(ax2, [title_prefix '-' brainarea])

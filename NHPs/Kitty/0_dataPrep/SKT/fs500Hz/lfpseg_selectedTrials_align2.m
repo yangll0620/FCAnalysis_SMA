@@ -1,8 +1,11 @@
-function [lfptrials, fs_lfp, T_chnsarea, idxGroups, idxGroupNames] = lfpseg_selectedTrials_align2PeakV(files, tdur_trial, varargin)
+function [lfptrials, fs_lfp, T_chnsarea] = lfpseg_selectedTrials_align2(files, align2, tdur_trial, varargin)
 % extract lfp seg data respect to targetonset, reachonset, reach and returnonset separately
 % [lfptrials, fs, T_chnsarea] = lfpseg_selectedTrials_align2PeakV(files, [t_AOI(1) t_AOI(2)], 'codesavefolder', savecodefolder);
+%
+%   not include trials with t_reach <0.2s
 % 
 %         Args:
+%             align2: the event to be aligned 
 % 
 %             tdur_trial: the duration of extracted trials respected to event(e.g. [-0.5 0.6])
 %             
@@ -29,10 +32,11 @@ if ~isempty(codesavefolder)
     copyfile2folder(mfilename('fullpath'), codesavefolder);
 end
 
-
+coli_align2 = uint32(align2);
 coli_reachonset = uint32(SKTEvent.ReachOnset);
 coli_reach = uint32(SKTEvent.Reach);
 
+t_minmax_reach = 0.2;
 
 load(fullfile(files(1).folder, files(1).name),  'fs_lfp', 'T_chnsarea');
 
@@ -58,24 +62,43 @@ for filei = 1 : nfiles
             continue
         end
         
-        % find peakV and its timepoint
-        idx_reachonset_ma = T_idxevent_ma{tri, coli_reachonset};
-        idx_reach_ma = T_idxevent_ma{tri, coli_reach};
-        [~, idx] = max(smoothWspeed_trial{tri}(idx_reachonset_ma: idx_reach_ma, 1));
-        idx_peakV_ma = idx + idx_reachonset_ma -1;
-        t_reachonset2peakV = (idx_peakV_ma - idx_reachonset_ma)/ fs_ma;
-        t_peakV2reach = (idx_reach_ma - idx_peakV_ma)/ fs_ma;
-
-        if t_reachonset2peakV < abs(tdur_trial(1)) || t_peakV2reach < tdur_trial(2)
-            clear idx idx_reachonset_ma idx_reach_ma idx_peakV_ma 
-            clear t_reachonset2peakV  t_peakV2reach
-            continue;
+        % select trials based on reach duration
+        t_reach = (T_idxevent_lfp{tri, coli_reach} - T_idxevent_lfp{tri, coli_reachonset}) / fs_lfp;
+        if t_reach < t_minmax_reach 
+            clear t_reach
+            continue
         end
         
-        % extract trial with t_dur
-        idx_peakV_lfp = round(idx_peakV_ma / fs_ma * fs_lfp);
-        idxdur = round(tdur_trial * fs_lfp) + idx_peakV_lfp;
+        if strcmpi(align2, SKTEvent.PeakV)
+            % find peakV and its timepoint
+            idx_reachonset_ma = T_idxevent_ma{tri, coli_reachonset};
+            idx_reach_ma = T_idxevent_ma{tri, coli_reach};
+            [~, idx] = max(smoothWspeed_trial{tri}(idx_reachonset_ma: idx_reach_ma, 1));
+            idx_peakV_ma = idx + idx_reachonset_ma -1;
+            t_reachonset2peakV = (idx_peakV_ma - idx_reachonset_ma)/ fs_ma;
+            t_peakV2reach = (idx_reach_ma - idx_peakV_ma)/ fs_ma;
+            
+            if t_reachonset2peakV < abs(tdur_trial(1)) || t_peakV2reach < tdur_trial(2)
+                clear idx idx_reachonset_ma idx_reach_ma idx_peakV_ma
+                clear t_reachonset2peakV  t_peakV2reach
+                continue;
+            end
+            
+            % extract trial with t_dur
+            idx_peakV_lfp = round(idx_peakV_ma / fs_ma * fs_lfp);
+            idx_time0 = idx_peakV_lfp;
+            
+            clear idx idx_reachonset_ma idx_reach_ma idx_peakV_ma
+            clear t_reachonset2peakV  t_peakV2reach
+            clear idx_peakV_lfp
+        else
+            idx_time0 = T_idxevent_lfp{tri, coli_align2}; 
+        end
+        
+        
+        % extract phase for 1 trial
         lfp_1trial = lfpdata{tri};
+        idxdur = round(tdur_trial * fs_lfp) + idx_time0;
         if idxdur(1) == 0
             idxdur(1) = 1;
         else
@@ -83,6 +106,7 @@ for filei = 1 : nfiles
         end
         lfp_phase_1trial = lfp_1trial(:,idxdur(1) :idxdur(2));
            
+        % cat into lfptrials
         lfptrials = cat(3, lfptrials, lfp_phase_1trial);
         
         clear t_reach idxdur lfp_phase_1trial lfp_1trial

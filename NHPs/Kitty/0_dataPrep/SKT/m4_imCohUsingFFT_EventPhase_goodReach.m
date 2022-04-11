@@ -1,4 +1,4 @@
-function m4_imCohUsingFFT_EventPhase_goodReach()
+                                                                                                                                                                                   function m4_imCohUsingFFT_EventPhase_goodReach()
 %% folders generate
 % the full path and the name of code file without suffix
 codefilepath = mfilename('fullpath');
