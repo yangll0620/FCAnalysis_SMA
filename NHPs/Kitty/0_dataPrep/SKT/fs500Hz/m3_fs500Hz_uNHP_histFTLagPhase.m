@@ -13,6 +13,7 @@ function m3_fs500Hz_uNHP_histFTLagPhase(animal, varargin)
 %           runRosePlot -  true or false(default)
 %           newRun - true or false(default), for running new or not
 
+
 codefilepath = mfilename('fullpath');
 
 % find the codefolder
@@ -67,11 +68,6 @@ if exist(savecodefolder, 'dir')
 end
 copyfile2folder(codefilepath, savecodefolder);
 
-phsubfolder = fullfile(savefolder, 'phases');
-if ~exist(phsubfolder, 'dir')
-    mkdir(phsubfolder);
-end
-
 
 ciCohPhasefile_prefix =[animal ' ciCohPhasefile'];
 
@@ -92,7 +88,12 @@ end
 if runRosePlot
     roseRLim = [0 0.3];
     
-    savefile_prefix = [animal 'trialPhaseDiff'];
+    savefile_prefix = [animal '-trialPhaseDiff-'];
+    
+    rosePlotsavefolder = fullfile(savefolder, 'rosePlot');
+    if ~exist(rosePlotsavefolder, 'dir')
+        mkdir(rosePlotsavefolder);
+    end
 end
 
 
@@ -109,11 +110,6 @@ chnsOfI = chnsOfInterest_extract(animal, 'codesavefolder', savecodefolder);
 
 for ei = ei_str: ei_end
     event = EventPhases{ei};
-    
-    subphsavefolder = fullfile(phsubfolder, event);
-    if ~exist(subphsavefolder, 'dir')
-        mkdir(subphsavefolder);
-    end
     
     for ci = ci_str : ci_end
         pdcond = cond_cell{ci};
@@ -210,23 +206,22 @@ for ei = ei_str: ei_end
             titlename_prefix = [animal '-'  pdcond '-'  event];
             subtitlename = [event '['  num2str(t_AOI(1)) ' ' num2str(t_AOI(2))   ']s, align2 = ' char(align2) ', ntrials = ' num2str(ntrials)];
             savefile_suffix = [event '_' pdcond '_align2' char(align2)];
-            rosePlotsavefolder = fullfile(savefolder, 'rosePlot', ephase);
-            if ~exist(rosePlotsavefolder, 'dir')
-                mkdir(rosePlotsavefolder);
-            end
-            
+         
             plotsave_deltaphirose(deltaphis_flatten_used, ciCoh_flatten_used, chnPairNames_used, f_selected, titlename_prefix, subtitlename, rosePlotsavefolder, savefile_prefix, savefile_suffix, image_type,...
-                'codesavefolder', savecodefolder, 'roseRLim', roseRLim);
+                'codesavefolder', savecodefolder, 'roseRLim', roseRLim, 'plotNoSig', false);
             close gcf
-            clear titlename_prefix subtitlename savefile_prefix savefile_suffix
+            clear titlename_prefix subtitlename  savefile_suffix
         end
 
 
-        clear pdcond subpdsavefolder align2 t_AOI align2name ciCohPhasefile
+        clear pdcond align2 t_AOI align2name ciCohPhasefile
         clear('deltaphis_allChnsTrials', 'ciCoh', 'T_chnsarea', 'ntrials', 'f_selected', 'psedociCohs');
+        clear sigciCoh sigciCoh_flatten deltaphis_flatten chnPairNames ciCoh_flatten_used deltaphis_flatten_used chnPairNames_used
 
         close all
     end
+    
+    clear event
 end
 end
 
