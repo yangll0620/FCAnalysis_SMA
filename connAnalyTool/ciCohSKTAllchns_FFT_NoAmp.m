@@ -1,4 +1,4 @@
-function [ciCoh_NoAmp, f_selected] = ciCohSKTAllchns_FFT_NoAmp(lfpdata, fs, f_AOI)
+function [ciCoh_NoAmp, f_selected] = ciCohSKTAllchns_FFT_NoAmp(lfpdata, fs, f_AOI, varargin)
 %
 %   ref: https://yll0620.medium.com/functional-connectivity-measurement-16423fee3581 
 %      treat ntemp as stationary time series, i.e. twin = ntemp, toverlap = 0
@@ -8,9 +8,24 @@ function [ciCoh_NoAmp, f_selected] = ciCohSKTAllchns_FFT_NoAmp(lfpdata, fs, f_AO
 %
 %       f_AOI: frequencies duration of interest, i.e. f_AOI = [8 40]
 %
+%       Name-Value: 
+%           'codesavefolder' - code saved folder
+%
 %   Outputs:
 %       ciCoh_NoAmp: absolute imaginery coherence nchns * nchns * nf, Upper triangle
 
+
+
+% parse params
+p = inputParser;
+addParameter(p, 'codesavefolder', '', @isstr);
+parse(p,varargin{:});
+
+% copy code to savefolder if not empty
+codesavefolder = p.Results.codesavefolder;
+if ~isempty(codesavefolder) 
+    copyfile2folder(mfilename('fullpath'), codesavefolder);
+end
 
 nchns = size(lfpdata, 1);
 

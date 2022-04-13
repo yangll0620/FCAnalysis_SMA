@@ -25,20 +25,12 @@ if ~exist('animal', 'var')
 end
 
 
-% parse params
-
-
-% find animal corresponding folder
-[~, codefilename]= fileparts(codefilepath);
-SKTSubfolder = 'SKT';
-if strcmpi(animal, 'Kitty')
-    SKTSubfolder = 'SKT_SegV';
-end
-NHPCodefilepath = fullfile(codefolder, 'NHPs', animal, '0_dataPrep' , SKTSubfolder, codefilename);
-[codecorresfolder, codecorresParentfolder] = code_corresfolder(NHPCodefilepath, true, false);
+[~, ~, pipelinefolder, ~] = exp_subfolders();
 
 %% Input setup
-inputfolder = fullfile(codecorresParentfolder, 'fs500Hz', 'm4_imCohPhaseUsingFFT_EventPhase_unifiedNHP');
+if strcmpi(animal, 'Jo')
+    inputfolder = fullfile(pipelinefolder, 'NHPs', animal, '0_dataPrep' , 'SKT', 'fs500Hz', 'm4_imCohPhaseUsingFFT_EventPhase_unifiedNHP');
+end
 if strcmpi(animal, 'Kitty')
     ylimit_ftLag = [0 20];
 end
@@ -52,18 +44,28 @@ roseRLim = [0 0.3];
 image_type = 'tif';
 
 %% save setup
-savefolder = codecorresfolder;
+[~,codefilename,~] = fileparts(codefilepath); 
+savecodefolder = fullfile(codefolder, 'NHPs', animal, '0_dataPrep', 'SKT', 'fs500Hz', codefilename);
+[savefolder, ~] = code_corresfolder(savecodefolder, false, false);
+
 copyfile2folder(codefilepath, fullfile(savefolder, 'code'));
 savecodefolder = fullfile(savefolder, 'code');
 
 
 %% Code start here
 runTFLag = false;
-runCicohHist = true;
-runRosePlot = false;
+runCicohHist = false;
+runRosePlot = true;
+
+if runRosePlot
+    rosePlotsavefolder = fullfile(savefolder, 'rosePlot');
+    if ~exist(rosePlotsavefolder, 'dir')
+        mkdir(rosePlotsavefolder);
+    end
+end
 
 cond_cell = cond_cell_extract(animal);
-EventPhases = SKT_eventPhases_extract();
+EventPhases = SKT_eventPhases_extract(animal);
 chnsOfI = chnsOfInterest_extract(animal, 'codesavefolder', savecodefolder);
 
 files = dir(fullfile(inputfolder, '*.mat'));
@@ -127,13 +129,10 @@ for fi = 1 : length(files)
             subtitlename = [ephase '['  num2str(t_AOI(1)) ' ' num2str(t_AOI(2))   ']s, align2 = ' char(align2) ', ntrials = ' num2str(ntrials)];
             savefile_prefix = [animal 'trialPhaseDiff'];
             savefile_suffix = [pdcond '_' ephase   '_align2' char(align2)];
-            rosePlotsavefolder = fullfile(savefolder, 'rosePlot', ephase);
-            if ~exist(rosePlotsavefolder, 'dir')
-                mkdir(rosePlotsavefolder);
-            end
+            
             
             plotsave_deltaphirose(deltaphis_flatten, sigciCohs_flatten, chnPairNames, f_selected, titlename_prefix, subtitlename, rosePlotsavefolder, savefile_prefix, savefile_suffix, image_type,...
-                'codesavefolder', savecodefolder, 'roseRLim', roseRLim);
+                'codesavefolder', savecodefolder, 'roseRLim', roseRLim, 'plotNoSig', false);
             
             clear titlename_prefix subtitlename savefile_prefix savefile_suffix
         end

@@ -3,6 +3,7 @@ function plotsave_deltaphirose(deltaphis_flatten, ciCoh_flatten, chnPairNames, f
 %       
 %       Name-Value: 
 %           'codesavefolder' - code saved folder
+%           'plotNoSig' - plot no sig tag(default false)
 %           'roseRLim' - RLim
 %   
 % save psedociCohs: nchns * nchns * nf * nshuffle, saved to ciCohPhasefile
@@ -12,9 +13,11 @@ function plotsave_deltaphirose(deltaphis_flatten, ciCoh_flatten, chnPairNames, f
 % parse params
 p = inputParser;
 addParameter(p, 'codesavefolder', '', @isstr);
+addParameter(p, 'plotNoSig', false, @(x)islogical(x)&&isscalar(x));
 addParameter(p, 'roseRLim', 'auto', @(x) assert(isnumeric(x) && isvector(x) && length(x)==2, 'roseRLim should be a vector with 2 numbers'))
 parse(p,varargin{:});
 codesavefolder = p.Results.codesavefolder;
+plotNoSig = p.Results.plotNoSig;
 if ~isequal(p.Results.roseRLim, 'auto')
     setRoseRLim = true;
     roseRLim = reshape(p.Results.roseRLim, 1, 2);
@@ -46,7 +49,19 @@ for chnPairi = 1 : nchnPairs
         mkdir(subchnpairsavefolder);
     end
     
+    
+    [~, maxnfi]= max(ciCoh_flatten(chnPairi,:));
     for nfi = 1 : nf
+        icoh = ciCoh_flatten(chnPairi, nfi);
+        sig = false;
+        if(icoh > 0)
+            sig = true;
+        end
+        if ~plotNoSig && ~sig
+            clear icoh sig
+            continue;
+        end
+        
         deltaphi = squeeze(deltaphis_flatten(chnPairi, nfi, :));
         f = f_selected(nfi);
         
@@ -64,12 +79,6 @@ for chnPairi = 1 : nchnPairs
         % subtitle
         annotation(gcf,'textbox',[0.5 0.017 0.5 0.032], 'String',{subtitlename}, 'LineStyle','none', 'FitBoxToText','off');
         
-        % plot icoh if sig
-        sig = false;
-        icoh = ciCoh_flatten(chnPairi, nfi);
-        if(icoh > 0)
-            sig = true;
-        end
         if sig
             annotation(gcf,'textbox',[0.7 0.8 0.5 0.03], 'String',{['cicoh = ' num2str(round(icoh, 3)) '*']}, 'LineStyle','none', 'FitBoxToText','off');
         end
@@ -79,10 +88,14 @@ for chnPairi = 1 : nchnPairs
         if sig
             sigstr = ['_sig'];
         end
+        if nfi == maxnfi
+            sigstr = [sigstr '_Max'];
+        end
         savefile =  fullfile(subchnpairsavefolder, [savefile_prefix '_pair' chnPairName '_' num2str(round(f))  'Hz_' savefile_suffix sigstr '.' image_type]);
         saveas(gcf,savefile, image_type);
         
         clear icoh
         close all
     end
+    clear chnPairName subchnpairsavefolder maxnfi
 end

@@ -26,6 +26,7 @@ addParameter(p, 'fig_bottom', 50, @(x) assert(isnumeric(x) && isscalar(x)));
 addParameter(p, 'fig_width', 1000, @(x) assert(isnumeric(x) && isscalar(x)));
 addParameter(p, 'fig_height', 250, @(x) assert(isnumeric(x) && isscalar(x)));
 addParameter(p, 'cbarTicks', [0 0.5 1], @(x) assert(isvector(x) && isnumeric(x)));
+addParameter(p, 'cbarStr', 'ciCoh', @isstr);
 
 parse(p,varargin{:});
 codesavefolder = p.Results.codesavefolder;
@@ -35,6 +36,7 @@ fig_bottom = p.Results.fig_bottom;
 fig_width = p.Results.fig_width;
 fig_height = p.Results.fig_height;
 cbarTicks = p.Results.cbarTicks;
+cbarStr = p.Results.cbarStr;
 
 
 % copy code to savefolder if not empty
@@ -64,7 +66,7 @@ xlabel('freqs/Hz')
 title(titlename, 'FontSize', 10, 'FontWeight', 'normal')
 set(gca,'CLim', histClim)
 c = colorbar;
-c.Label.String = 'ciCoh';
+c.Label.String = cbarStr;
 if ~isempty(cbarTicks)
     c.Ticks = cbarTicks;
 end

@@ -1,5 +1,7 @@
 function m3_fs500Hz_uNHP_histFTLagPhase(animal, varargin)
 % plot cicoh Histogram, frequency time lag and phase of interested channels
+%   Usage:
+%           m3_fs500Hz_uNHP_histFTLagPhase('Kitty', 'runRosePlot', true, 'runCicohHist', false)
 %
 %   Input:
 %       animal
@@ -81,9 +83,10 @@ if runCicohHist
     histClim = [0 1];
     
     histsavefolder = fullfile(savefolder, 'ciCohHist');
-    if ~exist(histsavefolder, 'dir')
-        mkdir(histsavefolder)
+    if exist(histsavefolder, 'dir')
+        rmdir(histsavefolder)
     end
+    mkdir(histsavefolder)
 end
 if runRosePlot
     roseRLim = [0 0.3];
@@ -91,7 +94,7 @@ if runRosePlot
     savefile_prefix = [animal '-trialPhaseDiff-'];
     
     rosePlotsavefolder = fullfile(savefolder, 'rosePlot');
-    if ~exist(rosePlotsavefolder, 'dir')
+    if exist(rosePlotsavefolder, 'dir')
         mkdir(rosePlotsavefolder);
     end
 end

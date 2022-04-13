@@ -36,8 +36,7 @@ coli_align2 = uint32(align2);
 
 coli_reachonset = uint32(SKTEvent.ReachOnset);
 coli_reach = uint32(SKTEvent.Reach);
-coli_returnonset = uint32(SKTEvent.ReturnOnset);
-coli_mouth = uint32(SKTEvent.Mouth);
+
 
 
 % load fs_lfp and T_chnsarea
