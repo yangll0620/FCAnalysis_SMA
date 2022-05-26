@@ -1,20 +1,36 @@
-clear 
+function fig_imCohChanges()
 
-%%function imCohChanges_unifiedNHP()
+codefilepath = mfilename('fullpath');
 
 
+% find the codefolder
+tmp = regexp(codefilepath, '.*\code', 'match');
+if length(tmp) ~= 1
+    disp('can not find code path correctly.')
+    return;
+end
+codefolder = tmp{1};
+clear tmp
 
 % add path
-codefolder = 'H:\My Drive\NMRC_umn\Projects\FCAnalysis\exp\code';
 addpath(genpath(fullfile(codefolder,'util')));
 addpath(genpath(fullfile(codefolder,'NHPs')));
 addpath(genpath(fullfile(codefolder,'connAnalyTool')));
 addpath(genpath(fullfile(codefolder,'toolbox')));
 
-%% Input
-input_folder_J = 'H:\My Drive\NMRC_umn\Projects\FCAnalysis\exp\pipeline\NHPs\Jo\0_dataPrep\SKT\fs500Hz\m4_fs500Hz_uNHP_imCohChanges_compCond';
-input_folder_K = 'H:\My Drive\NMRC_umn\Projects\FCAnalysis\exp\pipeline\NHPs\Kitty\0_dataPrep\SKT\fs500Hz\m4_fs500Hz_uNHP_imCohChanges_compCond';
-savecodefolder = '';
+%% Input & save
+[~, ~, pipelinefolder, outputfolder] = exp_subfolders();
+input_folder_J = fullfile(pipelinefolder, 'NHPs', 'Jo', '0_dataPrep', 'SKT', 'fs500Hz', 'm4_fs500Hz_uNHP_imCohChanges_compCond');
+input_folder_K = fullfile(pipelinefolder, 'NHPs', 'Kitty', '0_dataPrep', 'SKT', 'fs500Hz', 'm4_fs500Hz_uNHP_imCohChanges_compCond');
+
+
+savefolder = fullfile(outputfolder, 'results', 'figures');
+savecodefolder = fullfile(savefolder, 'code');
+copyfile2folder(codefilepath, savecodefolder);
+
+[~, funcname, ~]= fileparts(codefilepath);
+savefilename = funcname;
+
 
 
 %% plot figure parameters
@@ -131,7 +147,7 @@ for coli = 1 : ncols
             h_textCond_show = h_textCond;
         end
         outer_top = h_textAnimal + h_textCond_show + (rowi -1) * (h_colormap + deltaxy_colormap);
-        if rowi == nrows
+        if rowi == nrows || (rowi == nrows_Both && coli <= ncols_J)
             h_textFrenumlabel_show = 0;
             inner_bottom = h_textFrenum + h_textFrelabel;
             show_xlabel = true;
@@ -171,28 +187,33 @@ end
 for rowi = 1 : nrows
     event = ePhases{rowi};
 
-    t = annotation(fig, 'textbox', 'String', {event}, 'LineStyle', 'none', 'Units', 'pixels', 'FontSize', 11, 'FontWeight', 'bold');
-    pos = t.Position;
+    t1 = annotation(fig, 'textbox', 'String', {event}, 'LineStyle', 'none', 'Units', 'pixels', 'FontSize', 11, 'FontWeight', 'bold');
+    pos = t1.Position;
     pos_left = 5;
     pos_lower = fig_height-h_textAnimal-h_textCond-(rowi-1)*(h_colormap+deltaxy_colormap)-h_colormap/2-pos(4)*2/3;
     if rowi > nrows_Both
         pos_left = w_textMovePhase + w_textpair + w_colormap * ncols_J + deltax1_colormap * (ncols_J-1) + deltax2_colormap - pos(3)/2;
     end
-    t.Position = [pos_left pos_lower pos(3) pos(4)];
+    t1.Position = [pos_left pos_lower pos(3) pos(4)];
     
     clear event t pos lower left
 end
 
 
 %%%  added animal text
+t1 = annotation(fig, 'textbox', 'String', {'Animal J'}, 'LineStyle', 'none', 'Units', 'pixels', 'FontSize', 11, 'FontWeight', 'bold');
+pos = t1.Position;
 pos_left_J = (w_textMovePhase + w_textpair + w_colormap * ncols_J + deltax1_colormap * (ncols_J-1))/2;
-pos_left_K = ((w_textMovePhase + w_textpair + w_colormap * ncols_J + deltax1_colormap * (ncols_J-1) + deltax2_colormap) + fig_width)/2; 
-pos_lower = fig_height-h_textAnimal;
+pos_lower1 = fig_height-h_textAnimal - pos(4)/2;
+t1.Position = [pos_left_J pos_lower1 pos(3) pos(4)];
 
-t = annotation(fig, 'textbox', 'String', {'Animal J'}, 'LineStyle', 'none', 'Units', 'pixels', 'FontSize', 11, 'FontWeight', 'bold');
-pos = t.Position;
-t.Position = [pos_left_J pos_lower pos(3) pos(4)];
+t2 = annotation(fig, 'textbox', 'String', {'Animal K'}, 'LineStyle', 'none', 'Units', 'pixels', 'FontSize', 11, 'FontWeight', 'bold');
+pos = t2.Position;
+pos_lower2 = pos_lower1;
+pos_left_K = ((w_textMovePhase + w_textpair + w_colormap * ncols_J + deltax1_colormap * (ncols_J-1) + deltax2_colormap) + fig_width)/2 - pos(3)/2;
+t2.Position = [pos_left_K pos_lower2 pos(3) pos(4)];
 
-t = annotation(fig, 'textbox', 'String', {'Animal K'}, 'LineStyle', 'none', 'Units', 'pixels', 'FontSize', 11, 'FontWeight', 'bold');
-pos = t.Position;
-t.Position = [pos_left_K pos_lower pos(3) pos(4)];
+
+%%% save
+
+print(fullfile(savefolder, savefilename), '-dpng', '-r1000')
