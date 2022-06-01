@@ -1,5 +1,4 @@
-function fig_imCohChanges()
-
+function fig_imCohChanges_compEvent()
 codefilepath = mfilename('fullpath');
 
 
@@ -20,8 +19,8 @@ addpath(genpath(fullfile(codefolder,'toolbox')));
 
 %% Input & save
 [~, ~, pipelinefolder, outputfolder] = exp_subfolders();
-input_folder_J = fullfile(pipelinefolder, 'NHPs', 'Jo', '0_dataPrep', 'SKT', 'fs500Hz', 'm4_fs500Hz_uNHP_imCohChanges_compCond');
-input_folder_K = fullfile(pipelinefolder, 'NHPs', 'Kitty', '0_dataPrep', 'SKT', 'fs500Hz', 'm4_fs500Hz_uNHP_imCohChanges_compCond');
+input_folder_J = fullfile(pipelinefolder, 'NHPs', 'Jo', '0_dataPrep', 'SKT', 'fs500Hz', 'm4_fs500Hz_uNHP_imCohChanges_compEvent');
+input_folder_K = fullfile(pipelinefolder, 'NHPs', 'Kitty', '0_dataPrep', 'SKT', 'fs500Hz', 'm4_fs500Hz_uNHP_imCohChanges_compEvent');
 
 
 savefolder = fullfile(outputfolder, 'results', 'figures');
@@ -32,7 +31,6 @@ copyfile2folder(codefilepath, savecodefolder);
 savefilename = funcname;
 
 
-
 %% plot figure parameters
 w_colormap = 350; % width  for the colormap
 h_colormap = 120; % height for the colormap
@@ -40,173 +38,45 @@ h_colormap = 120; % height for the colormap
 w_deltax1_colormap = 5; % x distance between two color map within the same NHP
 w_deltax2_colormap = 20; % x distance between two color map of different NHPs
 
-w_textpair = 80; % width showing the pair name, i.e. M1-STN
 w_textMovePhase = 70; % width showing the moveing phase, i.e. preMove
+w_textpair = 80; % width showing the pair name, i.e. M1-STN
 w_textColorbar = 80; % width showing the colarbar 
 
-h_deltay_colormap = 15; % y distance between two color map 
+h_deltay_colormap_J = 80; % y distance between two color map of animal J
+h_deltay_colormap_K = 10; % y distance between two color map of animal K
 
-h_textFrenum = 30; % height showing the frequency number, i.e. 10 12
-h_textFrelabel = 30; % height showing the frequency label, i.e. Frequences/Hz
-h_textCond = 10; % height showing the condition, i.e. Mild-Normal
-h_textAnimal = 40; % height showing the condition, i.e. Mild-Normal
+h_textAnimal = 30; % height showing the animal name, i.e. animal J/K
+h_textCond = 30; % height showing the condition, i.e. Mild-Normal
+h_textFreNum = 10; % height showing the frequency number, i.e. 10 12
+h_textFreLabel = 40; % height showing the frequency label, i.e. Frequences/Hz
 
 
-fontsize1 = 11;
-fontsize2 = 10;
 fontname = 'Times New Roman';
 
+
 %% Code start here
-basepd = 'normal';
+baseevent = 'preMove';
 
-conds_J = cond_cell_extract('Jo');
-conds_K = cond_cell_extract('Kitty');
-conds_J(strcmp(conds_J, basepd)) = [];
-conds_K(strcmp(conds_K, basepd)) = [];
-conds = [conds_J conds_K];
+ePhases_J = {'earlyReach';  'lateReach'};
+ePhases_K = {'earlyReach';  'PeakV'; 'lateReach'};
 
+cond_J = {'Mild';  'Moderate'};
+cond_K = {'Moderate'};
 
-ePhases_both = {'preMove'; 'earlyReach';  'lateReach'};
-ePhases_onlyK = {'PeakV'};
-ePhases = [ePhases_both; ePhases_onlyK];
+nrows_J = length(ePhases_J);
+nrows_K = length(ePhases_K);
+ncols_J = length(cond_J);
+ncols_K = length(cond_K);
 
-nrows = length(ePhases);
-nrows_Both = length(ePhases_both);
-ncols_J = length(conds_J);
-ncols = length(conds);
+ncols = ncols_J + ncols_K;
 
-fig_width = ncols * w_colormap + (ncols-2)* w_deltax1_colormap + w_deltax2_colormap + w_textpair + w_textMovePhase;
-fig_height = nrows * h_colormap + (nrows-1)* h_deltay_colormap + h_textFrelabel + h_textFrenum + h_textCond + h_textAnimal;
+close all
+fig_width = ncols * w_colormap + (ncols-2)* w_deltax1_colormap + w_deltax2_colormap + w_textMovePhase * 2 + w_textpair * 2 + w_textColorbar * 2;
+fig_height_J = h_textAnimal + + h_textCond + nrows_J * h_colormap + (nrows_J-1)* h_deltay_colormap_J + h_textFreLabel + h_textFreNum;
+fig_height_K = h_textAnimal + + h_textCond + nrows_K * h_colormap + (nrows_K-1)* h_deltay_colormap_K + h_textFreLabel + h_textFreNum;
+fig_height = max(fig_height_J, fig_height_K);
 fig = figure('Position', [50 50 fig_width fig_height]);
 set(fig, 'PaperUnits', 'points');
-for coli = 1 : ncols
-    % extract comppd and animal
-    comppd = conds{coli};
-    if coli <= ncols_J
-        animal = 'Jo';
-        input_folder = input_folder_J;
-    else
-        animal = 'Kitty';
-        input_folder = input_folder_K;
-    end
-    ciCohChangesfile_prefix =[animal '-ciCohChanges'];
-    
-    show_yticklabels = false;
-    show_colorbar = false;
-    
-    % extract outer_left, outer_right, inner_left and inner_right
-    inner_left = 0;
-    inner_right = 0;
-    if coli == 1
-        w_textpair_show = 0;
-        inner_left = w_textpair;
-        show_yticklabels = true;
-    else
-        w_textpair_show = w_textpair;
-    end 
-    if coli <= ncols_J
-        outer_left = w_textMovePhase + w_textpair_show + (coli-1) * (w_colormap + w_deltax1_colormap);
-    else
-        outer_left = w_textMovePhase + w_textpair_show + (coli-1) * w_colormap + (coli-2) * w_deltax1_colormap + w_deltax2_colormap;
-    end
-    
-    
-    if coli == ncols
-        w_textColorbar_show = 0;
-        inner_right = w_textColorbar;
-        show_colorbar = true;
-    else
-        w_textColorbar_show = w_textColorbar;
-    end
-    if coli > ncols_J
-        outer_right = w_textColorbar_show + (ncols-coli) * (w_colormap + w_deltax1_colormap);
-    else
-        outer_right = w_textColorbar_show + (ncols-coli) * w_colormap + (ncols-coli -1) * w_deltax1_colormap + w_deltax2_colormap;
-    end
-    
-    
-    for rowi = 1 : nrows
-        
-        % extract sigciCohChanges_flatten
-        event = ePhases{rowi};
-        [~, ~, align2name] = SKT_EventPhase_align2_tAOI_extract(event, animal, comppd, 'codesavefolder', savecodefolder);
-        ciCohChangesfile = fullfile(input_folder, [ciCohChangesfile_prefix  '_b' basepd '--' comppd '_' event '_align2' align2name '.mat']);
-        if ~exist(ciCohChangesfile, 'file')
-            clear event align2name ciCohChangesfile
-            continue;
-        end
-        load(ciCohChangesfile, 'ciCohChanges', 'psedoiCohChanges', 'f_selected',  'T_chnsarea')
-        [sigciCohChanges]= sigciCoh_extract(psedoiCohChanges, ciCohChanges);
-        [sigciCohChanges_flatten, chnPairNames] = ciCohFlatten_chnPairNames_extract(sigciCohChanges, T_chnsarea);
-    
-        
-        
-        % extract outer_top, outer_bottom, inner_top and inner_bottom and set show tag
-        show_titlename = false;
-        show_xlabel = false;
-        show_xticklabels = false;
-        inner_top = 0;
-        inner_bottom = 0;
-        if rowi == 1
-            h_textCond_show = 0;
-            inner_top = h_textCond;
-            show_titlename = true;
-        else
-            h_textCond_show = h_textCond;
-        end
-        outer_top = h_textAnimal + h_textCond_show + (rowi -1) * (h_colormap + h_deltay_colormap);
-        if rowi == nrows || (rowi == nrows_Both && coli <= ncols_J)
-            h_textFrenumlabel_show = 0;
-            inner_bottom = h_textFrenum + h_textFrelabel;
-            show_xlabel = true;
-            show_xticklabels = true;
-        else
-            h_textFrenumlabel_show = h_textFrenum + h_textFrelabel;
-        end
-        outer_bottom = h_textFrenumlabel_show + (nrows-rowi)* (h_colormap + h_deltay_colormap);
-
-        % outer and inner margin
-        subplot_outerMargin = [outer_left outer_top outer_right outer_bottom];
-        subplot_innerposMargin = [inner_left inner_top inner_right inner_bottom];
-        
-        
-        % actual plot
-        plot_ciCohHistogram2(sigciCohChanges_flatten, chnPairNames, f_selected, [comppd '-' basepd], 'histClim', [-1 1],...
-            'codesavefolder', '', 'cbarStr', 'ciCohChange', 'cbarTicks', [-1 0 1], ...
-            'show_xticklabels', show_xticklabels, 'show_yticklabels', show_yticklabels, 'show_xlabel', show_xlabel, 'show_titlename', show_titlename,'show_colorbar', show_colorbar, ...
-            'fig', fig, 'outerposMargin', subplot_outerMargin, 'innerposMargin', subplot_innerposMargin, ...
-            'fontsize1', fontsize1, 'fontsize2', fontsize2, 'fontname', fontname);
-        
-        clear subplot_outerMargin subplot_innerposMargin
-        clear outer_top outer_bottom inner_top inner_bottom
-        clear show_titlename show_xlabel show_xticklabels
-        clear event align2name ciCohChangesfile
-        clear ciCohChanges psedoiCohChanges f_selected  T_chnsarea
-        clear sigciCohChanges sigciCohChanges_flatten chnPairNames
-    end
-    
-    clear outer_left outer_right inner_left inner_right
-    clear show_yticklabels show_colorbar
-    clear comppd ciCohChangesfile_prefix
-    
-end
-
-
-%%%  added event text
-for rowi = 1 : nrows
-    event = ePhases{rowi};
-
-    t1 = annotation(fig, 'textbox', 'String', {event}, 'LineStyle', 'none', 'Units', 'pixels', 'FontSize', 12, 'FontWeight', 'bold', 'FontName', fontname);
-    pos = t1.Position;
-    pos_left = 5;
-    pos_lower = fig_height-h_textAnimal-h_textCond-(rowi-1)*(h_colormap+h_deltay_colormap)-h_colormap/2-pos(4)*2/3;
-    if rowi > nrows_Both
-        pos_left = w_textMovePhase + w_textpair + w_colormap * ncols_J + w_deltax1_colormap * (ncols_J-1) + w_deltax2_colormap - pos(3)/2;
-    end
-    t1.Position = [pos_left pos_lower pos(3) pos(4)];
-    
-    clear event t pos lower left
-end
 
 
 %%%  added animal text
@@ -219,16 +89,151 @@ t1.Position = [pos_left_J pos_lower1 pos(3) pos(4)];
 t2 = annotation(fig, 'textbox', 'String', {'Animal K'}, 'LineStyle', 'none', 'Units', 'pixels', 'FontSize', 12, 'FontWeight', 'bold', 'FontName', fontname);
 pos = t2.Position;
 pos_lower2 = pos_lower1;
-pos_left_K = ((w_textMovePhase + w_textpair + w_colormap * ncols_J + w_deltax1_colormap * (ncols_J-1) + w_deltax2_colormap) + fig_width)/2 - pos(3)/2;
+pos_left_K = ((w_textMovePhase*2 + w_textpair*2 + w_colormap * ncols_J + w_deltax1_colormap * (ncols_J-1) + w_deltax2_colormap + w_textColorbar) + fig_width)/2 - pos(3)/2;
 t2.Position = [pos_left_K pos_lower2 pos(3) pos(4)];
 
+
+%%%  added event text
+for rowi = 1 : nrows_J
+    event = ePhases_J{rowi};
+
+    t1 = annotation(fig, 'textbox', 'String', {event}, 'LineStyle', 'none', 'Units', 'pixels', 'FontSize', 12, 'FontWeight', 'bold', 'FontName', fontname);
+    pos = t1.Position;
+    pos_left = 5;
+    pos_lower = fig_height-h_textAnimal-h_textCond-(rowi-1)*(h_colormap+h_deltay_colormap_J)-h_colormap/2-pos(4)*2/3;
+    t1.Position = [pos_left pos_lower pos(3) pos(4)];
+    
+    clear event t pos lower left
+end
+for rowi = 1 : nrows_K
+    event = ePhases_K{rowi};
+
+    t1 = annotation(fig, 'textbox', 'String', {event}, 'LineStyle', 'none', 'Units', 'pixels', 'FontSize', 12, 'FontWeight', 'bold', 'FontName', fontname);
+    pos = t1.Position;
+    pos_left = w_textMovePhase + w_textpair + ncols_J * w_colormap  + (ncols_J-1) * w_deltax1_colormap + w_deltax2_colormap + w_textColorbar;
+    pos_lower = fig_height-h_textAnimal-h_textCond-(rowi-1)*(h_colormap+h_deltay_colormap_K)-h_colormap/2-pos(4)*2/3;
+    t1.Position = [pos_left pos_lower pos(3) pos(4)];
+    
+    clear event t pos lower left
+end
+
+%%% plot actual changes hist plot
+for coli = 1 : ncols
+    
+    if coli <= ncols_J % for animal J
+        animal = 'Jo';
+        input_folder = input_folder_J;
+        pdcond = cond_J{coli};
+        nrows = nrows_J;
+        ePhases = ePhases_J;
+        h_deltay_colormap = h_deltay_colormap_J;
+    else
+        animal = 'Kitty';
+        input_folder = input_folder_K;
+        pdcond = cond_K{coli-ncols_J};
+        nrows = nrows_K;
+        ePhases = ePhases_K;
+        h_deltay_colormap = h_deltay_colormap_K;
+    end
+
+    show_textpair = false;
+    show_colorbar = false;
+    if coli == 1 || coli == ncols_J +1
+        show_textpair = true;
+    end
+    if coli == ncols_J || coli == ncols
+        show_colorbar = true;
+    end
+
+    if coli <= ncols_J
+        w_outer_left = w_textMovePhase + w_textpair + (coli - 1) * (w_colormap + w_deltax1_colormap);
+    else
+        w_outer_left = w_textMovePhase * 2 + w_textpair * 2 + (coli - 1) * w_colormap + (ncols_J-2) * w_deltax1_colormap + w_textColorbar + w_deltax2_colormap;
+    end
+    w_outer_diff = w_colormap;
+    w_inner_left = 0;
+    w_inner_right = 0;
+    if show_textpair
+        w_outer_left = w_outer_left - w_textpair;
+        w_outer_diff = w_outer_diff + w_textpair;
+        w_inner_left = w_inner_left + w_textpair;
+    end
+    if show_colorbar
+        w_outer_diff = w_outer_diff + w_textColorbar;
+        w_inner_right = w_inner_right + w_textColorbar;
+    end
+    w_outer_right = fig_width - (w_outer_left + w_outer_diff);
+    
+    for rowi = 1 : nrows
+        
+        % extract sigciCohChanges_flatten
+        event = ePhases{rowi};
+        [~, ~, align2name] = SKT_EventPhase_align2_tAOI_extract(event, animal, pdcond, 'codesavefolder', savecodefolder);
+        pattfile = dir(fullfile(input_folder, [animal  '*ciCohChanges*' lower(pdcond) '*b' baseevent '--' event '_align2' align2name '.mat']));
+        if length(pattfile) ~=1
+            disp('exist file is not only one')
+            return;
+        end
+        ciCohChangesfile = fullfile(input_folder, pattfile(1).name);
+        load(ciCohChangesfile, 'ciCohChanges', 'psedoiCohChanges', 'f_selected',  'T_chnsarea')
+        [sigciCohChanges]= sigciCoh_extract(psedoiCohChanges, ciCohChanges);
+        [sigciCohChanges_flatten, chnPairNames] = ciCohFlatten_chnPairNames_extract(sigciCohChanges, T_chnsarea);
+        
+        
+        % extract outer_top, outer_bottom, inner_top and inner_bottom and set show tag
+        show_condname = false;
+        show_freLabel = false;
+        show_freNum = false;
+        
+        if rowi == 1
+            show_condname = true;
+        end
+        if rowi == nrows
+            show_freLabel = true;
+            show_freNum = true;
+        end
+
+        
+        h_outer_top = h_textAnimal + h_textCond + (rowi - 1) * (h_colormap + h_deltay_colormap);
+        h_outer_diff = h_colormap;
+        h_inner_top = 0;
+        h_inner_bottom = 0;
+        if show_condname
+            h_outer_diff = h_outer_diff + h_textCond;
+            h_outer_top = h_outer_top - h_textCond;
+            h_inner_top = h_inner_top + h_textCond;
+        end
+        if show_freLabel
+            h_outer_diff = h_outer_diff + h_textFreLabel;
+            h_inner_bottom =  h_inner_bottom + h_textFreLabel;
+        end
+        if show_freNum
+            h_outer_diff = h_outer_diff + h_textFreNum;
+            h_inner_bottom =  h_inner_bottom + h_textFreNum; 
+        end
+        h_outer_bottom = fig_height - (h_outer_top + h_outer_diff);
+
+        
+        % outer and inner margin
+        subplot_outerMargin = [w_outer_left h_outer_top w_outer_right h_outer_bottom];
+        subplot_innerposMargin = [w_inner_left h_inner_top w_inner_right h_inner_bottom];
+        
+        % actual plot
+        plot_ciCohHistogram3(sigciCohChanges_flatten, chnPairNames, f_selected, pdcond, 'histClim', [-1 1],...
+            'codesavefolder', '', 'cbarStr', 'ciCohChange', 'cbarTicks', [-1 0 1], ...
+            'show_xticklabels', show_freNum, 'show_yticklabels', show_textpair, 'show_xlabel', show_freLabel, 'show_titlename', show_condname,'show_colorbar', show_colorbar, ...
+            'fig', fig, 'outerposMargin', subplot_outerMargin, 'innerposMargin', subplot_innerposMargin, ...
+            'fontname', fontname);
+        
+    end
+end
 
 %%% save
 print(fullfile(savefolder, savefilename), '-dpng', '-r1000')
 disp('saved figure')
 
 
-function plot_ciCohHistogram2(ciCoh_flatten, chnPairNames, f_selected, titlename, varargin)
+function plot_ciCohHistogram3(ciCoh_flatten, chnPairNames, f_selected, titlename, varargin)
 %
 %   Inputs:
 %       ciCoh_flatten:
@@ -354,7 +359,8 @@ end
 [npairs, nf] = size(ciCoh_flatten);
 if show_xticklabels
     
-    xticklabels = [10 20 30 40];
+    xticks([1:nf])
+    xticklabels(round(f_selected))
     
     set(gca, 'fontsize',fontsize2, 'FontName', fontname)
 else
@@ -385,3 +391,5 @@ if show_colorbar
     set(gca, 'Position', pos);
     clear pos
 end
+
+
