@@ -1,6 +1,4 @@
-function fig_timeStatiscal()
-
-
+function fig_timeStatiscal_freezeExample()
 codefilepath = mfilename('fullpath');
 
 
@@ -19,11 +17,8 @@ addpath(genpath(fullfile(codefolder,'NHPs')));
 addpath(genpath(fullfile(codefolder,'connAnalyTool')));
 addpath(genpath(fullfile(codefolder,'toolbox')));
 
-%% Input & save
-[~, ~, pipelinefolder, outputfolder] = exp_subfolders();
-input_folder_J = fullfile(pipelinefolder, 'NHPs', 'Jo', '0_dataPrep', 'SKT', 'fs500Hz', 'm2_SKTData_SelectTrials');
-input_folder_K = fullfile(pipelinefolder, 'NHPs', 'Kitty', '0_dataPrep', 'SKT', 'fs500Hz', 'm2_segSKTData_SelectTrials_chnOfI');
 
+[~, ~, ~, outputfolder] = exp_subfolders();
 
 savefolder = fullfile(outputfolder, 'results', 'figures');
 savecodefolder = fullfile(savefolder, 'code');
@@ -33,22 +28,109 @@ copyfile2folder(codefilepath, savecodefolder);
 [~, funcname, ~]= fileparts(codefilepath);
 savefilename = funcname;
 
+%% plot figure parameters in pixels
+w_subplot = 360;
+h_subplot_a = 300;
+h_subplot_b1 = 200;
+h_subplot_b2 = 200;
 
-%% plot figure parameters in pixals
-w_timePlot = 360; % width  for the time plot
-h_timePlot = 300; % height for the time plot
-
-w_textTime = 40; % width showing the 'Reachi Time (s)'
-w_textTimeNum = 10; % width showing the ylabel
-w_deltax_timePlots = 50; % x distance between two time plots
+w_delta = 40;
+h_delta_ab = 30;
+h_delta_inb = 10;
 
 
-h_deltay = 15; % y distance between two plots
-h_textAnimal = 40; % height showing the animal, i.e. Animal J
-h_textCondLabel = 30; % height showing the condition label, i.e. Normal, n = 176
 
-fontSize_textAnimal = 12;
-fontname = 'Times New Roman';
+w_ylabel = 40;
+w_yticks = 20;
+w_yright = 50;
+h_xlabel = 30;
+h_xticks = 20;
+h_title = 40;
+
+
+fig_width = w_ylabel + w_yticks*2 + w_subplot * 2 + w_delta + w_yright;
+fig_height = h_subplot_a + h_subplot_b1 + h_subplot_b2 + (h_xlabel + h_xticks) * 2 + h_delta_ab + h_delta_inb;
+
+fig = figure('Units', 'pixels', 'Position', [100 100 fig_width fig_height]);
+
+%%%
+h_top_a = 0;
+h_top_b = h_subplot_a + (h_xlabel + h_xticks) + h_delta_ab;
+
+
+
+%%% plot time statiscal
+fig_timeStatiscal('fig', fig, 'h_top', h_top_a, 'w_timePlot', w_subplot, 'h_timePlot', h_subplot_a, ...
+                  'w_deltax_timePlots', w_delta, ...
+                  'w_textTime', w_ylabel, 'w_textTimeNum', w_yticks,  'h_textAnimal', h_title, 'h_textCondLabel', h_xlabel);
+
+
+%%% plot text (a) and (b)
+w_textab = 40;
+h_textab = 20;
+ta = annotation(fig, 'textbox', 'String', {'(a)'}, 'LineStyle', 'none', 'Units', 'pixels', 'FontSize', 12, 'FontWeight', 'bold', 'FontName', 'Times New Roman');
+pos_left = 0;
+pos_lower = fig_height - h_textab;
+ta.Position = [pos_left pos_lower w_textab h_textab];
+
+tb = annotation(fig, 'textbox', 'String', {'(b)'}, 'LineStyle', 'none', 'Units', 'pixels', 'FontSize', 12, 'FontWeight', 'bold', 'FontName', 'Times New Roman');
+pos_lower = fig_height - (h_top_b + h_textab);
+tb.Position = [pos_left pos_lower w_textab h_textab];
+
+clear ta tb pos pos_left pos_lower
+
+
+%%% save
+print(fullfile(savefolder, savefilename), '-dpng', '-r1000')
+disp('saved figure')
+
+function fig_timeStatiscal(varargin)
+%   Inputs:
+%
+%       Name-Value: 
+%           'fig' - figure handle to show the image (default [] to create a new one)
+%           'h_top' - distance between the subplot top and fig top
+%           'w_timePlot' - width  for the time plot, default 360
+%           'h_timePlot' - height for the time plot, default 300
+%           'w_textTime' - width showing the 'Reachi Time (s)', default 40
+%           'w_textTimeNum' - width showing the ylabel, default 40
+%           'w_deltax_timePlots' - x distance between two time plots, default 50
+%           'h_textAnimal' - height showing the animal, i.e. Animal J, default 40
+%           'h_textCondLabel' - height showing the condition label, i.e. Normal, n = 176, default 30
+
+
+
+% parse params
+p = inputParser;
+addParameter(p, 'fig', [], @(x) assert(isa(x, 'matlab.ui.Figure')));
+addParameter(p, 'h_top', 0, @(x) assert(isscalar(x)&&isnumeric(x)));
+addParameter(p, 'w_timePlot', 360, @(x) assert(isscalar(x)&&isnumeric(x)));
+addParameter(p, 'h_timePlot', 300, @(x) assert(isscalar(x)&&isnumeric(x)));
+addParameter(p, 'w_textTime', 40, @(x) assert(isscalar(x)&&isnumeric(x)));
+addParameter(p, 'w_textTimeNum', 10, @(x) assert(isscalar(x)&&isnumeric(x)));
+addParameter(p, 'w_deltax_timePlots', 50, @(x) assert(isscalar(x)&&isnumeric(x)));
+addParameter(p, 'h_textAnimal', 40, @(x) assert(isscalar(x)&&isnumeric(x)));
+addParameter(p, 'h_textCondLabel', 30, @(x) assert(isscalar(x)&&isnumeric(x)));
+
+
+parse(p,varargin{:});
+fig = p.Results.fig;
+h_top = p.Results.h_top;
+w_timePlot = p.Results.w_timePlot;
+h_timePlot = p.Results.h_timePlot;
+w_textTime = p.Results.w_textTime;
+w_textTimeNum = p.Results.w_textTimeNum;
+w_deltax_timePlots = p.Results.w_deltax_timePlots;
+h_textAnimal = p.Results.h_textAnimal;
+h_textCondLabel = p.Results.h_textCondLabel;
+
+%% Input & save
+[~, ~, pipelinefolder, ~] = exp_subfolders();
+input_folder_J = fullfile(pipelinefolder, 'NHPs', 'Jo', '0_dataPrep', 'SKT', 'fs500Hz', 'm2_SKTData_SelectTrials');
+input_folder_K = fullfile(pipelinefolder, 'NHPs', 'Kitty', '0_dataPrep', 'SKT', 'fs500Hz', 'm2_segSKTData_SelectTrials_chnOfI');
+
+
+
 
 %% Code Start here
 coli_reachonset = 2;
@@ -60,20 +142,17 @@ animals = {'Jo';'Kitty'};
 conds_J = cond_cell_extract('Jo');
 conds_K = cond_cell_extract('Kitty');
 
+if isempty(fig)
+    fig_width = w_textTime + w_textTimeNum*2 + w_timePlot * 2 + w_deltax_timePlots;
+    fig_height = h_textAnimal + h_timePlot + h_textCondLabel;
+    fig = figure('Position', [150 150 fig_width fig_height]);
+    clear fig_width fig_height
+end
 
-fig_width = w_textTime + w_textTimeNum*2 + w_timePlot * 2 + w_deltax_timePlots;
-fig_height = h_textAnimal + h_timePlot + h_textCondLabel;
+pos = get(gcf, 'Position');
+fig_width = pos(3);
+fig_height = pos(4);
 
-fig = figure('Units', 'pixels', 'Position', [100 100 fig_width fig_height]);
-
-%%% plot text (a) and (b)
-w_text = 40;
-h_text = 20;
-t1 = annotation(fig, 'textbox', 'String', {'(a)'}, 'LineStyle', 'none', 'Units', 'pixels', 'FontSize', 12, 'FontWeight', 'bold', 'FontName', fontname);
-pos_left = 0;
-pos_lower = fig_height - h_text;
-t1.Position = [pos_left pos_lower w_text h_text];
-clear t1 pos pos_left pos_lower
 
 %%% plot Reach time 
 for ai = 1 : length(animals)
@@ -137,14 +216,15 @@ for ai = 1 : length(animals)
 
     
     % h_outer_top h_inner_top h_outer_bottom h_inner_bottom
-    h_outer_top = 0;
+    h_outer_top = h_top;
     h_inner_top = 0;
+    h_inner_bottom = 0;
     h_outer_diff = h_timePlot;
     if show_animalLabel
         h_inner_top = h_inner_top + h_textAnimal;
     end
     if show_condLabel
-        h_inner_bottom = h_textCondLabel;
+        h_inner_bottom = h_inner_bottom + h_textCondLabel;
         h_outer_diff = h_outer_diff + h_textCondLabel;
     end
     h_outer_bottom = fig_height -  (h_outer_top + h_outer_diff);
@@ -166,21 +246,18 @@ for ai = 1 : length(animals)
     clear t_reaction
 end
 
-
-
-
-
-
-
 function plot_1timeStatiscal(t_reaction, varargin)
 %   Inputs:
-%       cond_cell:
+%       t_reaction:
 %
 %       Name-Value: 
 %           'fig' - figure handle to show the image (default [] to create a new one)
 %           'innerposMargin' - [left top right bottom]  left, top, right, bottom of distance between outer and inner position default [5 5 5 5]
 %           'outerposMargin' - [left top right bottom] outer pos margin between outer and figure bounder default [5 5 5 5]
 %           'titlename' - title name for showing
+%           'show_xticklabels' - show (true, default) or not show (false) xticklabels
+%           'show_yticklabels' - show (true, default) or not show (false) yticklabels
+%           'show_ylabel' - show (true, default) or not show (false) ylabel
 
 
 % parse params
@@ -246,7 +323,7 @@ if ~isempty(titlename)
     title(titlename, 'FontSize', 12, 'FontWeight', 'bold', 'FontName', fontname)
 end
 if show_ylabel
-    ylabel('Reach Time/s', 'FontSize', 12, 'FontWeight', 'bold', 'FontName', fontname)
+    ylabel('Reach Time (s)', 'FontSize', 12, 'FontWeight', 'bold', 'FontName', fontname)
 end
 
 if show_xticklabels
