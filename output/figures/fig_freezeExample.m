@@ -1,37 +1,63 @@
-function fig_freezeExample()
+function fig_freezeExample(varargin)
+%   Inputs:
+%
+%       Name-Value: 
+%           'fig' - figure handle to show the image (default [] to create a new one)
+%           'h_top' - distance between the subplot top and fig top, default 0
+%           'w_left' - distance between the subplot left and fig left, default 0
+%           'h_sublotb' - width  for the time plot, default 200
+%           'w_subplotb' - height for the time plot, default 360
+%           'h_delta_b' - width  for the time plot, default 20
+%           'w_delta_b' - height for the time plot, default 10
+%           'w_textSpeedFreq' - width  for the time plot, default 30
+%           'w_SpeedFreqTicks' - height for the time plot, default 30
+%           'w_colorbar' - width  for the time plot, default 40
+%           'h_textTime' - height for the time plot, default 30
+%           'h_TimeTicks' - width  for the time plot, default 20
+%           'holdplace_SpeedFreqTicks' - hold place for SpeedFreqTicks (true) or not (false, default) 
 
 
-codefilepath = mfilename('fullpath');
+
+% parse params
+p = inputParser;
+addParameter(p, 'fig', [], @(x) assert(isa(x, 'matlab.ui.Figure')));
+addParameter(p, 'h_top', 0, @(x) assert(isscalar(x)&&isnumeric(x)));
+addParameter(p, 'w_left', 0, @(x) assert(isscalar(x)&&isnumeric(x)));
+addParameter(p, 'h_sublotb', 360, @(x) assert(isscalar(x)&&isnumeric(x)));
+addParameter(p, 'w_subplotb', 300, @(x) assert(isscalar(x)&&isnumeric(x)));
+addParameter(p, 'h_delta_b', 20, @(x) assert(isscalar(x)&&isnumeric(x)));
+addParameter(p, 'w_delta_b', 10, @(x) assert(isscalar(x)&&isnumeric(x)));
+addParameter(p, 'w_textSpeedFreq', 30, @(x) assert(isscalar(x)&&isnumeric(x)));
+addParameter(p, 'w_SpeedFreqTicks', 30, @(x) assert(isscalar(x)&&isnumeric(x)));
+addParameter(p, 'w_colorbar', 40, @(x) assert(isscalar(x)&&isnumeric(x)));
+addParameter(p, 'h_textTime', 30, @(x) assert(isscalar(x)&&isnumeric(x)));
+addParameter(p, 'h_TimeTicks', 20, @(x) assert(isscalar(x)&&isnumeric(x)));
+addParameter(p, 'holdplace_SpeedFreqTicks', false, @(x) assert(islogical(x) && isscalar(x)));
 
 
-% find the codefolder
-tmp = regexp(codefilepath, '.*\code', 'match');
-if length(tmp) ~= 1
-    disp('can not find code path correctly.')
-    return;
-end
-codefolder = tmp{1};
-clear tmp
 
-% add path
-addpath(genpath(fullfile(codefolder,'util')));
-addpath(genpath(fullfile(codefolder,'NHPs')));
-addpath(genpath(fullfile(codefolder,'connAnalyTool')));
-addpath(genpath(fullfile(codefolder,'toolbox')));
 
-%% Input & save
-[~, ~, pipelinefolder, outputfolder] = exp_subfolders();
+parse(p,varargin{:});
+fig = p.Results.fig;
+h_top = p.Results.h_top;
+w_left = p.Results.w_left;
+h_sublotb = p.Results.h_sublotb;
+w_subplotb = p.Results.w_subplotb;
+h_delta_b = p.Results.h_delta_b;
+w_delta_b = p.Results.w_delta_b;
+w_textSpeedFreq = p.Results.w_textSpeedFreq;
+w_SpeedFreqTicks = p.Results.w_SpeedFreqTicks;
+w_colorbar = p.Results.w_colorbar;
+h_textTime = p.Results.h_textTime;
+h_TimeTicks = p.Results.h_TimeTicks;
+holdplace_SpeedFreqTicks = p.Results.holdplace_SpeedFreqTicks;
+ 
+
+
+%% Input 
+[~, ~, pipelinefolder, ~] = exp_subfolders();
 input_Freeze_file = fullfile(pipelinefolder, 'NHPs', 'Kitty', '0_dataPrep', 'SKT', 'fs500Hz', 'm3_fs500Hz_freezeSKTData_EpisodeExtract', 'Kitty_freezeEpisodes_moderate-tThesFreezeReach5s_20150408_bktdt2.mat');
 
-
-
-savefolder = fullfile(outputfolder, 'results', 'figures');
-savecodefolder = fullfile(savefolder, 'code');
-copyfile2folder(codefilepath, savecodefolder);
-
-
-[~, funcname, ~]= fileparts(codefilepath);
-savefilename = funcname;
 
 
 %% Code Start here
@@ -60,23 +86,16 @@ tri_mani = tri;
 clear tri freezeTypeInEpi
 
 %%% plot
-h_sublotb = 200;
-w_subplotb = 360;
-
-
-h_delta_b = 20;
-w_delta_b = 10;
-
-w_textSpeedFreq = 30;
-w_SpeedFreqTicks = 30;
-w_colorbar = 40;
-
-h_textTime = 30;
-h_TimeTicks = 20;
-
-fig_width = w_subplotb * 2 + w_delta_b;
-fig_height = h_sublotb * 2 + h_delta_b;
-fig = figure('Units', 'pixels', 'Position', [150 150 fig_width fig_height]);
+if isempty(fig)
+    fig_width = w_subplotb * 2 + w_delta_b;
+    fig_height = h_sublotb * 2 + h_delta_b;
+    fig = figure('Units', 'pixels', 'Position', [150 150 fig_width fig_height]);
+    clear fig_width fig_height
+end
+pos = get(gcf, 'Position');
+fig_width = pos(3);
+fig_height = pos(4);
+clear pos
 
 ncols = 2;
 nrows = 2;
@@ -97,7 +116,7 @@ for coli = 1: ncols
     end
     
     % w_out_left w_inner_left w_outer_right w_inner_right
-    w_outer_left = w_textSpeedFreq + (coli -1)* (w_subplotb + w_delta_b);
+    w_outer_left = w_left + w_textSpeedFreq + w_SpeedFreqTicks + (coli -1)* (w_subplotb + w_delta_b);
     w_inner_left = 0;
     w_inner_right = 0;
     w_outer_diff = w_subplotb;
@@ -106,15 +125,16 @@ for coli = 1: ncols
         w_inner_left = w_inner_left + w_textSpeedFreq;
         w_outer_diff = w_outer_diff + w_textSpeedFreq;
     end
-    if show_SpeedFreqTicks
+    if show_SpeedFreqTicks || holdplace_SpeedFreqTicks
         w_outer_left = w_outer_left - w_SpeedFreqTicks;
         w_inner_left = w_inner_left + w_SpeedFreqTicks;
         w_outer_diff = w_outer_diff + w_SpeedFreqTicks;
-    end
-    w_outer_right = fig_width - (w_outer_left + w_outer_diff);
+    end   
     if show_Colorbar
         w_inner_right = w_inner_right + w_colorbar;
+        w_outer_diff = w_outer_diff + w_colorbar;
     end
+    w_outer_right = fig_width - (w_outer_left + w_outer_diff);
     
     tri = tris(coli);
     ma = smoothWspeed_trial{tri};
@@ -129,7 +149,7 @@ for coli = 1: ncols
         end
         
         % h_outer_top h_inner_top h_outer_bottom h_inner_bottom
-        h_outer_top = 0;
+        h_outer_top = h_top;
         h_inner_top = 0;
         h_inner_bottom = 0;
         h_outer_diff = h_sublotb;
@@ -188,6 +208,7 @@ function plot_1freezeTrial(ma, ts, varargin)
 %           'show_xticklabels' - show (true, default) or not show (false) yticklabels
 
 
+
 % parse params
 p = inputParser;
 addParameter(p, 'fig', [], @(x) assert(isa(x, 'matlab.ui.Figure')));
@@ -198,6 +219,7 @@ addParameter(p, 'show_xticklabels', true, @(x) assert(islogical(x) && isscalar(x
 addParameter(p, 'show_ylabel', true, @(x) assert(islogical(x) && isscalar(x)));
 addParameter(p, 'show_yticklabels', true, @(x) assert(islogical(x) && isscalar(x)));
 addParameter(p, 'fontname', 'Times New Roman', @ischar);
+
 
 
 
@@ -228,7 +250,7 @@ set(gca, 'OuterPosition', outerpos, 'Position', innerpos)
 
 
 % plot MA
-hp = plot(ax, ts, ma, 'DisplayName','speed'); 
+hp = plot(ax, ts, ma, 'DisplayName','speed', 'LineWidth',2); 
 hold on
 
 if show_xlabel

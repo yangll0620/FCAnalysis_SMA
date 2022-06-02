@@ -40,34 +40,45 @@ h_delta_inb = 10;
 
 
 
-w_ylabel = 40;
+w_ylabel = 60;
 w_yticks = 20;
 w_yright = 50;
 h_xlabel = 30;
 h_xticks = 20;
 h_title = 40;
 
+w_textab = 20;
+h_textab = 20;
 
-fig_width = w_ylabel + w_yticks*2 + w_subplot * 2 + w_delta + w_yright;
+
+fig_width = w_textab +w_ylabel + w_yticks*2 + w_subplot * 2 + w_delta + w_yright;
 fig_height = h_subplot_a + h_subplot_b1 + h_subplot_b2 + (h_xlabel + h_xticks) * 2 + h_delta_ab + h_delta_inb;
 
+close all
 fig = figure('Units', 'pixels', 'Position', [100 100 fig_width fig_height]);
 
 %%%
 h_top_a = 0;
-h_top_b = h_subplot_a + (h_xlabel + h_xticks) + h_delta_ab;
+h_top_b = h_subplot_a + (h_xticks) + h_delta_ab;
+w_left_ab = w_textab;
 
 
 
 %%% plot time statiscal
-fig_timeStatiscal('fig', fig, 'h_top', h_top_a, 'w_timePlot', w_subplot, 'h_timePlot', h_subplot_a, ...
-                  'w_deltax_timePlots', w_delta, ...
-                  'w_textTime', w_ylabel, 'w_textTimeNum', w_yticks,  'h_textAnimal', h_title, 'h_textCondLabel', h_xlabel);
+fig_timeStatiscal('fig', fig, 'h_top', h_top_a, 'w_left', w_left_ab, 'w_timePlot', w_subplot, 'h_timePlot', h_subplot_a, ...
+                  'w_deltax_timePlots', w_delta, 'w_textTime', w_ylabel, 'w_textTimeNum', w_yticks, 'w_hold_yright', w_yright,...
+                   'h_textAnimal', h_title, 'h_textCondLabel', h_xlabel);
+              
+
+              
+fig_freezeExample('fig', fig, 'h_top', h_top_b, 'w_left', w_left_ab, 'w_subplotb', w_subplot, 'h_sublotb', h_subplot_b1, ...
+                  'w_delta_b', w_delta  + h_xticks, 'h_delta_b', h_delta_inb, ...
+                  'w_textSpeedFreq', w_ylabel, 'w_SpeedFreqTicks', w_yticks,  'w_colorbar', w_yright, 'holdplace_SpeedFreqTicks', true, ...
+                  'h_textTime', h_xlabel, 'h_TimeTicks', h_xticks);
+
 
 
 %%% plot text (a) and (b)
-w_textab = 40;
-h_textab = 20;
 ta = annotation(fig, 'textbox', 'String', {'(a)'}, 'LineStyle', 'none', 'Units', 'pixels', 'FontSize', 12, 'FontWeight', 'bold', 'FontName', 'Times New Roman');
 pos_left = 0;
 pos_lower = fig_height - h_textab;
@@ -90,6 +101,7 @@ function fig_timeStatiscal(varargin)
 %       Name-Value: 
 %           'fig' - figure handle to show the image (default [] to create a new one)
 %           'h_top' - distance between the subplot top and fig top
+%           'w_left' - distance between the subplot left and fig left
 %           'w_timePlot' - width  for the time plot, default 360
 %           'h_timePlot' - height for the time plot, default 300
 %           'w_textTime' - width showing the 'Reachi Time (s)', default 40
@@ -97,6 +109,7 @@ function fig_timeStatiscal(varargin)
 %           'w_deltax_timePlots' - x distance between two time plots, default 50
 %           'h_textAnimal' - height showing the animal, i.e. Animal J, default 40
 %           'h_textCondLabel' - height showing the condition label, i.e. Normal, n = 176, default 30
+%           'w_hold_yright' - width holding on the right, default 0 
 
 
 
@@ -104,6 +117,7 @@ function fig_timeStatiscal(varargin)
 p = inputParser;
 addParameter(p, 'fig', [], @(x) assert(isa(x, 'matlab.ui.Figure')));
 addParameter(p, 'h_top', 0, @(x) assert(isscalar(x)&&isnumeric(x)));
+addParameter(p, 'w_left', 0, @(x) assert(isscalar(x)&&isnumeric(x)));
 addParameter(p, 'w_timePlot', 360, @(x) assert(isscalar(x)&&isnumeric(x)));
 addParameter(p, 'h_timePlot', 300, @(x) assert(isscalar(x)&&isnumeric(x)));
 addParameter(p, 'w_textTime', 40, @(x) assert(isscalar(x)&&isnumeric(x)));
@@ -111,11 +125,13 @@ addParameter(p, 'w_textTimeNum', 10, @(x) assert(isscalar(x)&&isnumeric(x)));
 addParameter(p, 'w_deltax_timePlots', 50, @(x) assert(isscalar(x)&&isnumeric(x)));
 addParameter(p, 'h_textAnimal', 40, @(x) assert(isscalar(x)&&isnumeric(x)));
 addParameter(p, 'h_textCondLabel', 30, @(x) assert(isscalar(x)&&isnumeric(x)));
+addParameter(p, 'w_hold_yright', 0, @(x) assert(isscalar(x)&&isnumeric(x)));
 
 
 parse(p,varargin{:});
 fig = p.Results.fig;
 h_top = p.Results.h_top;
+w_left = p.Results.w_left;
 w_timePlot = p.Results.w_timePlot;
 h_timePlot = p.Results.h_timePlot;
 w_textTime = p.Results.w_textTime;
@@ -123,8 +139,11 @@ w_textTimeNum = p.Results.w_textTimeNum;
 w_deltax_timePlots = p.Results.w_deltax_timePlots;
 h_textAnimal = p.Results.h_textAnimal;
 h_textCondLabel = p.Results.h_textCondLabel;
+w_hold_yright = p.Results.w_hold_yright;
 
-%% Input & save
+
+
+%% Input 
 [~, ~, pipelinefolder, ~] = exp_subfolders();
 input_folder_J = fullfile(pipelinefolder, 'NHPs', 'Jo', '0_dataPrep', 'SKT', 'fs500Hz', 'm2_SKTData_SelectTrials');
 input_folder_K = fullfile(pipelinefolder, 'NHPs', 'Kitty', '0_dataPrep', 'SKT', 'fs500Hz', 'm2_segSKTData_SelectTrials_chnOfI');
@@ -152,6 +171,7 @@ end
 pos = get(gcf, 'Position');
 fig_width = pos(3);
 fig_height = pos(4);
+clear pos
 
 
 %%% plot Reach time 
@@ -197,10 +217,10 @@ for ai = 1 : length(animals)
     
     
     % w_out_left w_inner_left w_outer_right w_inner_right
-    w_outer_left = w_textTime + (ai -1) * (w_textTimeNum + w_timePlot + w_deltax_timePlots);
+    w_outer_left = w_left + w_textTime + (ai -1) * (w_textTimeNum + w_timePlot + w_deltax_timePlots);
     w_inner_left = 0;
-    w_outer_diff = w_timePlot;
-    w_inner_right = 0;
+    w_outer_diff = w_timePlot + w_hold_yright;
+    w_inner_right = w_hold_yright;
     if show_timeLabel
         w_outer_left = w_outer_left - w_textTime;
         w_inner_left = w_inner_left + w_textTime;
@@ -208,11 +228,10 @@ for ai = 1 : length(animals)
     end
     if show_timeNum
         w_outer_diff = w_outer_diff + w_textTimeNum;
+        w_inner_left = w_inner_left + w_textTimeNum;
     end
     w_outer_right = fig_width - (w_outer_left + w_outer_diff);
-    if ai == 2
-        w_outer_right = w_outer_right + 10;
-    end
+
 
     
     % h_outer_top h_inner_top h_outer_bottom h_inner_bottom
