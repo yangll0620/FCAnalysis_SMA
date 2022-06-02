@@ -46,10 +46,11 @@ w_textColorbar = 80; % width showing the colarbar
 
 h_deltay_colormap = 15; % y distance between two color map 
 
+h_textAnimal = 40; % height showing the animal, i.e. Animal J
+h_textCond = 10; % height showing the condition, i.e. Mild-Normal
 h_textFrenum = 30; % height showing the frequency number, i.e. 10 12
 h_textFrelabel = 30; % height showing the frequency label, i.e. Frequences/Hz
-h_textCond = 10; % height showing the condition, i.e. Mild-Normal
-h_textAnimal = 40; % height showing the condition, i.e. Mild-Normal
+
 
 
 fontsize1 = 11;
