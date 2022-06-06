@@ -308,9 +308,7 @@ title([animal ' Rest PSD in ' strrep(brainarea, '_', '-')])
 
 % save figure
 savename = fullfile(savefolder, [animal 'Rest_psd_' brainarea]);
-print(gcf, savename, '-painters', '-depsc')
-
-
+saveas(gcf, savename, 'png')
 close gcf
 
 clear psd_allsegs_normal  psd_allsegs_moderate

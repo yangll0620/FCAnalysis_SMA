@@ -113,7 +113,7 @@ for i = 1 : length(cond_cell)
     
     
     %%% plot spectrogram across all trials  
-    [lfptrials, fs, T_chnsarea] = lfp_goodTrials_align2(files, align2, tdur_trial, t_minmax_reach, t_minmax_return);
+    [lfptrials, fs, T_chnsarea] = lfp_goodTrials_align2(files, align2, tdur_trial, t_minmax_reach);
     mask_noisyChns = cellfun(@(x) contains(x, noisy_chns), T_chnsarea.brainarea);
     mask_notDBS_notM1 = ~strcmp(T_chnsarea.brainarea, 'M1') & ~strcmp(T_chnsarea.electype, 'DBS');
     mask_usedChns = ~(mask_noisyChns | mask_notDBS_notM1);

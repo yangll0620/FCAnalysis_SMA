@@ -39,6 +39,8 @@ addParameter(p, 'show_yticklabels', true, @(x) assert(islogical(x) && isscalar(x
 addParameter(p, 'show_xlabel', true, @(x) assert(islogical(x) && isscalar(x)));
 addParameter(p, 'show_titlename', true, @(x) assert(islogical(x) && isscalar(x)));
 addParameter(p, 'show_colorbar', true, @(x) assert(islogical(x) && isscalar(x)));
+addParameter(p, 'margin_inner', [80 30 15 40], @(x) assert(isnumeric(x) && isvector(x) && length(x)==4));
+addParameter(p, 'margin_outer', [5 5 5 5], @(x) assert(isnumeric(x) && isvector(x) && length(x)==4));
 
 parse(p,varargin{:});
 codesavefolder = p.Results.codesavefolder;
@@ -54,6 +56,8 @@ show_yticklabels = p.Results.show_yticklabels;
 show_xlabel = p.Results.show_xlabel;
 show_titlename = p.Results.show_titlename;
 show_colorbar = p.Results.show_colorbar;
+margin_inner = p.Results.margin_inner; % left, top, right, bottom of distance between outer and inner position
+margin_outer = p.Results.margin_outer; % left, top, right, bottom margin of outer position
 
 
 % copy code to savefolder if not empty
@@ -71,15 +75,13 @@ colormap(jet)
 
 
 %%% show inf
-dispix_outinpos = [80 30 15 40]; % left, top, right, bottom of distance between outer and inner position
-margin_outpos = [5 5 5 5]; % left, top, right, bottom margin of outer position
 [npairs, nf] = size(ciCoh_flatten);
 if show_xticklabels
     xticks([1:nf])
     xticklabels(round(f_selected))
 else
     xticks([]);
-    dispix_outinpos(4) = dispix_outinpos(4)-10;
+    margin_inner(4) = margin_inner(4)-10;
 end
 
 if show_yticklabels
@@ -87,18 +89,18 @@ if show_yticklabels
     set(gca,'YTickLabel',chnPairNames,'fontsize',10,'FontWeight','normal')
 else 
     yticks([]);
-    dispix_outinpos(1) = 0;
+    margin_inner(1) = 0;
 end
 
 if show_xlabel
-    xlabel('Freqs/Hz')
+    xlabel('Frequence (Hz)', 'FontSize', 12, 'FontWeight', 'bold', 'FontName','Times New Roma')
 else
-    dispix_outinpos(4) = dispix_outinpos(4)-30;
+    margin_inner(4) = margin_inner(4)-30;
 end
 if show_titlename
     title(titlename, 'FontSize', 10, 'FontWeight', 'normal')
 else
-    dispix_outinpos(2) = 0;
+    margin_inner(2) = 0;
 end
 
 if show_colorbar
@@ -108,12 +110,12 @@ if show_colorbar
         c.Ticks = cbarTicks;
     end
 else
-    dispix_outinpos(3) = 0;
+    margin_inner(3) = 0;
 end
 
 % set axes position
-outpos = [margin_outpos(1) margin_outpos(4) fig_width-margin_outpos(1)-margin_outpos(3) fig_height-margin_outpos(2)-margin_outpos(4)];
-innerpos = [outpos(1)+dispix_outinpos(1) outpos(2)+dispix_outinpos(4) outpos(3)-dispix_outinpos(1)-dispix_outinpos(3) outpos(4)-dispix_outinpos(2)-dispix_outinpos(4)];
+outpos = [margin_outer(1) margin_outer(4) fig_width-margin_outer(1)-margin_outer(3) fig_height-margin_outer(2)-margin_outer(4)];
+innerpos = [outpos(1)+margin_inner(1) outpos(2)+margin_inner(4) outpos(3)-margin_inner(1)-margin_inner(3) outpos(4)-margin_inner(2)-margin_inner(4)];
 set(gca, 'Units', 'pixels');
 set(gca, 'OuterPosition', outpos, 'Position', innerpos)
 set(gca,'CLim', histClim)

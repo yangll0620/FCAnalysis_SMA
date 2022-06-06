@@ -2,6 +2,8 @@ function m4_fs500Hz_FreezeSKT_earlyMiddLateFreeze_imCohUsingFFT(freezePhase, var
 % 
 %   Usage
 %       m4_fs500Hz_FreezeSKT_earlyMiddLateFreeze_imCohUsingFFT('earlyFreeze', 'ntrialsUsed', 84);
+%       m4_fs500Hz_FreezeSKT_earlyMiddLateFreeze_imCohUsingFFT('middleFreeze', 'ntrialsUsed', 84);
+%       m4_fs500Hz_FreezeSKT_earlyMiddLateFreeze_imCohUsingFFT('lateFreeze', 'ntrialsUsed', 84);
 %
 %   Input
 %      freezePhase : one of {'earlyFreeze', 'middleFreeze', 'lateFreeze'}
@@ -188,7 +190,7 @@ end
 
 %%%----------- case no psedociCohs variable or psedociCohs nshuffle < shuffleN_psedoTest -------- %%%
 psedoVar = whos('-file',ciCohPhasefile, 'psedociCohs');
-if isempty(psedoVar) || psedoVar.size(4)< shuffleN_psedoTest
+if isempty(psedoVar) 
 
     files = dir(fullfile(inputfolder_Freeze, ['*' pdcond '*.mat']));
     [lfpsegs_freeze, fs, T_chnsarea, ~]= seg2ShortSegments_wPhase(files, 'tseg', seg_tseg, 'align2', seg_align2, 'tdur', seg_tdur);
@@ -242,10 +244,16 @@ nshuffle = size(psedociCohs.(combiFreeName), 4);
 imgtitle_prefix = [file_prefix];
 saveimgfile_prefix = [saveimgfile_prefix];
 
+show_freqNumLabel = false;
+if strcmp(freezePhase, 'lateFreeze')
+    show_freqNumLabel = true;
+end
 
 titlename = [imgtitle_prefix  ', nsegs = ' num2str(nsegs.(combiFreeName)) ', nshuffle= ' num2str(nshuffle)];
 plot_ciCohHistogram(sigciCoh_flatten, chnPairNames, f_selected, titlename, ...
-    'fig_width', 500, 'fig_height', 200, 'codesavefolder', savecodefolder);
+    'fig_width', 400, 'fig_height', 200, 'margin_inner', [5 5 50 40],...
+    'codesavefolder', savecodefolder, ...
+    'show_titlename', false, 'show_xlabel', show_freqNumLabel, 'show_yticklabels', false);
 saveimgname = [saveimgfile_prefix '.' image_type];
 saveas(gcf, fullfile(savefolder, saveimgname), image_type);
 
@@ -269,6 +277,8 @@ function [lfpsegs_freeze, fs, T_chnsarea, combFreeTypes]= seg2ShortSegments_wPha
 %   
 %           tdur: the time duration respect to align2, only needed when align2 not ''
 %
+%           tstart: start used time point, default 0
+%
 if isempty(files)
     disp('files for seg2ShortSegments empty!')
     
@@ -285,10 +295,12 @@ p = inputParser;
 addParameter(p, 'tseg', 0.2, @isscalar);
 addParameter(p, 'align2', '', @isstr);
 addParameter(p, 'tdur', [], @isvector);
+addParameter(p, 'tstart', 0, @isvector);
 parse(p,varargin{:});
 tseg = p.Results.tseg;
 align2 = p.Results.align2;
 tdur = p.Results.tdur;
+tstart = p.Results.tstart;
 if isempty(align2)
    tdur = []; 
 end
@@ -338,7 +350,7 @@ for fi = 1: length(files)
             continue;
         end
         if isempty(tdur)
-            t_str = freezEpisodes{frzi}.freezeTPhaseS(1);
+            t_str = freezEpisodes{frzi}.freezeTPhaseS(1) + tstart;
             t_end = freezEpisodes{frzi}.freezeTPhaseS(2);
         else
             switch align2

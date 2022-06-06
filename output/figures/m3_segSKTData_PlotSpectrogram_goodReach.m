@@ -1,4 +1,4 @@
-function m3_fs500Hz_SKTData_PlotSpectrogram()
+function m3_segSKTData_PlotSpectrogram_goodReach()
 %  extract lfp data respect to reachonset
 % 
 %  return:
@@ -25,14 +25,26 @@ addpath(genpath(fullfile(codefolder,'NHPs')));
 %% global variables
 
 % animal
-animal = animal_extract(codecorresfolder);
-
+if ismac
+    % Code to run on Mac platform
+elseif isunix
+    % Code to run on Linux platform
+    
+    [fi, j] = regexp(codecorresfolder, ['NHPs', '/', '[A-Za-z]*']);
+elseif ispc
+    % Code to run on Windows platform
+    
+    [fi, j] = regexp(codecorresfolder, ['NHPs', '\\', '[A-Za-z]*']);
+else
+    disp('Platform not supported')
+end
+animal = codecorresfolder(fi + length('NHPs') + 1:j);
 
 
 %%  input setup
 
 % input folder: extracted raw rest data with grayMatter 
-inputfolder = fullfile(codecorresParentfolder, 'm2_SKTData_SelectTrials');
+inputfolder = fullfile(codecorresParentfolder, 'm2_segSKTData_SelectTrials_chnOfI');
 
 cond_cell = cond_cell_extract(animal);
 [t_minmax_reach_normal, t_minmax_return_normal, t_minmax_reach_mild, t_minmax_return_mild, t_minmax_reach_moderate, t_minmax_return_moderate] ...
@@ -65,23 +77,15 @@ end
 
 % align to event
 align2 = SKTEvent.ReachOnset;
-
-
-f_AOI = [8 40];
-t_AOI = [-0.5 0.5];
-twin = 0.2;
-toverlap = 0.18;
-
+coli_align2 = uint32(align2);
 
 % saved fig format
 savefig_format = 'tif';
 
 %% save setup
 savefolder = codecorresfolder;
-savecodefolder = fullfile(savefolder, 'code');
-copyfile2folder(codefilepath, savecodefolder);
 
-%% Start Code Here
+%% starting: narrow filter the lfp data of all the files
 
 % save trials 
 reply = input('save trials or no y/n [n] ', 's');
@@ -102,23 +106,24 @@ for i = 1 : length(cond_cell)
     pdcond = cond_cell{i};
     
     files = dir(fullfile(inputfolder, ['*_' pdcond '_*.mat']));
+    if isempty(files)
+        continue
+    end
     
     eval(['tdur_trial = tdur_trial_' pdcond ';']);
     eval(['t_minmax_reach = t_minmax_reach_' pdcond ';']);
     eval(['t_minmax_return = t_minmax_return_' pdcond ';']);
     
     
-    %%% plot spectrogram across all trials  
-    [lfptrials, fs, T_chnsarea] = lfp_goodTrials_align2(files, align2, tdur_trial, t_minmax_reach);
+    %%% plot spectrogram across all trials
+    [lfptrials, fs, T_chnsarea] = lfpseg_selectedTrials_align2(files, align2, tdur_trial);
     mask_noisyChns = cellfun(@(x) contains(x, noisy_chns), T_chnsarea.brainarea);
     mask_notDBS_notM1 = ~strcmp(T_chnsarea.brainarea, 'M1') & ~strcmp(T_chnsarea.electype, 'DBS');
     mask_usedChns = ~(mask_noisyChns | mask_notDBS_notM1);
     T_chnsarea = T_chnsarea(mask_usedChns, :); T_chnsarea.chni = [1: height(T_chnsarea)]';
     lfptrials = lfptrials(mask_usedChns, :, :);
     
-    plot_spectrogram_acrossTrials(lfptrials, T_chnsarea, tdur_trial, fs, animal, pdcond, align2, ...
-                                  'f_AOI', f_AOI, 't_AOI', t_AOI, 'twin', twin, 'toverlap', toverlap, ... 
-                                  'savefolder', savefolder, 'savefig_format', savefig_format);
+    plot_spectrogram_acrossTrials(lfptrials, T_chnsarea, tdur_trial, fs, animal, pdcond, align2, savefolder, savefig_format);
     saveas(gcf, fullfile(savefolder, [animal '_' pdcond]), savefig_format);
     close gcf
     
@@ -146,25 +151,25 @@ function plot_spectrogram_acrossTrials(lfp_phase_trials, T_chnsarea, tdur_trial,
 % plot lfpdata of all the channels: nchns * ntemp * ntrials
 
 
-% parse params
-p = inputParser;
-addParameter(p, 'f_AOI', [8 40], @(x) assert(isnumeric(x) && isvector(x) && length(x)==2));
-addParameter(p, 't_AOI', [-0.5 0.5], @(x) assert(isnumeric(x) && isvector(x) && length(x)==2));
-addParameter(p, 'twin', 0.2, @(x) assert(isnumeric(x) && isscalar(x)));
-addParameter(p, 'toverlap', 0.18, @(x) assert(isnumeric(x) && isscalar(x)));
-addParameter(p, 'savefolder', pwd, @isstr);
-addParameter(p, 'savefig_format', '.tif', @isstr);
+if length(varargin) >= 1
+    savefolder = varargin{1};
+else
+    savefolder = pwd;
+end
 
+if length(varargin) >= 2
+    savefig_format = varargin{2};
+else
+    savefig_format = 'tif';
+end
 
-% parse parameters
-parse(p,varargin{:});
-f_AOI = p.Results.f_AOI;
-t_AOI = p.Results.t_AOI;
-twin = p.Results.twin;
-toverlap = p.Results.toverlap;
-savefolder = p.Results.savefolder;
-savefig_format = p.Results.savefig_format;
+twin = 0.2;
+toverlap = 0.18;
+f_AOI = [8 40];
+t_AOI = [-0.5 0.5];
 
+nwin = round(twin * fs);
+noverlap = round(toverlap * fs);
 
 
 % subplot/Figure parameters
@@ -182,8 +187,38 @@ subp_height = 0.12;
 supb_deltaX = 0.02;
 supb_deltaY = 0.015;
 
-[psd_allchns, freqs_plot, times_plot] = calc_spectrogram_acrossTrials(lfp_phase_trials, tdur_trial, fs, ...
-                                        'f_AOI', f_AOI, 't_AOI', t_AOI, 'twin', twin, 'toverlap', toverlap);
+
+% calculate psd for each chn across trials
+psd_allchns = [];
+for chi = 1 : size(lfp_phase_trials, 1)
+    psds = []; %  psds: nf * nt * ntrials
+    for tri = 1: size(lfp_phase_trials, 3)
+        x = lfp_phase_trials(chi, :, tri);
+        [~, freqs, times, ps] = spectrogram(x, nwin, noverlap,[],fs); % ps: nf * nt
+        psds = cat(3, psds, ps);
+        
+        clear x ps
+    end
+    % convert into dB
+    psds = 10 * log10(psds);
+    psd = mean(psds, 3); % psd: nf * nt
+    
+    % select freqs/times and corresponding psd
+    idx_f = (freqs >= f_AOI(1) &  freqs <=f_AOI(2));
+    freqs_plot =  freqs(idx_f);
+    
+    times = times + tdur_trial(1);
+    idx_t = (times >= t_AOI(1) &  times <=t_AOI(2));
+    times_plot = times(idx_t);
+    
+    psd_plot = psd(idx_f, idx_t);
+    
+    % gauss filted
+    psd_plot = imgaussfilt(psd_plot,'FilterSize',[3,11]);
+    
+    psd_allchns = cat(3, psd_allchns, psd_plot); % psd_allchns: nf * nt * nchns
+    clear psds psd psd_plot idx_t idx_f
+end
 
 % plot spectrogram
 % Group chns into STN, GP and others
@@ -192,7 +227,7 @@ mask_GP = contains(T_chnsarea.brainarea, 'gp');
 mask_Others = ~(mask_STN | mask_GP);
 idxGroups = [{find(mask_STN)}; {find(mask_GP)}; {find(mask_Others)}];
 idxGroupNames = {'STN'; 'GP'; 'Others'};
-[clim_Spectrogram_STN, clim_Spectrogram_GP, clim_Spectrogram_Others] = clim_SKTSpectrogram_extract(animal, 'codesavefolder', fullfile(savefolder, 'code'));
+[clim_Spectrogram_STN, clim_Spectrogram_GP, clim_Spectrogram_Others] = clim_SKTSpectrogram_extract(animal);
 ntrials = size(lfp_phase_trials, 3);
 
 fig = figure(); 
@@ -257,7 +292,7 @@ for idxGi = 1 : length(idxGroups)
         colormap(jet)
         colorbar('FontSize', 9)
         ylabel('Frequency(Hz)', 'FontSize', 12, 'FontWeight', 'bold')
-        xlabel('time/s', 'FontSize', 112, 'FontWeight', 'bold')
+        xlabel('time/s', 'FontSize', 12, 'FontWeight', 'bold')
         xtls = xticklabels(ax_sep);
         xtls{cellfun(@(x) strcmp(x, '0'), xtls)} = char(align2);
         xticklabels(ax_sep, xtls)
@@ -286,138 +321,6 @@ for idxGi = 1 : length(idxGroups)
     clear clim
     
 end
-end
-
-
-function [psd_allchns, freqs_plot, times_plot] = calc_spectrogram_acrossTrials(lfp_phase_trials, tdur_trial, fs, varargin)
-% calc spectrogram of lfp_phase_trials: nchns * ntemp * ntrials
-%   Inputs:
-%       lfp_phase_trials: nchns * ntemp * ntrials
-%
-%   Returns:
-%       psd_allchns: nf * nt * nchns
-%       freqs_plot: nf * 1
-%       times_plot: nt * 1
-
-
-% parse params
-p = inputParser;
-addParameter(p, 'f_AOI', [8 40], @(x) assert(isnumeric(x) && isvector(x) && length(x)==2));
-addParameter(p, 't_AOI', [-0.5 0.5], @(x) assert(isnumeric(x) && isvector(x) && length(x)==2));
-addParameter(p, 'twin', 0.2, @(x) assert(isnumeric(x) && isscalar(x)));
-addParameter(p, 'toverlap', 0.18, @(x) assert(isnumeric(x) && isscalar(x)));
-
-
-% parse parameters
-parse(p,varargin{:});
-f_AOI = p.Results.f_AOI;
-t_AOI = p.Results.t_AOI;
-twin = p.Results.twin;
-toverlap = p.Results.toverlap;
-
-
-%% Code Start here
-nwin = round(twin * fs);
-noverlap = round(toverlap * fs);
-
-
-% calculate psd for each chn across trials
-psd_allchns = [];
-for chi = 1 : size(lfp_phase_trials, 1)
-    psds = []; %  psds: nf * nt * ntrials
-    for tri = 1: size(lfp_phase_trials, 3)
-        x = lfp_phase_trials(chi, :, tri);
-        [~, freqs, times, ps] = spectrogram(x, nwin, noverlap,[],fs); % ps: nf * nt
-        psds = cat(3, psds, ps);
-        
-        clear x ps
-    end
-    % convert into dB
-    psds = 10 * log10(psds);
-    psd = mean(psds, 3); % psd: nf * nt
-    
-    % select freqs/times and corresponding psd
-    idx_f = (freqs >= f_AOI(1) &  freqs <=f_AOI(2));
-    freqs_plot =  freqs(idx_f);
-    
-    times = times + tdur_trial(1);
-    idx_t = (times >= t_AOI(1) &  times <=t_AOI(2));
-    times_plot = times(idx_t);
-    
-    psd_plot = psd(idx_f, idx_t);
-    
-    % gauss filted
-    psd_plot = imgaussfilt(psd_plot,'FilterSize',[3,11]);
-    
-    psd_allchns = cat(3, psd_allchns, psd_plot); % psd_allchns: nf * nt * nchns
-    clear psds psd psd_plot idx_t idx_f
-end
-
-end
-
-
-function [psd_allchns_alltrials, freqs_plot, times_plot] = calc_spectrogram_perTrial(lfp_phase_trials, tdur_trial, fs, varargin)
-% calc spectrogram of lfp_phase_trials: nchns * ntemp * ntrials
-%   Inputs:
-%       lfp_phase_trials: nchns * ntemp * ntrials
-%
-%   Returns:
-%       psd_allchns: nf * nt  * ntrials * nchns
-%       freqs_plot: nf * 1
-%       times_plot: nt * 1
-
-
-% parse params
-p = inputParser;
-addParameter(p, 'f_AOI', [8 40], @(x) assert(isnumeric(x) && isvector(x) && length(x)==2));
-addParameter(p, 't_AOI', [-0.5 0.5], @(x) assert(isnumeric(x) && isvector(x) && length(x)==2));
-addParameter(p, 'twin', 0.2, @(x) assert(isnumeric(x) && isscalar(x)));
-addParameter(p, 'toverlap', 0.18, @(x) assert(isnumeric(x) && isscalar(x)));
-
-
-% parse parameters
-parse(p,varargin{:});
-f_AOI = p.Results.f_AOI;
-t_AOI = p.Results.t_AOI;
-twin = p.Results.twin;
-toverlap = p.Results.toverlap;
-
-
-%% Code Start here
-nwin = round(twin * fs);
-noverlap = round(toverlap * fs);
-
-
-% calculate psd for each chn across trials
-psd_allchns_alltrials = [];
-for chi = 1 : size(lfp_phase_trials, 1)
-    psds = []; %  psds: nf * nt * ntrials
-    for tri = 1: size(lfp_phase_trials, 3)
-        x = lfp_phase_trials(chi, :, tri);
-        [~, freqs, times, ps] = spectrogram(x, nwin, noverlap,[],fs); % ps: nf * nt
-        psds = cat(3, psds, ps);
-        
-        clear x ps
-    end
-    % convert into dB
-    psds = 10 * log10(psds);
-    
-    
-    % select freqs/times and corresponding psd
-    idx_f = (freqs >= f_AOI(1) &  freqs <=f_AOI(2));
-    freqs_plot =  freqs(idx_f);
-    
-    times = times + tdur_trial(1);
-    idx_t = (times >= t_AOI(1) &  times <=t_AOI(2));
-    times_plot = times(idx_t);
-    
-    psd_plot = psds(idx_f, idx_t, :);
-    
-    
-    psd_allchns_alltrials = cat(4, psd_allchns_alltrials, psd_plot); % psd_allchns: nf * nt * ntrials * nchns
-    clear psds psd psd_plot idx_t idx_f
-end
-
 end
 
 
@@ -621,12 +524,7 @@ for tri = 1: ntrials
             else
                 xticks([])
             end
-            if strcmp(pdcond, 'normal')
-                ylabel('Frequency(Hz)')
-            else
-                yticks([])
-            end
-            
+            ylabel('Frequency(Hz)')
             
             % plot reach onset line
             hold on;
@@ -678,5 +576,122 @@ for tri = 1: ntrials
     clear ma_WSpeed ma_W_X ma_W_Y ma_W_Z times_plot_ma
     clear fig psd_allchns_plot time_plot_lfp freqs_plot
     clear savefile
+end
+end
+
+
+function [lfptrials, fs_lfp, T_chnsarea] = lfpseg_selectedTrials_align2(files, align2, tdur_trial, varargin)
+% extract lfp seg data respect to targetonset, reachonset, reach and returnonset separately
+% [lfptrials, fs, T_chnsarea] = lfpseg_selectedTrials_align2PeakV(files, [t_AOI(1) t_AOI(2)], 'codesavefolder', savecodefolder);
+%
+%   not include trials with t_reach <0.2s
+% 
+%         Args:
+%             align2: the event to be aligned 
+% 
+%             tdur_trial: the duration of extracted trials respected to event(e.g. [-0.5 0.6])
+%             
+%
+%       Name-Value: 
+%           'codesavefolder' - code saved folder
+% 
+%         return:
+%             lfptrials: nchns * ntemp * ntrials
+% 
+%             chnAreas:
+% 
+%             fs:
+
+
+% parse params
+p = inputParser;
+addParameter(p, 'codesavefolder', '', @isstr);
+parse(p,varargin{:});
+
+% copy code to savefolder if not empty
+codesavefolder = p.Results.codesavefolder;
+if ~isempty(codesavefolder) 
+    copyfile2folder(mfilename('fullpath'), codesavefolder);
+end
+
+coli_align2 = uint32(align2);
+coli_reachonset = uint32(SKTEvent.ReachOnset);
+coli_reach = uint32(SKTEvent.Reach);
+
+t_minmax_reach = 0.2;
+
+load(fullfile(files(1).folder, files(1).name),  'fs_lfp', 'T_chnsarea');
+
+nfiles = length(files);
+lfptrials = [];
+for filei = 1 : nfiles
+    
+    % load data, lfpdata: [nchns, ntemps, ntrials]
+    filename = files(filei).name;
+    load(fullfile(files(filei).folder, filename), 'lfpdata', 'T_idxevent_lfp', 'selectedTrials', 'T_idxevent_ma', 'smoothWspeed_trial', 'fs_ma');
+    
+    if(height(T_idxevent_lfp) == 1)
+        disp([filename ' has only 1 trial, skip!']);
+        continue;
+    end
+    
+    
+    ntrials = length(lfpdata);
+    for tri = 1: ntrials
+        
+        % ignore trials marked with 0
+        if ~selectedTrials(tri)
+            continue
+        end
+        
+        % select trials based on reach duration
+        t_reach = (T_idxevent_lfp{tri, coli_reach} - T_idxevent_lfp{tri, coli_reachonset}) / fs_lfp;
+        if t_reach < t_minmax_reach 
+            clear t_reach
+            continue
+        end
+        
+        if align2 == SKTEvent.PeakV
+            % find peakV and its timepoint
+            idx_reachonset_ma = T_idxevent_ma{tri, coli_reachonset};
+            idx_reach_ma = T_idxevent_ma{tri, coli_reach};
+            [~, idx] = max(smoothWspeed_trial{tri}(idx_reachonset_ma: idx_reach_ma, 1));
+            idx_peakV_ma = idx + idx_reachonset_ma -1;
+            t_reachonset2peakV = (idx_peakV_ma - idx_reachonset_ma)/ fs_ma;
+            t_peakV2reach = (idx_reach_ma - idx_peakV_ma)/ fs_ma;
+            
+            if t_reachonset2peakV < abs(tdur_trial(1)) || t_peakV2reach < tdur_trial(2)
+                clear idx idx_reachonset_ma idx_reach_ma idx_peakV_ma
+                clear t_reachonset2peakV  t_peakV2reach
+                continue;
+            end
+            
+            % extract trial with t_dur
+            idx_peakV_lfp = round(idx_peakV_ma / fs_ma * fs_lfp);
+            idx_time0 = idx_peakV_lfp;
+            
+            clear idx idx_reachonset_ma idx_reach_ma idx_peakV_ma
+            clear t_reachonset2peakV  t_peakV2reach
+            clear idx_peakV_lfp
+        else
+            idx_time0 = T_idxevent_lfp{tri, coli_align2}; 
+        end
+        
+        
+        % extract phase for 1 trial
+        lfp_1trial = lfpdata{tri};
+        idxdur = round(tdur_trial * fs_lfp) + idx_time0;
+        if idxdur(1) == 0
+            idxdur(1) = 1;
+        else
+            idxdur(1) = idxdur(1) + 1;
+        end
+        lfp_phase_1trial = lfp_1trial(:,idxdur(1) :idxdur(2));
+           
+        % cat into lfptrials
+        lfptrials = cat(3, lfptrials, lfp_phase_1trial);
+        
+        clear t_reach idxdur lfp_phase_1trial lfp_1trial
+    end
 end
 end

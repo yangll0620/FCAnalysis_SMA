@@ -1,4 +1,4 @@
-function m3_segSKTData_PlotSpectrogram_goodReach()
+function MS_m3_segSKTData_PlotSpectrogram()
 %  extract lfp data respect to reachonset
 % 
 %  return:
@@ -44,7 +44,7 @@ animal = codecorresfolder(fi + length('NHPs') + 1:j);
 %%  input setup
 
 % input folder: extracted raw rest data with grayMatter 
-inputfolder = fullfile(codecorresParentfolder, 'm2_segSKTData_SelectTrials_goodReach');
+inputfolder = fullfile(codecorresParentfolder, 'm2_SKTData_SelectTrials');
 
 cond_cell = cond_cell_extract(animal);
 [t_minmax_reach_normal, t_minmax_return_normal, t_minmax_reach_mild, t_minmax_return_mild, t_minmax_reach_moderate, t_minmax_return_moderate] ...

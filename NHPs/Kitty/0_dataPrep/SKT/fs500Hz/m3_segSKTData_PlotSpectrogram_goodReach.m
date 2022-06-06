@@ -309,6 +309,7 @@ for idxGi = 1 : length(idxGroups)
         title(ax_sep, [animal ' ' pdcond ':' brainarea ', ntrials = ' num2str(ntrials)]);
         savefile_sep = fullfile(savefolder, [animal '_sep_' pdcond '_' brainarea]);
         saveas(fig_sep, savefile_sep, savefig_format);
+        print(fig_sep, savefile_sep, '-painters', '-depsc')
         close(fig_sep)
         
         clear fig_sep ax_sep  savefile_sep  xtls

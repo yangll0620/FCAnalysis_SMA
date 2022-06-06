@@ -35,7 +35,7 @@ h_subplot_b1 = 200;
 h_subplot_b2 = 200;
 
 w_delta = 40;
-h_delta_ab = 30;
+h_delta_betweenab = 40;
 h_delta_inb = 10;
 
 
@@ -52,14 +52,14 @@ h_textab = 20;
 
 
 fig_width = w_textab +w_ylabel + w_yticks*2 + w_subplot * 2 + w_delta + w_yright;
-fig_height = h_subplot_a + h_subplot_b1 + h_subplot_b2 + (h_xlabel + h_xticks) * 2 + h_delta_ab + h_delta_inb;
+fig_height = h_subplot_a + h_subplot_b1 + h_subplot_b2 + (h_xlabel + h_xticks) * 2 + h_delta_betweenab + h_delta_inb;
 
 close all
 fig = figure('Units', 'pixels', 'Position', [100 100 fig_width fig_height]);
 
 %%%
 h_top_a = 0;
-h_top_b = h_subplot_a + (h_xticks) + h_delta_ab;
+h_top_b = h_subplot_a + (h_xticks) + h_delta_betweenab;
 w_left_ab = w_textab;
 
 
@@ -93,6 +93,7 @@ clear ta tb pos pos_left pos_lower
 
 %%% save
 print(fullfile(savefolder, savefilename), '-dpng', '-r1000')
+print(gcf, fullfile(savefolder, savefilename), '-painters', '-depsc');
 disp('saved figure')
 
 function fig_timeStatiscal(varargin)
@@ -264,6 +265,9 @@ for ai = 1 : length(animals)
     clear subplot_outerMargin subplot_innerposMargin
     clear t_reaction
 end
+
+
+
 
 function plot_1timeStatiscal(t_reaction, varargin)
 %   Inputs:

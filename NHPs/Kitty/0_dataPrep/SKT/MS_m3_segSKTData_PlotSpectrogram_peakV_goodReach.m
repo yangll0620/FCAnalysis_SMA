@@ -1,4 +1,4 @@
-function m3_segSKTData_PlotSpectrogram_peakV_goodReach()
+function MS_m3_segSKTData_PlotSpectrogram_peakV_goodReach()
 %  extract lfp data respect to reachonset
 % 
 %  return:
@@ -29,7 +29,7 @@ animal = animal_extract(codecorresfolder);
 %%  input setup
 
 % input folder: extracted raw rest data with grayMatter 
-inputfolder = fullfile(codecorresParentfolder, 'm2_segSKTData_SelectTrials_chnOfI');
+inputfolder = fullfile(codecorresParentfolder, 'm2_segSKTData_SelectTrials_goodReach');
 
 
 savefig_format = 'tif';
@@ -160,6 +160,11 @@ for ci = 1: length(cond_cell)
     % Group chns into STN, GP and others
     [clim_Spectrogram_STN, clim_Spectrogram_GP, clim_Spectrogram_Others] = clim_SKTSpectrogram_extract(animal);
 
+    chnsOfI = chnsOfInterest_extract(animal);
+    mask_chnsOfI = cellfun(@(x) contains(x, chnsOfI), T_chnsarea.brainarea);
+    T_chnsarea = T_chnsarea(mask_chnsOfI, :); T_chnsarea.chni = [1: height(T_chnsarea)]';
+    psd_allchns_alltrials = psd_allchns_alltrials(:, :, mask_chnsOfI, :);
+    
     ntrials = size(psd_allchns_alltrials, 4);
     psd_allchns_avgTrials = mean(psd_allchns_alltrials, 4);
     for chi = 1 : size(psd_allchns_avgTrials, 3)
@@ -176,8 +181,9 @@ for ci = 1: length(cond_cell)
         end
         
         fig_sep = figure(); 
-        set(fig_sep, 'PaperUnits', 'points',  'Position', [680 558 600 300]);
+        set(fig_sep, 'PaperUnits', 'points',  'Position', [680 558 400 200]);
         ax_sep  = axes('Parent',fig_sep);
+        set(ax_sep, 'Units', 'pixels','Position', [45 40 290 150])
         
         psd_plot = psd_allchns_avgTrials(:, :,chi);
         psd_plot = imgaussfilt(psd_plot, 'FilterSize', [1 5]);
@@ -185,31 +191,44 @@ for ci = 1: length(cond_cell)
         hold on
         
         colormap(jet)
-        colorbar('FontSize', 9)
+
         
-        ylabel('Frequency(Hz)', 'FontSize', 12, 'FontWeight', 'bold')
-        xlabel('time/s', 'FontSize', 12, 'FontWeight', 'bold')
-        xtls = xticklabels(ax_sep);
-        xtls{cellfun(@(x) strcmp(x, '0'), xtls)} = char('peakV');
-        xticklabels(ax_sep, xtls)
-        set(ax_sep,'fontsize',11)
-        set(ax_sep, 'Position', [0.09 0.15 0.8 0.79])
+        if strcmp(pdcond, 'normal')
+            ylabel('Frequency(Hz)', 'FontSize', 10, 'FontWeight', 'bold', 'FontName', 'Times New Roma')
+        else
+            yticks([])
+        end
         
-        title(ax_sep, [animal ' ' pdcond ':' brainarea ', ntrials = ' num2str(ntrials)])
+        if contains(brainarea, 'gp')
+            xlabel('time (s)', 'FontSize', 10, 'FontWeight', 'bold', 'FontName', 'Times New Roma')
+            xticks([-0.2 0 0.2])
+            xtls = xticklabels(ax_sep);
+            xtls{cellfun(@(x) strcmp(x, '0'), xtls)} = 'peakV';
+            xticklabels(ax_sep, xtls)
+        else
+            xticks([]);
+        end
         
+        if strcmp(pdcond, 'moderate')
+            pos = get(gca, 'Position');
+            c = colorbar;
+            set(gca, 'Position', pos);
+            clear pos
+        end
+        
+        hold on
+        
+        % plot peakV line
+        plot(ax_sep, [0 0], ylim, 'r--', 'LineWidth',1.5)
         if isempty(clim)
             set(ax_sep,'YDir','normal')
         else
             set(ax_sep,'YDir','normal', 'CLim', clim)
         end
         
-        % plot peakV line
-        plot(ax_sep, [0 0], ylim, 'r--', 'LineWidth',1.5)
-        
         % save
         savefile_sep = fullfile(savefolder, [animal '_peakV_' pdcond '_' brainarea]);
         saveas(fig_sep, savefile_sep, savefig_format);
-        print(fig_sep, savefile_sep, '-painters', '-depsc')
         close(fig_sep)
             
         clear brainarea fig_sep ax_sep psd_plot
