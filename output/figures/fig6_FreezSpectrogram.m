@@ -1,4 +1,4 @@
-function fig_FreezSpectrogram()
+function fig6_FreezSpectrogram()
 codefilepath = mfilename('fullpath');
 
 
@@ -19,15 +19,20 @@ addpath(genpath(fullfile(codefolder,'toolbox')));
 
 %% Input & save
 [~, ~, pipelinefolder, outputfolder] = exp_subfolders();
+[~, funcname, ~]= fileparts(codefilepath);
+
 inputfolder = fullfile(pipelinefolder, 'NHPs', 'Kitty', '0_dataPrep', 'SKT', 'fs500Hz', 'm3_fs500Hz_freezeSKTData_EpisodeExtract');
 
+savefolder = fullfile(outputfolder, 'results', 'figures', funcname);
+if ~exist(savefolder, 'dir')
+    mkdir(savefolder)
+end
 
 
-savefolder = fullfile(outputfolder, 'results', 'figures');
 savecodefolder = fullfile(savefolder, 'code');
 copyfile2folder(codefilepath, savecodefolder);
 
-[~, funcname, ~]= fileparts(codefilepath);
+
 savefilename = funcname;
 
 
@@ -36,7 +41,7 @@ w_colormap = 350; % width  for the colormap
 h_colormap = 120; % height for the colormap
 
 w_deltax1_colormap = 5; % x distance between two color map within the same NHP
-w_deltax2_colormap = 20; % x distance between two color map of different NHPs
+w_deltax2_colormap = 10; % x distance between two color map of different NHPs
 
 w_textMovePhase = 70; % width showing the moveing phase, i.e. preMove
 w_textpair = 80; % width showing the pair name, i.e. M1-STN
@@ -62,19 +67,233 @@ files = dir(fullfile(inputfolder, ['*moderate*.mat']));
 [tbl_freezEpisodes]= tbl_freezEpisodes_extract(files, 't_bef', 0.8, 't_aft', 1);
 
 [~, combFreeTypes] = optFreezeTypes_extract();
-for cfi = 1: length(combFreeTypes)
-    freezeType = combFreeTypes{cfi};
+
+ncols = length(combFreeTypes);
+time0names = {'CueOnset', 'FreezeStart', 'Touch'};
+chnNames = {'M1', 'STN', 'GP'};
+for coli = 3: ncols
+    show_textFreLabel = false;
+    show_textFreNum = false;
+    show_colorbar = false;
+    show_legends_speed = false;
+    show_textSpeed = false;
+    if coli == 1
+        show_textFreLabel = true;
+        show_textFreNum = true;
+        show_textSpeed = true;
+    end
+    if coli == ncols
+        show_colorbar = true;
+        show_legends_speed = false;
+    end
+    
+    freezeType = combFreeTypes{coli};
     [psds, freqs_psd, times_psd, wSpeeds, times_wSpeed]= extract_spectrogramMA_acrossTrials(tbl_freezEpisodes, freezeType);
-    for chi = 1 : size(psds, 3)
-        psds_1chn = squeeze(psds(:, :, chi));
-        plot_spectrogramMA_1chn(psds_1chn, freqs_psd, times_psd, wSpeeds, times_wSpeed);
-        saveas(gcf, '1.png')
+    nrows = size(psds, 3);
+    for rowi = 1 : nrows
+        psds_1chn = squeeze(psds(:, :, rowi));
+        
+        
+        show_speedplot = false;
+        show_textTimeNum = false;
+        show_textTimeLabel = false;
+        if rowi == 1
+            show_speedplot = true;
+        end
+        if rowi == nrows
+            show_textTimeNum = true;
+            show_textTimeLabel = true;
+        end
+        plot_spectrogramMA_1chn(psds_1chn, freqs_psd, times_psd, wSpeeds, times_wSpeed,...
+            'show_ylabel_spect', show_textFreLabel, 'show_colorbar_spect', show_colorbar, 'show_yticklabels_spect', show_textFreNum, ...
+            'show_xticklabels_spect',show_textTimeLabel, 'show_xlabel_spect', show_textTimeNum, ...
+            'show_speedplot', show_speedplot, 'show_legends_speed', show_legends_speed, 'show_ylabel_speed', show_textSpeed, ...
+            'time0name', time0names{coli}, 'titlename_speed', freezeType);
+        
+        fig = gcf;
+        subsavefile = [savefilename '-' freezeType '-' chnNames{rowi}] ;
+        print(fig, fullfile(savefolder, subsavefile), '-painters', '-depsc');
+        print(fig, fullfile(savefolder, subsavefile), '-dpng', '-r1000')
+        close(fig)
+        
         clear psds_1chn
     end
     
     clear freezeType
 end
 
+%%% save
+disp('saved figure')
+
+
+
+function plot_spectrogramMA_1chn(psds_1chn, freqs_psd, times_psd, wSpeeds, times_wSpeed, varargin)
+%
+%
+%  Inputs:
+%       psds: nfs * nts_psd 
+%       freqs_psd: frequencies nfs * 1
+%       times_psd: 1 * nts_psd
+%       wSpeeds: speed of all trials nts_speed * ntrials
+%       times_wSpeed : time point for speed 1 * nts_speed
+%
+%       Name-Value: 
+%           'clim' - clim (default [])
+%           'show_xticklabels_spect' - show (true, default) or not show (false) xticklabels for spectrogram
+%           'show_xlabel_spect' - show (true, default) or not show (false) xlabel for spectrogram
+%           'show_ylabel_spect' - show (true, default) or not show (false) ylabel for spectrogram
+%           'show_colorbar_spect' - show (true, default) or not show (false) colorbar for spectrogram
+%           'show_titlename_speed' - show (true, default) or not show (false) titlename for speed
+%           'show_ylabel_speed' - show (true, default) or not show (false) ylabel for speed
+%           'show_MoveThres_speed' - show (true, default) or not show (false) MoveThres line for speed
+%           'show_legends_speed' - show (true, default) or not show (false) legend for speed
+%           'time0name' - text name for time 0, default '0'
+%           'titlename_speed' - title name for speed, default 'Speed'
+%           'show_speedplot' - show speed plot (true) or not (false default)
+
+
+
+% parse params
+p = inputParser;
+addParameter(p, 'clim', [], @(x) assert(isnumeric(x) && isvector(x) && length(x)==2));
+addParameter(p, 'show_xticklabels_spect', true, @(x) assert(islogical(x) && isscalar(x)));
+addParameter(p, 'show_xlabel_spect', true, @(x) assert(islogical(x) && isscalar(x)));
+addParameter(p, 'show_ylabel_spect', true, @(x) assert(islogical(x) && isscalar(x)));
+addParameter(p, 'show_yticklabels_spect', true, @(x) assert(islogical(x) && isscalar(x)));
+addParameter(p, 'show_colorbar_spect', true, @(x) assert(islogical(x) && isscalar(x)));
+addParameter(p, 'show_titlename_speed', true, @(x) assert(islogical(x) && isscalar(x)));
+addParameter(p, 'show_ylabel_speed', true, @(x) assert(islogical(x) && isscalar(x)));
+addParameter(p, 'show_MoveThres_speed', true, @(x) assert(islogical(x) && isscalar(x)));
+addParameter(p, 'show_legends_speed', true, @(x) assert(islogical(x) && isscalar(x)));
+addParameter(p, 'time0name', '0', @isstr);
+addParameter(p, 'titlename_speed', 'Speed', @isstr);
+addParameter(p, 'show_speedplot', false, @(x) assert(islogical(x) && isscalar(x)));
+
+
+
+parse(p,varargin{:});
+show_xlabel_spect = p.Results.show_xlabel_spect;
+show_xticklabels_spect = p.Results.show_xticklabels_spect;
+show_ylabel_spect = p.Results.show_ylabel_spect;
+show_yticklabels_spect = p.Results.show_yticklabels_spect;
+show_colorbar_spect = p.Results.show_colorbar_spect;
+show_titlename_speed = p.Results.show_titlename_speed;
+show_ylabel_speed = p.Results.show_ylabel_speed;
+show_MoveThres_speed = p.Results.show_MoveThres_speed;
+show_legends_speed = p.Results.show_legends_speed;
+time0name = p.Results.time0name;
+titlename_speed = p.Results.titlename_speed;
+show_speedplot = p.Results.show_speedplot;
+
+
+
+
+%%% plot 
+
+%%% subplot spectrogram
+
+%gauss filted
+psds_1chn = imgaussfilt(psds_1chn,'FilterSize',[3,11]);
+
+ax_spec = subplot(4,1,[2,3,4]);
+imagesc(ax_spec,times_psd, freqs_psd, psds_1chn);hold on
+
+if ~exist('clim', 'var')|| isempty(clim)
+    set(ax_spec,'YDir','normal')
+else
+    set(ax_spec,'YDir','normal', 'CLim', clim)
+end
+colormap(jet)
+c = colorbar;
+c.Visible = 'off';
+
+fig = gcf;
+set(fig, 'Position', [150 650 420 350])
+
+
+% plot time 0 line
+plot(ax_spec, [0 0], ylim, 'k--')
+
+% show inf
+if show_xticklabels_spect
+    % change time 0 name
+    xtklabels = xticklabels(ax_spec);
+    xtklabels{find(cellfun(@(x) strcmp(x,'0'), xtklabels))} = time0name;
+    xticklabels(ax_spec, xtklabels);
+else
+    xticks([]);
+end
+
+
+if show_xlabel_spect
+    xlabel(ax_spec, 'Time (s)', 'fontsize', 12, 'FontName', 'Times New Roma', 'FontWeight', 'bold')
+end
+if show_ylabel_spect
+    ylabel(ax_spec, 'Frequency (Hz)', 'fontsize', 12, 'FontName', 'Times New Roma', 'FontWeight', 'bold')
+end
+
+if show_yticklabels_spect
+else
+    yticks([]);
+end
+
+if show_colorbar_spect
+    c.Visible = 'on';
+    c.Label.String = 'Power (dB/Hz)';
+end
+
+pos_spec = get(ax_spec, 'Position');
+pos_spec(3) = 0.7;
+set(ax_spec, 'Position', pos_spec);
+
+%%% subplot wSpeed
+if  ~show_speedplot
+    return
+end
+ax_speed = subplot(4,1,1);
+hlegs = [];
+for tri = 1 : size(wSpeeds, 2)
+    wSpeed = wSpeeds(:, tri);
+    plot(ax_speed, times_wSpeed, wSpeed);
+    hold on
+    clear wSpeed
+end
+
+% time 0 line
+plot([0 0], ylim, 'k--')
+
+% adjust pos, xlim, ylim
+pos_speed = get(ax_speed, 'Position');
+pos_speed(1) = pos_spec(1);
+pos_speed(3) = pos_spec(3);
+set(ax_speed, 'Position', pos_speed)
+xlim(get(ax_spec, 'XLim'));
+ylimit = ylim;
+if ylimit(2) < 32
+    ylim([0 32])
+end
+
+set(ax_speed, 'XTick', [])
+
+
+% show inf speed
+if show_titlename_speed
+    title(ax_speed, titlename_speed, 'FontSize', 12, 'FontWeight', 'bold', 'FontName', 'Times New Roma')
+end
+
+if show_ylabel_speed
+    ylabel(ax_speed, 'Speed', 'fontsize', 12, 'FontName', 'Times New Roma', 'FontWeight', 'bold')
+end
+
+if show_MoveThres_speed
+    h = plot(ax_speed, xlim, [30 30], 'r--', 'DisplayName', 'MoveThres');
+    hlegs = [hlegs h];
+    clear h
+end
+
+if show_legends_speed
+    legend(ax_speed, hlegs, 'Position', [0.82 0.85 0.14 0.07])
+end
 
 
 function [psds, freqs_psd, times_psd, wSpeeds, times_wSpeed]= extract_spectrogramMA_acrossTrials(tbl_freezEpisodes, freezeType)
@@ -142,165 +361,6 @@ psds = mean(psds_alltrials, 4);
 fs_ma = tbl_freezEpisodes.fs_ma(1);
 idx_wSpeedfreezstr = tbl_subfreezEpi.idx_wSpeedStrendFreez{tbi}(1);
 times_wSpeed = [1:size(wSpeeds, 1)]/fs_ma - idx_wSpeedfreezstr/fs_ma;
-
-
-
-function plot_spectrogramMA_1chn(psds_1chn, freqs_psd, times_psd, wSpeeds, times_wSpeed, varargin)
-%
-%
-%  Inputs:
-%       psds: nfs * nts_psd 
-%       freqs_psd: frequencies nfs * 1
-%       times_psd: 1 * nts_psd
-%       wSpeeds: speed of all trials nts_speed * ntrials
-%       times_wSpeed : time point for speed 1 * nts_speed
-%
-%       Name-Value: 
-%           'clim' - clim (default [])
-%           'show_xticklabels_spect' - show (true, default) or not show (false) xticklabels for spectrogram
-%           'show_xlabel_spect' - show (true, default) or not show (false) xlabel for spectrogram
-%           'show_ylabel_spect' - show (true, default) or not show (false) ylabel for spectrogram
-%           'show_colorbar_spect' - show (true, default) or not show (false) colorbar for spectrogram
-%           'show_titlename_speed' - show (true, default) or not show (false) titlename for speed
-%           'show_ylabel_speed' - show (true, default) or not show (false) ylabel for speed
-%           'show_MoveThres_speed' - show (true, default) or not show (false) MoveThres line for speed
-%           'show_legends_speed' - show (true, default) or not show (false) legend for speed
-%           'time0name' - text name for time 0, default '0'
-%           'titlename_speed' - title name for speed, default 'Speed'
-
-
-
-% parse params
-p = inputParser;
-addParameter(p, 'clim', [], @(x) assert(isnumeric(x) && isvector(x) && length(x)==2));
-addParameter(p, 'show_xticklabels_spect', true, @(x) assert(islogical(x) && isscalar(x)));
-addParameter(p, 'show_xlabel_spect', true, @(x) assert(islogical(x) && isscalar(x)));
-addParameter(p, 'show_ylabel_spect', true, @(x) assert(islogical(x) && isscalar(x)));
-addParameter(p, 'show_colorbar_spect', true, @(x) assert(islogical(x) && isscalar(x)));
-addParameter(p, 'show_titlename_speed', true, @(x) assert(islogical(x) && isscalar(x)));
-addParameter(p, 'show_ylabel_speed', true, @(x) assert(islogical(x) && isscalar(x)));
-addParameter(p, 'show_MoveThres_speed', true, @(x) assert(islogical(x) && isscalar(x)));
-addParameter(p, 'show_legends_speed', true, @(x) assert(islogical(x) && isscalar(x)));
-addParameter(p, 'time0name', '0', @isstr);
-addParameter(p, 'titlename_speed', 'Speed', @isstr);
-
-
-parse(p,varargin{:});
-show_xticklabels_spect = p.Results.show_xticklabels_spect;
-show_xlabel_spect = p.Results.show_xlabel_spect;
-show_ylabel_spect = p.Results.show_ylabel_spect;
-show_colorbar_spect = p.Results.show_colorbar_spect;
-show_titlename_speed = p.Results.show_titlename_speed;
-show_ylabel_speed = p.Results.show_ylabel_speed;
-show_MoveThres_speed = p.Results.show_MoveThres_speed;
-show_legends_speed = p.Results.show_legends_speed;
-time0name = p.Results.time0name;
-titlename_speed = p.Results.titlename_speed;
-
-
-
-
-%%% plot 
-fig = figure();
-
-%%% subplot spectrogram
-
-%gauss filted
-psds_1chn = imgaussfilt(psds_1chn,'FilterSize',[3,11]);
-
-ax_spec = subplot(4,1,[2,3,4]);
-imagesc(ax_spec,times_psd, freqs_psd, psds_1chn);hold on
-
-if ~exist('clim', 'var')|| isempty(clim)
-    set(ax_spec,'YDir','normal')
-else
-    set(ax_spec,'YDir','normal', 'CLim', clim)
-end
-colormap(jet)
-colorbar
-
-
-% plot time 0 line
-plot(ax_spec, [0 0], ylim, 'k--')
-
-pos_spec = get(ax_spec, 'Position');
-
-% show inf
-if show_xticklabels_spect
-    % change time 0 name
-    xtklabels = xticklabels(ax_spec);
-    xtklabels{find(cellfun(@(x) strcmp(x,'0'), xtklabels))} = time0name;
-    xticklabels(ax_spec, xtklabels);
-else
-    xticks([]);
-end
-
-
-if show_xlabel_spect
-    xlabel(ax_spec, 'Time (s)', 'fontsize', 12, 'FontName', 'Times New Roma', 'FontWeight', 'bold')
-end
-if show_ylabel_spect
-    ylabel(ax_spec, 'Frequency (Hz)', 'fontsize', 12, 'FontName', 'Times New Roma', 'FontWeight', 'bold')
-end
-
-if show_colorbar_spect
-    colorbar;
-    set(ax_spec, 'Position', pos_spec);
-    clear pos
-end
-
-%%% subplot wSpeed
-ax_speed = subplot(4,1,1);
-hlegs = [];
-for tri = 1 : size(wSpeeds, 2)
-    wSpeed = wSpeeds(:, tri);
-    if tri == 1
-        h = plot(ax_speed, times_wSpeed, wSpeed, 'DisplayName', 'wristSpeed');
-        hold on
-        hlegs = [hlegs h];
-        clear h
-    else
-        plot(ax_speed, times_wSpeed, wSpeed);
-        hold on
-    end
-    clear wSpeed
-end
-
-% time 0 line
-plot([0 0], ylim, 'k--')
-
-% adjust pos, xlim, ylim
-pos_speed = get(ax_speed, 'Position');
-pos_speed(3) = pos_spec(3);
-set(ax_speed, 'Position', pos_speed)
-xlim(get(ax_spec, 'XLim'));
-ylimit = ylim;
-if ylimit(2) < 32
-    ylim([0 32])
-end
-
-set(ax_speed, 'XTick', [])
-
-
-% show inf speed
-if show_titlename_speed
-    title(ax_speed, titlename_speed, 'FontSize', 12, 'FontWeight', 'bold', 'FontName', 'Times New Roma')
-end
-
-if show_ylabel_speed
-    ylabel(ax_speed, 'Speed', 'fontsize', 12, 'FontName', 'Times New Roma', 'FontWeight', 'bold')
-end
-
-if show_MoveThres_speed
-    h = plot(ax_speed, xlim, [30 30], 'r--', 'DisplayName', 'MoveThres');
-    hlegs = [hlegs h];
-    clear h
-end
-
-if show_legends_speed
-    legend(ax_speed, hlegs, 'Position', [0.82 0.85 0.14 0.07])
-end
-
 
 
 function [tbl_freezEpisodes]= tbl_freezEpisodes_extract(files, varargin)

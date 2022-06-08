@@ -11,6 +11,7 @@ function m4_fs500Hz_FreezeSKT_earlyMiddLateFreeze_imCohUsingFFT(freezePhase, var
 %       Name-Value: 
 %           'matchSKT' - tag for matchSKT, true or false (default)
 %           'ntrialsUsed' - ntrials used for cicoh calculation, default = 100(matchSKT should be false)
+%           'nRandom' - randomly select nRandom times, default 10
 
 %% folders generate
 % the full path and the name of code file without suffix
@@ -43,11 +44,15 @@ addParameter(p, 'matchSKT', false, @(x)isscalar(x)&&islogical(x));
 addParameter(p, 'ntrialsUsed', 200, @(x)isscalar(x)&&isnumeric(x));
 addParameter(p, 'shuffleN_psedoTest', 500, @(x)isscalar(x)&&isnumeric(x));
 addParameter(p, 'newRun', false, @(x) assert(islogical(x) && isscalar(x)));
+addParameter(p, 'nRandom', 10, @(x)isscalar(x)&&isnumeric(x));
+
+
 parse(p,varargin{:});
 matchSKT = p.Results.matchSKT;
 ntrialsUsed = p.Results.ntrialsUsed;
 shuffleN_psedoTest = p.Results.shuffleN_psedoTest;
 newRun = p.Results.newRun;
+nRandom = p.Results.nRandom;
 
 
 switch freezePhase
@@ -120,13 +125,6 @@ notAOI_chns = notInterested_chns_extract(animal);
 removed_chns = [unwanted_DBS noisy_chns notAOI_chns];
 clear unwanted_DBS noisy_chns
 
-    
-subpdsavefolder = fullfile(savefolder, pdcond);
-if ~exist(subpdsavefolder, 'dir')
-    mkdir(subpdsavefolder);
-end
-
-
 % load(and extract) ciCohPhasefile
 ciCohPhasefile = fullfile(savefolder, [ciCohPhasefile_prefix  '_' pdcond  '.mat']);
 
@@ -154,31 +152,40 @@ if(~exist(ciCohPhasefile, 'file') || newRun)
     clear files removedChns_mask
     
     
-    
-    % select matchSKT or ntrialsUsed trials
-    if matchSKT
-        % match the trial number in rest and SKT
-        load(fullfile(inputfolder_SKT, [animal ' ciCohPhasefile_' pdcond '_earlyReach_align2ReachOnset.mat']), 'ntrials')
-        nsegs = size(lfpsegs, 3);
-        randomSKTInds =  randsample(nsegs,ntrials);
-        lfpsegs = lfpsegs(:, :, randomSKTInds);
-        clear ntrials nsegs randomSKTInds
-    else
-        if ~isempty(ntrialsUsed)
+    ciCoh_ntimes = [];
+    for nRandi = 1 : nRandom
+        
+        % select matchSKT or ntrialsUsed trials
+        if matchSKT
+            % match the trial number in rest and SKT
+            load(fullfile(inputfolder_SKT, [animal ' ciCohPhasefile_' pdcond '_earlyReach_align2ReachOnset.mat']), 'ntrials')
             nsegs = size(lfpsegs, 3);
-            randomSKTInds =  randsample(nsegs,ntrialsUsed);
+            randomSKTInds =  randsample(nsegs,ntrials);
             lfpsegs = lfpsegs(:, :, randomSKTInds);
-            clear nsegs randomSKTInds
+            clear ntrials nsegs randomSKTInds
+        else
+            if ~isempty(ntrialsUsed)
+                nsegs = size(lfpsegs, 3);
+                randomSKTInds =  randsample(nsegs,ntrialsUsed);
+                lfpsegs = lfpsegs(:, :, randomSKTInds);
+                clear nsegs randomSKTInds
+            end
         end
+        
+        
+        %  extract and save deltaphis_allChnsTrials and cicoh
+        [~, ciCoh_1time, f_selected]= ciCoh_trialDeltaPhi(lfpsegs, fs, f_AOI);
+        
+        ciCoh_ntimes = cat(4, ciCoh_ntimes, ciCoh_1time);
+        
+        nseg = size(lfpsegs, 3);
+        
+        clear ciCoh_1time
     end
-    
-    
-    %  extract and save deltaphis_allChnsTrials and cicoh
-    [~, ciCoh, f_selected]= ciCoh_trialDeltaPhi(lfpsegs, fs, f_AOI);
-    
+    ciCoh = squeeze(mean(ciCoh_ntimes, 4));
     
     % save
-    nsegs.(combiFreeName) = size(lfpsegs, 3);
+    nsegs.(combiFreeName) = nseg;
     ciCohs.(combiFreeName) = ciCoh;
     save(ciCohPhasefile, 'ciCohs', 'nsegs', 'f_selected', 'T_chnsarea', '-append');
     

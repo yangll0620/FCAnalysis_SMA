@@ -3,7 +3,7 @@ function m4_fs500Hz_uNHP_imCohChanges_compEvent(animal, varargin)
 %
 %   Example Usage:
 %           m4_fs500Hz_uNHP_imCohChanges_compEvent('Kitty', 'compEi_str', 1, 'ci_str', 1)
-%           m4_fs500Hz_uNHP_imCohChanges_compEvent('Kitty', 'compEi_str', 1, 'ci_str', 1, 'shuffleN_psedoTest', 10, 'newRun', true)
+%           m4_fs500Hz_uNHP_imCohChanges_compEvent('Kitty', 'compEi_str', 1, 'ci_str', 1, 'shuffleN_psedoTest', 500, 'newRun', true)
 %   
 %   Input:
 %       animal
@@ -11,8 +11,8 @@ function m4_fs500Hz_uNHP_imCohChanges_compEvent(animal, varargin)
 %       Name-Value:
 %           compEi_str - compare events start index
 %           compEi_end - compare events end index
-%           ei_str - event start index
-%           ei_end - event end index
+%           ci_str - condition start index
+%           ci_end - condition end index
 %           newRun - true or false(default), for running new or not
 %           shuffleN_psedoTest -  default 500
 

@@ -1,4 +1,4 @@
-function fig_imCohChanges()
+function fig4_imCohChanges()
 
 codefilepath = mfilename('fullpath');
 
@@ -20,15 +20,22 @@ addpath(genpath(fullfile(codefolder,'toolbox')));
 
 %% Input & save
 [~, ~, pipelinefolder, outputfolder] = exp_subfolders();
+[~, funcname, ~]= fileparts(codefilepath);
+
+
 input_folder_J = fullfile(pipelinefolder, 'NHPs', 'Jo', '0_dataPrep', 'SKT', 'fs500Hz', 'm4_fs500Hz_uNHP_imCohChanges_compCond');
 input_folder_K = fullfile(pipelinefolder, 'NHPs', 'Kitty', '0_dataPrep', 'SKT', 'fs500Hz', 'm4_fs500Hz_uNHP_imCohChanges_compCond');
 
 
-savefolder = fullfile(outputfolder, 'results', 'figures');
+savefolder = fullfile(outputfolder, 'results', 'figures', funcname);
+if ~exist(savefolder, 'dir')
+    mkdir(savefolder)
+end
+
 savecodefolder = fullfile(savefolder, 'code');
 copyfile2folder(codefilepath, savecodefolder);
 
-[~, funcname, ~]= fileparts(codefilepath);
+
 savefilename = funcname;
 
 
@@ -38,10 +45,10 @@ w_colormap = 350; % width  for the colormap
 h_colormap = 120; % height for the colormap
 
 w_deltax1_colormap = 5; % x distance between two color map within the same NHP
-w_deltax2_colormap = 20; % x distance between two color map of different NHPs
+w_deltax2_colormap = 10; % x distance between two color map of different NHPs
 
-w_textpair = 80; % width showing the pair name, i.e. M1-STN
 w_textMovePhase = 70; % width showing the moveing phase, i.e. preMove
+w_textpair = 80; % width showing the pair name, i.e. M1-STN
 w_textColorbar = 80; % width showing the colarbar 
 
 h_deltay_colormap = 15; % y distance between two color map 
@@ -96,35 +103,36 @@ for coli = 1 : ncols
     show_colorbar = false;
     
     % extract outer_left, outer_right, inner_left and inner_right
-    inner_left = 0;
-    inner_right = 0;
+    w_inner_left = 0;
+    w_inner_right = 0;
     if coli == 1
         w_textpair_show = 0;
-        inner_left = w_textpair;
+        w_inner_left = w_textpair;
         show_yticklabels = true;
     else
         w_textpair_show = w_textpair;
     end 
     if coli <= ncols_J
-        outer_left = w_textMovePhase + w_textpair_show + (coli-1) * (w_colormap + w_deltax1_colormap);
+        w_outer_left = w_textMovePhase + w_textpair_show + (coli-1) * (w_colormap + w_deltax1_colormap);
     else
-        outer_left = w_textMovePhase + w_textpair_show + (coli-1) * w_colormap + (coli-2) * w_deltax1_colormap + w_deltax2_colormap;
+        w_outer_left = w_textMovePhase + w_textpair_show + (coli-1) * w_colormap + (coli-2) * w_deltax1_colormap + w_deltax2_colormap;
     end
     
     
     if coli == ncols
         w_textColorbar_show = 0;
-        inner_right = w_textColorbar;
+        w_inner_right = w_textColorbar;
         show_colorbar = true;
     else
         w_textColorbar_show = w_textColorbar;
     end
     if coli > ncols_J
-        outer_right = w_textColorbar_show + (ncols-coli) * (w_colormap + w_deltax1_colormap);
+        w_outer_right = w_textColorbar_show + (ncols-coli) * (w_colormap + w_deltax1_colormap);
     else
-        outer_right = w_textColorbar_show + (ncols-coli) * w_colormap + (ncols-coli -1) * w_deltax1_colormap + w_deltax2_colormap;
+        w_outer_right = w_textColorbar_show + (ncols-coli) * w_colormap + (ncols-coli -1) * w_deltax1_colormap + w_deltax2_colormap;
     end
     
+    ifig_width = fig_width - (w_outer_left + w_outer_right);
     
     for rowi = 1 : nrows
         
@@ -146,29 +154,29 @@ for coli = 1 : ncols
         show_titlename = false;
         show_xlabel = false;
         show_xticklabels = false;
-        inner_top = 0;
-        inner_bottom = 0;
+        h_inner_top = 0;
+        h_inner_bottom = 0;
         if rowi == 1
             h_textCond_show = 0;
-            inner_top = h_textCond;
+            h_inner_top = h_textCond;
             show_titlename = true;
         else
             h_textCond_show = h_textCond;
         end
-        outer_top = h_textAnimal + h_textCond_show + (rowi -1) * (h_colormap + h_deltay_colormap);
+        h_outer_top = h_textAnimal + h_textCond_show + (rowi -1) * (h_colormap + h_deltay_colormap);
         if rowi == nrows || (rowi == nrows_Both && coli <= ncols_J)
             h_textFrenumlabel_show = 0;
-            inner_bottom = h_textFrenum + h_textFrelabel;
+            h_inner_bottom = h_textFrenum + h_textFrelabel;
             show_xlabel = true;
             show_xticklabels = true;
         else
             h_textFrenumlabel_show = h_textFrenum + h_textFrelabel;
         end
-        outer_bottom = h_textFrenumlabel_show + (nrows-rowi)* (h_colormap + h_deltay_colormap);
+        h_outer_bottom = h_textFrenumlabel_show + (nrows-rowi)* (h_colormap + h_deltay_colormap);
 
         % outer and inner margin
-        subplot_outerMargin = [outer_left outer_top outer_right outer_bottom];
-        subplot_innerposMargin = [inner_left inner_top inner_right inner_bottom];
+        subplot_outerMargin = [w_outer_left h_outer_top w_outer_right h_outer_bottom];
+        subplot_innerposMargin = [w_inner_left h_inner_top w_inner_right h_inner_bottom];
         
         
         % actual plot
@@ -177,6 +185,22 @@ for coli = 1 : ncols
             'show_xticklabels', show_xticklabels, 'show_yticklabels', show_yticklabels, 'show_xlabel', show_xlabel, 'show_titlename', show_titlename,'show_colorbar', show_colorbar, ...
             'fig', fig, 'outerposMargin', subplot_outerMargin, 'innerposMargin', subplot_innerposMargin, ...
             'fontsize1', fontsize1, 'fontsize2', fontsize2, 'fontname', fontname);
+        
+        % separate figure
+        ifig_height = fig_height - (h_outer_top + h_outer_bottom);
+        
+        
+        ifig = figure('Position', [50 50 ifig_width ifig_height]);
+        set(ifig, 'PaperUnits', 'points');
+        plot_ciCohHistogram2(sigciCohChanges_flatten, chnPairNames, f_selected, [comppd '-' basepd], 'histClim', [-1 1],...
+            'codesavefolder', savecodefolder, 'cbarStr', 'ciCohChange', 'cbarTicks', [-1 0 1], ...
+            'show_xticklabels', show_xticklabels, 'show_yticklabels', show_yticklabels, 'show_xlabel', show_xlabel, 'show_titlename', show_titlename,'show_colorbar', show_colorbar, ...
+            'fig', ifig,  'innerposMargin', subplot_innerposMargin, ...
+            'fontsize1', fontsize1, 'fontsize2', fontsize2, 'fontname', fontname);
+        
+        subfilename = [savefilename '-' animal '-' comppd '-B' basepd '-' event]; % 'Jo-mild-Bnormal-preMove'
+        print(ifig, fullfile(savefolder, subfilename), '-painters', '-depsc')
+        close(ifig)
         
         clear subplot_outerMargin subplot_innerposMargin
         clear outer_top outer_bottom inner_top inner_bottom
@@ -225,164 +249,8 @@ t2.Position = [pos_left_K pos_lower2 pos(3) pos(4)];
 
 
 %%% save
-print(fullfile(savefolder, savefilename), '-dpng', '-r1000')
+print(fig, fullfile(savefolder, savefilename), '-painters', '-depsc');
+print(fig, fullfile(savefolder, savefilename), '-dpng', '-r1000')
 disp('saved figure')
+close(fig)
 
-
-function plot_ciCohHistogram2(ciCoh_flatten, chnPairNames, f_selected, titlename, varargin)
-%
-%   Inputs:
-%       ciCoh_flatten:
-%       chnPairNames
-%       f_selected
-%       titlename
-%       histClim
-%
-%       Name-Value: 
-%           'codesavefolder' - code saved folder
-%           'histClim' - ciCoh histogram clim (default [0 1])
-%           'fig' - figure handle to show the image (default [] to create a new one)
-%           'cbarTicks' - vector, default [0 0.5 1]
-%           'show_xticklabels' - show (true, default) or not show (false) xticklabels
-%           'show_yticklabels' - show (true, default) or not show (false) yticklabels
-%           'show_xlabel' - show (true, default) or not show (false) xlabel
-%           'show_titlename' - show (true, default) or not show (false) titlename
-%           'show_colorbar' - show (true, default) or not show (false) colorbar
-%           'innerposMargin' - [left top right bottom]  left, top, right, bottom of distance between outer and inner position default [5 5 5 5]
-%           'outerposMargin' - [left top right bottom] outer pos margin between outer and figure bounder default [5 5 5 5]
-%           'fontsize1' - font size for title, default 12
-%           'fontsize2' - font size for , default 10
-%           'fontname' - font name , default 'Times New Roman'
-
-
-
-% parse params
-p = inputParser;
-addParameter(p, 'codesavefolder', '', @isstr);
-addParameter(p, 'histClim', [0 1], @(x) assert(isnumeric(x) && isvector(x) && length(x)==2));
-addParameter(p, 'fig', [], @(x) assert(isa(x, 'matlab.ui.Figure')));
-addParameter(p, 'cbarTicks', [0 0.5 1], @(x) assert(isvector(x) && isnumeric(x)));
-addParameter(p, 'cbarStr', 'ciCoh', @isstr);
-addParameter(p, 'show_xticklabels', true, @(x) assert(islogical(x) && isscalar(x)));
-addParameter(p, 'show_yticklabels', true, @(x) assert(islogical(x) && isscalar(x)));
-addParameter(p, 'show_xlabel', true, @(x) assert(islogical(x) && isscalar(x)));
-addParameter(p, 'show_titlename', true, @(x) assert(islogical(x) && isscalar(x)));
-addParameter(p, 'show_colorbar', true, @(x) assert(islogical(x) && isscalar(x)));
-addParameter(p, 'innerposMargin', [5 5 5 5], @(x) assert(isvector(x) && isnumeric(x) && length(x)==4));
-addParameter(p, 'outerposMargin', [5 5 5 5], @(x) assert(isvector(x) && isnumeric(x) && length(x)==4));
-addParameter(p, 'fontsize1', 11, @(x) assert(isscalar(x) && isnumeric(x)));
-addParameter(p, 'fontsize2', 10, @(x) assert(isscalar(x) && isnumeric(x)));
-addParameter(p, 'fontname', 'Times New Roman', @isstr);
-
-parse(p,varargin{:});
-codesavefolder = p.Results.codesavefolder;
-histClim = p.Results.histClim;
-fig = p.Results.fig;
-cbarTicks = p.Results.cbarTicks;
-cbarStr = p.Results.cbarStr;
-show_xticklabels = p.Results.show_xticklabels;
-show_yticklabels = p.Results.show_yticklabels;
-show_xlabel = p.Results.show_xlabel;
-show_titlename = p.Results.show_titlename;
-show_colorbar = p.Results.show_colorbar;
-innerposMargin = p.Results.innerposMargin;
-outerposMargin = p.Results.outerposMargin; 
-fontsize1 = p.Results.fontsize1;
-fontsize2 = p.Results.fontsize2;
-fontname = p.Results.fontname;
-
-
-
-% copy code to savefolder if not empty
-if ~isempty(codesavefolder) 
-    copyfile2folder(mfilename('fullpath'), codesavefolder);
-end
-
-
-
-% plot
-if isempty(fig)
-    fig = figure;
-end
-ax = axes(fig, 'Units', 'pixels');
-imagesc(ax, ciCoh_flatten)
-colormap(jet)
-
-% set axes position
-fig_pos = fig.Position;
-fig_width = fig_pos(3);
-fig_height = fig_pos(4);
-outerpos = [outerposMargin(1) outerposMargin(4) fig_width-outerposMargin(1)-outerposMargin(3) fig_height-outerposMargin(2)-outerposMargin(4)];
-innerpos = [outerposMargin(1)+ innerposMargin(1) outerposMargin(4)+innerposMargin(4) outerpos(3)-innerposMargin(1)-innerposMargin(3) outerpos(4)-innerposMargin(2)-innerposMargin(4)];
-set(gca, 'OuterPosition', outerpos, 'Position', innerpos)
-set(gca,'CLim', histClim)
-
-
-%%% plot the line to separete the pairs
-chnPair_prev = '';
-for ci = 1: length(chnPairNames)
-    chnPair = chnPairNames{ci};
-    
-    % replace M1-stn0-1 to M1-STN
-    s_stn = regexp(chnPair, 'stn[0-9]*-[0-9]*', 'match');
-    if ~isempty(s_stn)
-        for si = 1 : length(s_stn)
-            chnPair = strrep(chnPair, s_stn{si}, 'STN');
-        end
-    end
-    % replace M1-stn0-1 to M1-STN
-    s_gp = regexp(chnPair, 'gp[0-9]*-[0-9]*', 'match');
-    if ~isempty(s_gp)
-        for si = 1 : length(s_gp)
-            chnPair = strrep(chnPair, s_gp{si}, 'GP');
-        end
-    end
-    
-    if ~strcmp(chnPair_prev, '') && ~strcmp(chnPair_prev, chnPair) % a new site pairs
-        hold on; plot(gca, xlim, [(ci + ci -1)/2 (ci + ci -1)/2], 'w--')
-        % Create line
-    end
-    chnPair_prev = chnPair;
-    chnPairNames{ci} = chnPair;
-    
-    
-    clear s_stn s_gp chnPair
-end
-
-
-
-%%% show inf
-[npairs, nf] = size(ciCoh_flatten);
-if show_xticklabels
-    
-    xticklabels = [10 20 30 40];
-    
-    set(gca, 'fontsize',fontsize2, 'FontName', fontname)
-else
-    xticks([]);
-end
-
-if show_yticklabels
-    yticks([1:npairs]);
-    set(gca,'YTickLabel',chnPairNames,'fontsize',11, 'FontName', fontname)
-else 
-    yticks([]);
-end
-
-if show_xlabel
-    xlabel('Frequency (Hz)', 'fontsize', 12, 'FontName', fontname)
-end
-if show_titlename
-    title(titlename, 'FontSize', 12, 'FontWeight', 'bold', 'FontName', fontname)
-end
-
-if show_colorbar
-    pos = get(gca, 'Position');
-    c = colorbar;
-    c.Label.String = cbarStr;
-    if ~isempty(cbarTicks)
-        set(c, 'Ticks', cbarTicks, 'FontSize', fontsize1, 'FontWeight', 'bold', 'FontName', fontname)
-    end
-    set(gca, 'Position', pos);
-    clear pos
-end
