@@ -3,7 +3,7 @@ function m4_fs500Hz_uNHP_imCohChanges_compEvent(animal, varargin)
 %
 %   Example Usage:
 %           m4_fs500Hz_uNHP_imCohChanges_compEvent('Kitty', 'compEi_str', 1, 'ci_str', 1)
-%           m4_fs500Hz_uNHP_imCohChanges_compEvent('Kitty', 'compEi_str', 1, 'ci_str', 1, 'shuffleN_psedoTest', 500, 'newRun', true)
+%           m4_fs500Hz_uNHP_imCohChanges_compEvent('Kitty', 'compEi_str', 1, 'ci_str', 1, 'ci_end', 1, 'shuffleN_psedoTest', 500, 'newRun', true)
 %   
 %   Input:
 %       animal

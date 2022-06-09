@@ -28,6 +28,7 @@ input_folder_K = fullfile(pipelinefolder, 'NHPs', 'Kitty', '0_dataPrep', 'SKT', 
 savefolder = fullfile(outputfolder, 'results', 'figures', funcname);
 if ~exist(savefolder, 'dir')
     mkdir(savefolder)
+    
 end
 
 savecodefolder = fullfile(savefolder, 'code');
@@ -154,7 +155,7 @@ for coli = 1 : ncols
     if coli <= ncols_J
         w_outer_left = w_textMovePhase + w_textpair + (coli - 1) * (w_colormap + w_deltax1_colormap);
     else
-        w_outer_left = w_textMovePhase * 2 + w_textpair * 2 + (coli - 1) * w_colormap + (ncols_J-2) * w_deltax1_colormap + w_textColorbar + w_deltax2_colormap;
+        w_outer_left = w_textMovePhase * 2 + w_textpair * 2 + (coli - 1) * w_colormap + (coli-2) * w_deltax1_colormap + w_textColorbar + w_deltax2_colormap;
     end
     w_outer_diff = w_colormap;
     w_inner_left = 0;
@@ -230,6 +231,17 @@ for coli = 1 : ncols
             'show_xticklabels', show_freNum, 'show_yticklabels', show_textpair, 'show_xlabel', show_freLabel, 'show_titlename', show_condname,'show_colorbar', show_colorbar, ...
             'fig', fig, 'outerposMargin', subplot_outerMargin, 'innerposMargin', subplot_innerposMargin, ...
             'fontname', fontname);
+        
+        ifig = figure('Position', [150 150 400 200]);
+        plot_ciCohHistogram2(sigciCohChanges_flatten, chnPairNames, f_selected, pdcond, 'histClim', [-1 1],...
+            'fig', ifig, ...
+            'cbarStr', 'ciCohChange', 'cbarTicks', [-1 0 1], ...
+            'show_xticklabels', show_freNum, 'show_yticklabels', show_textpair, 'show_xlabel', show_freLabel, 'show_titlename', show_condname,'show_colorbar', show_colorbar, ...
+            'codesavefolder', savecodefolder);
+        subfilename = [animal '-' event '-' pdcond]; % 'Jo-mild-Bnormal-preMove'
+        print(ifig, fullfile(savefolder, subfilename), '-painters', '-depsc')
+        print(ifig, fullfile(savefolder, subfilename), '-dpng', '-r1000')
+        close(ifig)
         
     end
 end

@@ -74,6 +74,49 @@ imagesc(ciCoh_flatten)
 colormap(jet)
 
 
+chnPair_prev = '';
+for ci = 1: length(chnPairNames)
+    chnPair = chnPairNames{ci};
+    
+    % replace M1-stn0-1 to M1-STN
+    s_stn = regexp(chnPair, 'stn[0-9]*-[0-9]*', 'match');
+    if ~isempty(s_stn)
+        for si = 1 : length(s_stn)
+            chnPair = strrep(chnPair, s_stn{si}, 'STN');
+        end
+    end
+    % replace M1-stn0-1 to M1-STN
+    s_gp = regexp(chnPair, 'gp[0-9]*-[0-9]*', 'match');
+    if ~isempty(s_gp)
+        for si = 1 : length(s_gp)
+            chnPair = strrep(chnPair, s_gp{si}, 'GP');
+        end
+    end
+    
+    if ~strcmp(chnPair_prev, '') && ~strcmp(chnPair_prev, chnPair) % a new site pairs
+        hold on; plot(gca, xlim, [(ci + ci -1)/2 (ci + ci -1)/2], 'w--')
+        % Create line
+    end
+    chnPairNames{ci} = chnPair;
+    chnPair_prev = chnPair;
+    
+    clear s_stn s_gp chnPair
+end
+
+
+% set axes position
+outpos = [margin_outer(1) margin_outer(4) fig_width-margin_outer(1)-margin_outer(3) fig_height-margin_outer(2)-margin_outer(4)];
+innerpos = [outpos(1)+margin_inner(1) outpos(2)+margin_inner(4) outpos(3)-margin_inner(1)-margin_inner(3) outpos(4)-margin_inner(2)-margin_inner(4)];
+set(gca, 'Units', 'pixels');
+set(gca, 'OuterPosition', outpos, 'Position', innerpos)
+set(gca,'CLim', histClim)
+c = colorbar;
+c.Label.String = cbarStr;
+if ~isempty(cbarTicks)
+    c.Ticks = cbarTicks;
+end
+c.Visible = 'off';
+
 %%% show inf
 [npairs, nf] = size(ciCoh_flatten);
 if show_xticklabels
@@ -104,47 +147,7 @@ else
 end
 
 if show_colorbar
-    c = colorbar;
-    c.Label.String = cbarStr;
-    if ~isempty(cbarTicks)
-        c.Ticks = cbarTicks;
-    end
-else
-    margin_inner(3) = 0;
+c.Visible = 'on';
 end
 
-% set axes position
-outpos = [margin_outer(1) margin_outer(4) fig_width-margin_outer(1)-margin_outer(3) fig_height-margin_outer(2)-margin_outer(4)];
-innerpos = [outpos(1)+margin_inner(1) outpos(2)+margin_inner(4) outpos(3)-margin_inner(1)-margin_inner(3) outpos(4)-margin_inner(2)-margin_inner(4)];
-set(gca, 'Units', 'pixels');
-set(gca, 'OuterPosition', outpos, 'Position', innerpos)
-set(gca,'CLim', histClim)
 
-
-chnPair_prev = '';
-for ci = 1: length(chnPairNames)
-    chnPair = chnPairNames{ci};
-    
-    % replace M1-stn0-1 to M1-STN
-    s_stn = regexp(chnPair, 'stn[0-9]*-[0-9]*', 'match');
-    if ~isempty(s_stn)
-        for si = 1 : length(s_stn)
-            chnPair = strrep(chnPair, s_stn{si}, 'STN');
-        end
-    end
-    % replace M1-stn0-1 to M1-STN
-    s_gp = regexp(chnPair, 'gp[0-9]*-[0-9]*', 'match');
-    if ~isempty(s_gp)
-        for si = 1 : length(s_gp)
-            chnPair = strrep(chnPair, s_gp{si}, 'GP');
-        end
-    end
-    
-    if ~strcmp(chnPair_prev, '') && ~strcmp(chnPair_prev, chnPair) % a new site pairs
-        hold on; plot(gca, xlim, [(ci + ci -1)/2 (ci + ci -1)/2], 'w--')
-        % Create line
-    end
-    chnPair_prev = chnPair;
-    
-    clear s_stn s_gp chnPair
-end

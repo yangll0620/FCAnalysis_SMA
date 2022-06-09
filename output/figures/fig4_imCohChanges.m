@@ -74,12 +74,12 @@ conds_K(strcmp(conds_K, basepd)) = [];
 conds = [conds_J conds_K];
 
 
-ePhases_both = {'preMove'; 'earlyReach';  'lateReach'};
-ePhases_onlyK = {'PeakV'};
-ePhases = [ePhases_both; ePhases_onlyK];
+ePhases_J = {'preMove'; 'earlyReach';  'lateReach'};
+ePhases_K = {'preMove'; 'earlyReach';  'PeakV'; 'lateReach'};
 
-nrows = length(ePhases);
-nrows_Both = length(ePhases_both);
+
+
+nrows = 4;
 ncols_J = length(conds_J);
 ncols = length(conds);
 
@@ -93,9 +93,12 @@ for coli = 1 : ncols
     if coli <= ncols_J
         animal = 'Jo';
         input_folder = input_folder_J;
+        ePhases = ePhases_J;
+        
     else
         animal = 'Kitty';
         input_folder = input_folder_K;
+        ePhases = ePhases_K;
     end
     ciCohChangesfile_prefix =[animal '-ciCohChanges'];
     
@@ -132,8 +135,7 @@ for coli = 1 : ncols
         w_outer_right = w_textColorbar_show + (ncols-coli) * w_colormap + (ncols-coli -1) * w_deltax1_colormap + w_deltax2_colormap;
     end
     
-    ifig_width = fig_width - (w_outer_left + w_outer_right);
-    
+    nrows = length(ePhases);
     for rowi = 1 : nrows
         
         % extract sigciCohChanges_flatten
@@ -164,7 +166,7 @@ for coli = 1 : ncols
             h_textCond_show = h_textCond;
         end
         h_outer_top = h_textAnimal + h_textCond_show + (rowi -1) * (h_colormap + h_deltay_colormap);
-        if rowi == nrows || (rowi == nrows_Both && coli <= ncols_J)
+        if rowi == nrows 
             h_textFrenumlabel_show = 0;
             h_inner_bottom = h_textFrenum + h_textFrelabel;
             show_xlabel = true;
@@ -186,11 +188,9 @@ for coli = 1 : ncols
             'fig', fig, 'outerposMargin', subplot_outerMargin, 'innerposMargin', subplot_innerposMargin, ...
             'fontsize1', fontsize1, 'fontsize2', fontsize2, 'fontname', fontname);
         
-        % separate figure
-        ifig_height = fig_height - (h_outer_top + h_outer_bottom);
         
         
-        ifig = figure('Position', [50 50 ifig_width ifig_height]);
+        ifig = figure('Position', [50 50 400 200]);
         set(ifig, 'PaperUnits', 'points');
         plot_ciCohHistogram2(sigciCohChanges_flatten, chnPairNames, f_selected, [comppd '-' basepd], 'histClim', [-1 1],...
             'codesavefolder', savecodefolder, 'cbarStr', 'ciCohChange', 'cbarTicks', [-1 0 1], ...
@@ -200,6 +200,7 @@ for coli = 1 : ncols
         
         subfilename = [savefilename '-' animal '-' comppd '-B' basepd '-' event]; % 'Jo-mild-Bnormal-preMove'
         print(ifig, fullfile(savefolder, subfilename), '-painters', '-depsc')
+        print(ifig, fullfile(savefolder, subfilename), '-dpng', '-r1000')
         close(ifig)
         
         clear subplot_outerMargin subplot_innerposMargin
