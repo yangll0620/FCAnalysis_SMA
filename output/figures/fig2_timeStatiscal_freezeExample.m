@@ -401,7 +401,7 @@ end
 alpha = 0.5;
 xt = get(gca, 'XTick');
 yt = get(gca, 'YTick');
-hs = [0.92 0.97 1.02];
+hs = [0.88 0.92 0.97];
 for ci = 1 : nconds-1
     pdcondi  = cond_cell{ci};
     ti = t_reaction.(pdcondi);
@@ -721,7 +721,7 @@ end
 ax = axes(fig, 'Units', 'pixels');
 
 % set axes position
-if ~isempty(outerposMargin) && ~isempty(outerposMargin)
+if ~isempty(outerposMargin) && ~isempty(innerposMargin)
     fig_pos = fig.Position;
     fig_width = fig_pos(3);
     fig_height = fig_pos(4);
@@ -732,7 +732,7 @@ end
 
 
 
-% plot MA
+% plot MA & threshold
 plot(ax, ts, ma, 'DisplayName','speed', 'LineWidth',1); 
 hold on
 
@@ -810,7 +810,7 @@ else
 end
 
 if show_ylabel
-    ylabel('Speed', 'FontSize', 12, 'FontWeight', 'bold', 'FontName', fontname)
+    ylabel('Speed of Wrist (cm/s)', 'FontSize', 12, 'FontWeight', 'bold', 'FontName', fontname)
 end
 
 

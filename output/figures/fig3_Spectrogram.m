@@ -69,7 +69,7 @@ savefilename = funcname;
 animals = {'Jo', 'Kitty'};
 
 %%% plot Rest PSD
-if false
+if true
     for ai = 1 : length(animals)
         animal = animals{ai};
         input_restfile = input_restfiles.(animal(1));
@@ -468,14 +468,14 @@ for chi = 1 : size(lfp_phase_trials, 1)
 end
 
 
-function RestPSD(input_restfile, plotF_AOI, chnsused, savefolder, animal)
+function RestPSD(input_restfile, plotF_AOI, chnsused, savefolder, animal, ifig_width, ifig_height)
 load(input_restfile, 'pxxs_allfiles_normal', 'pxxs_allfiles_moderate', 'F_pxx');
 vars = whos('-file',input_restfile, 'pxxs_allfiles_mild');
 if ~isempty(vars)
     load(input_restfile, 'pxxs_allfiles_mild');
 end
-idx_AOI = find(F_pxx >= plotF_AOI(1) & F_pxx <= plotF_AOI(2));
-freqs = F_pxx(idx_AOI);
+idx_FOI = find(F_pxx >= plotF_AOI(1) & F_pxx <= plotF_AOI(2));
+freqs = F_pxx(idx_FOI);
 
 
 %pxxs_allfiles_moderate = pxxs_allfiles_moderate(idx_AOI, :);
@@ -486,13 +486,13 @@ for rowi = 1 : nrows
     chnname = chnsused{rowi};
     
     psds.normal = pxxs_allfiles_normal.(chnname);
-    psds.normal = psds.normal(idx_AOI, :);
+    psds.normal = psds.normal(idx_FOI, :);
     if exist('pxxs_allfiles_mild', 'var')
         psds.mild = pxxs_allfiles_mild.(chnname);
-        psds.mild = psds.mild(idx_AOI, :);
+        psds.mild = psds.mild(idx_FOI, :);
     end
-    psds.moderate = pxxs_allfiles_moderate.M1;
-    psds.moderate = psds.moderate(idx_AOI, :);
+    psds.moderate = pxxs_allfiles_moderate.(chnname);
+    psds.moderate = psds.moderate(idx_FOI, :);
     
     show_FreqNum = false;
     show_FreqLabel = false;
@@ -506,16 +506,16 @@ for rowi = 1 : nrows
         show_FreqLabel = true;
     end
     
-    fig = figure('Position', [150 150 300 200]);
+    ifig = figure('Position', [150 150 300 200]);
     plotPSD_comp_1chn(psds, freqs,...
-        'fig', fig,...
+        'fig', ifig,...
         'show_xlabel', show_FreqLabel, 'show_xticklabels', show_FreqNum, ...
         'show_ylabel', show_PowerLabel, 'show_yticklabels', show_PowerNum, 'show_legend', show_legend);
     
     subsavefile = ['RestPSD-' animal '-' chnname];
-    print(fig, fullfile(savefolder, subsavefile), '-painters', '-depsc');
-    print(fig, fullfile(savefolder, subsavefile), '-dpng', '-r1000')
-    close(fig)
+    print(ifig, fullfile(savefolder, subsavefile), '-vector', '-depsc');
+    print(ifig, fullfile(savefolder, subsavefile), '-dpng', '-r1000')
+    close(ifig)
     
 
     clear chnname psds 
@@ -567,6 +567,7 @@ show_legend = p.Results.show_legend;
 color_range.normal = [224, 255, 255] / 255;
 color_range.mild = [255, 228, 225] / 255;
 color_range.moderate = [238, 238, 238] / 255;
+
 color_mean.normal = [0, 0, 255] / 255;
 color_mean.mild = [255, 00, 0] / 255;
 color_mean.moderate = [0, 0, 0] / 255;
@@ -647,7 +648,7 @@ if show_xlabel
 end
 
 if show_ylabel
-    ylabel('Power', 'FontSize', 12, 'FontWeight', 'bold', 'FontName', 'Times New Roman')
+    ylabel('Normalized Power', 'FontSize', 12, 'FontWeight', 'bold', 'FontName', 'Times New Roman')
 end
 
 if show_legend
@@ -731,6 +732,7 @@ end
 
 if show_xticklabels
     pos = get(ax, 'Position');
+
     xtls = xticklabels(ax);
     xtls{cellfun(@(x) strcmp(x, '0'), xtls)} = char(align2);
     xticklabels(ax, xtls)

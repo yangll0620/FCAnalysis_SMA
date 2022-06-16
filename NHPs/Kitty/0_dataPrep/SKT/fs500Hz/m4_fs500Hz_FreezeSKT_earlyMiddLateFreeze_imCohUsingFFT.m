@@ -85,22 +85,19 @@ saveimgfile_prefix = [file_prefix '_ciCohHist'];
 
 %% Code start here
 
-unwanted_DBS = unwanted_DBS_extract(animal);
-noisy_chns = noisy_chns_extract(animal);
-notAOI_chns = notInterested_chns_extract(animal);
-removed_chns = [unwanted_DBS noisy_chns notAOI_chns];
-clear unwanted_DBS noisy_chns
-
 % load(and extract) ciCohPhasefile
 ciCohPhasefile = fullfile(savefolder, [ciCohPhasefile_prefix  '_' pdcond  '.mat']);
 
 %%% ----------- case no ciCohPhasefile or new Run -------- %%%
 if(~exist(ciCohPhasefile, 'file') || newRun)
     
+    % extract lfpsegs_freeze
     files = dir(fullfile(inputfolder_Freeze, ['*' pdcond '*.mat']));
     [lfpsegs_freeze, fs, T_chnsarea, ~]= seg2Short_earlyMiddleLateFreeze_Segments(files, 'tseg', seg_tseg);
     save(ciCohPhasefile, 'lfpsegs_freeze', 'fs', 'T_chnsarea', 'f_AOI');
 
+
+    % calculate ciCohs
     freezeNames = fieldnames(lfpsegs_freeze);
     for fri = 1 : length(freezeNames)
         freezeName = freezeNames{fri};
