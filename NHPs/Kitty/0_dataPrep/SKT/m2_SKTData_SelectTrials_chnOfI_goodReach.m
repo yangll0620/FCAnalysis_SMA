@@ -1,4 +1,4 @@
-function m2_segSKTData_SelectTrials_chnOfI_goodReach(varargin)
+function m2_SKTData_SelectTrials_chnOfI_goodReach(varargin)
 %  plot spectrogram of each trial and manually select trials only use good
 %  reach trials
 %

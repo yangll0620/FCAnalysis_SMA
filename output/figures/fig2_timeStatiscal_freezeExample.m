@@ -1,4 +1,28 @@
-function fig2_timeStatiscal_freezeExample()
+function fig2_timeStatiscal_freezeExample(varargin)
+%   
+%   Usage:
+%       fig2_timeStatiscal_freezeExample('plot_timeStatiscal', true, 'plot_freezeExample', true)
+%       fig2_timeStatiscal_freezeExample('plot_timeStatiscal', false, 'plot_freezeExample', true)
+%       fig2_timeStatiscal_freezeExample('plot_timeStatiscal', true, 'plot_freezeExample', false)
+%
+%   Inputs:
+%
+%       Name-Value:
+%           'plot_timeStatiscal' - tag plotting timeStatiscal (default true)
+%           'plot_freezeExample' - tag plotting freeze Example (default true)
+
+
+% parse params
+p = inputParser;
+addParameter(p, 'plot_timeStatiscal', true, @(x) assert(islogical(x) && isscalar(x)));
+addParameter(p, 'plot_freezeExample', true, @(x) assert(islogical(x) && isscalar(x)));
+
+
+parse(p,varargin{:});
+plot_timeStatiscal = p.Results.plot_timeStatiscal;
+plot_freezeExample = p.Results.plot_freezeExample;
+
+
 codefilepath = mfilename('fullpath');
 
 
@@ -19,7 +43,6 @@ addpath(genpath(fullfile(codefolder,'toolbox')));
 
 
 
-
 %% Input & save
 [~, ~, ~, outputfolder] = exp_subfolders();
 [~, funcname, ~]= fileparts(codefilepath);
@@ -30,134 +53,50 @@ if ~exist(savefolder, 'dir')
     mkdir(savefolder)
 end
 
+aisavefolder = fullfile(outputfolder,'results','figures', 'Illustrator', funcname);
+if ~exist(aisavefolder, 'dir')
+    mkdir(aisavefolder)
+end
 
 savecodefolder = fullfile(savefolder, 'code');
 copyfile2folder(codefilepath, savecodefolder);
 
-savefilename = funcname;
+%% Code start Here
+if plot_timeStatiscal
+    fig_timeStatiscal('pos_ifig', [150 150 300 250], ...
+        'savefolder', savefolder, 'copy2folder', aisavefolder);
+end
+
+if plot_freezeExample
+    fig_freezeExample('pos_ifig', [150 150 350 250],...
+        'savefolder', savefolder, 'copy2folder', aisavefolder);
+end
 
 
-%% plot figure parameters in pixels
-w_subplot = 360;
-h_subplot_a = 300;
-h_subplot_b1 = 200;
-h_subplot_b2 = 200;
-
-w_delta = 40;
-h_delta_betweenab = 40;
-h_delta_inb = 10;
-
-
-
-w_ylabel = 60;
-w_yticks = 20;
-w_yright = 50;
-h_xlabel = 30;
-h_xticks = 20;
-h_title = 40;
-
-w_textab = 20;
-h_textab = 20;
-
-
-fig_width = w_textab +w_ylabel + w_yticks*2 + w_subplot * 2 + w_delta + w_yright;
-fig_height = h_subplot_a + h_subplot_b1 + h_subplot_b2 + (h_xlabel + h_xticks) * 2 + h_delta_betweenab + h_delta_inb;
-
-close all
-fig = figure('Units', 'pixels', 'Position', [100 100 fig_width fig_height]);
-
-%%%
-h_top_a = 0;
-h_top_b = h_subplot_a + (h_xticks) + h_delta_betweenab;
-w_left_ab = w_textab;
-
-
-
-%%% plot time statiscal
-fig_timeStatiscal('fig', fig, 'h_top', h_top_a, 'w_left', w_left_ab, 'w_timePlot', w_subplot, 'h_timePlot', h_subplot_a, ...
-                  'w_deltax_timePlots', w_delta, 'w_textTime', w_ylabel, 'w_textTimeNum', w_yticks, 'w_hold_yright', w_yright,...
-                   'h_textAnimal', h_title, 'h_textCondLabel', h_xlabel, 'savefolder', savefolder);
-              
-
-              
-fig_freezeExample('fig', fig, 'savefolder', savefolder, ...
-                  'h_top', h_top_b, 'w_left', w_left_ab, 'w_subplotb', w_subplot, 'h_sublotb', h_subplot_b1, ...
-                  'w_delta_b', w_delta  + h_xticks, 'h_delta_b', h_delta_inb, ...
-                  'w_textSpeedFreq', w_ylabel, 'w_SpeedFreqTicks', w_yticks,  'w_colorbar', w_yright, 'holdplace_SpeedFreqTicks', true, ...
-                  'h_textTime', h_xlabel, 'h_TimeTicks', h_xticks);
-
-
-
-%%% plot text (a) and (b)
-ta = annotation(fig, 'textbox', 'String', {'(a)'}, 'LineStyle', 'none', 'Units', 'pixels', 'FontSize', 12, 'FontWeight', 'bold', 'FontName', 'Times New Roman');
-pos_left = 0;
-pos_lower = fig_height - h_textab;
-ta.Position = [pos_left pos_lower w_textab h_textab];
-
-tb = annotation(fig, 'textbox', 'String', {'(b)'}, 'LineStyle', 'none', 'Units', 'pixels', 'FontSize', 12, 'FontWeight', 'bold', 'FontName', 'Times New Roman');
-pos_lower = fig_height - (h_top_b + h_textab);
-tb.Position = [pos_left pos_lower w_textab h_textab];
-
-clear ta tb pos pos_left pos_lower
-
-
-%%% save
-print(fullfile(savefolder, savefilename), '-dpng', '-r1000')
-print(gcf, fullfile(savefolder, savefilename), '-painters', '-depsc');
-disp('saved figure')
 
 function fig_timeStatiscal(varargin)
 %   Inputs:
 %
-%       Name-Value: 
-%           'fig' - figure handle to show the image (default [] to create a new one)
-%           'h_top' - distance between the subplot top and fig top
-%           'w_left' - distance between the subplot left and fig left
-%           'w_timePlot' - width  for the time plot, default 360
-%           'h_timePlot' - height for the time plot, default 300
-%           'w_textTime' - width showing the 'Reachi Time (s)', default 40
-%           'w_textTimeNum' - width showing the ylabel, default 40
-%           'w_deltax_timePlots' - x distance between two time plots, default 50
-%           'h_textAnimal' - height showing the animal, i.e. Animal J, default 40
-%           'h_textCondLabel' - height showing the condition label, i.e. Normal, n = 176, default 30
-%           'w_hold_yright' - width holding on the right, default 0 
-%           'savefolder' - 
-
-
+%       Name-Value:
+%           'pos_ifig' - position and size of the figure [left bottom fig_width fig_height], default [150 150 400 300]
+%
+%           'savefolder'
+%           'copy2folder'
 
 % parse params
 p = inputParser;
-addParameter(p, 'fig', [], @(x) assert(isa(x, 'matlab.ui.Figure')));
-addParameter(p, 'h_top', 0, @(x) assert(isscalar(x)&&isnumeric(x)));
-addParameter(p, 'w_left', 0, @(x) assert(isscalar(x)&&isnumeric(x)));
-addParameter(p, 'w_timePlot', 360, @(x) assert(isscalar(x)&&isnumeric(x)));
-addParameter(p, 'h_timePlot', 300, @(x) assert(isscalar(x)&&isnumeric(x)));
-addParameter(p, 'w_textTime', 40, @(x) assert(isscalar(x)&&isnumeric(x)));
-addParameter(p, 'w_textTimeNum', 10, @(x) assert(isscalar(x)&&isnumeric(x)));
-addParameter(p, 'w_deltax_timePlots', 50, @(x) assert(isscalar(x)&&isnumeric(x)));
-addParameter(p, 'h_textAnimal', 40, @(x) assert(isscalar(x)&&isnumeric(x)));
-addParameter(p, 'h_textCondLabel', 30, @(x) assert(isscalar(x)&&isnumeric(x)));
-addParameter(p, 'w_hold_yright', 0, @(x) assert(isscalar(x)&&isnumeric(x)));
-addParameter(p, 'savefolder', '', @isstr);
-
+addParameter(p, 'savefolder', '.', @ischar);
+addParameter(p, 'pos_ifig', [150 150 400 300], @(x) assert(isvector(x) && isnumeric(x) && length(x)==4));
+addParameter(p, 'copy2folder', '', @ischar);
 
 parse(p,varargin{:});
-fig = p.Results.fig;
-h_top = p.Results.h_top;
-w_left = p.Results.w_left;
-w_timePlot = p.Results.w_timePlot;
-h_timePlot = p.Results.h_timePlot;
-w_textTime = p.Results.w_textTime;
-w_textTimeNum = p.Results.w_textTimeNum;
-w_deltax_timePlots = p.Results.w_deltax_timePlots;
-h_textAnimal = p.Results.h_textAnimal;
-h_textCondLabel = p.Results.h_textCondLabel;
-w_hold_yright = p.Results.w_hold_yright;
+pos_ifig = p.Results.pos_ifig;
 savefolder = p.Results.savefolder;
+copy2folder = p.Results.copy2folder;
 
 
 
-%% Input 
+% Input
 [~, ~, pipelinefolder, ~] = exp_subfolders();
 input_folder_J = fullfile(pipelinefolder, 'NHPs', 'Jo', '0_dataPrep', 'SKT', 'fs500Hz', 'm2_SKTData_SelectTrials');
 input_folder_K = fullfile(pipelinefolder, 'NHPs', 'Kitty', '0_dataPrep', 'SKT', 'fs500Hz', 'm2_segSKTData_SelectTrials_chnOfI');
@@ -165,7 +104,7 @@ input_folder_K = fullfile(pipelinefolder, 'NHPs', 'Kitty', '0_dataPrep', 'SKT', 
 
 
 
-%% Code Start here
+% Code Start here
 coli_reachonset = 2;
 coli_touch = 3;
 
@@ -175,20 +114,9 @@ animals = {'Jo';'Kitty'};
 conds_J = cond_cell_extract('Jo');
 conds_K = cond_cell_extract('Kitty');
 
-if isempty(fig)
-    fig_width = w_textTime + w_textTimeNum*2 + w_timePlot * 2 + w_deltax_timePlots;
-    fig_height = h_textAnimal + h_timePlot + h_textCondLabel;
-    fig = figure('Position', [150 150 fig_width fig_height]);
-    clear fig_width fig_height
-end
-
-pos = get(gcf, 'Position');
-fig_width = pos(3);
-fig_height = pos(4);
-clear pos
 
 
-%%% plot Reach time 
+%%% plot Reach time
 for ai = 1 : length(animals)
     animal = animals{ai};
     if ai == 1
@@ -199,7 +127,7 @@ for ai = 1 : length(animals)
         input_folder = input_folder_K;
     end
     nconds = length(cond_cell);
-    
+
     % extract t_reaction
     for ci = 1 : nconds
         pdcond  = cond_cell{ci};
@@ -215,81 +143,38 @@ for ai = 1 : length(animals)
                 clear selectedTrials
             end
             t_event = cat(1, t_event, T_idxevent_lfp{goodTrials, :}/ fs_lfp);
-            clear T_idxevent_lfp fs_lfp
+            clear T_idxevent_lfp fs_lfp goodTrials
         end
         t_reaction.(pdcond) = t_event(:, coli_touch) - t_event(:, coli_reachonset);
         clear pdcond files t_event fi
     end
-    
+
     show_timeLabel = false;
     if ai == 1
         show_timeLabel = true;
     end
     show_timeNum = true;
-    show_animalLabel = true;
     show_condLabel = true;
-    
-    
-    % w_out_left w_inner_left w_outer_right w_inner_right
-    w_outer_left = w_left + w_textTime + (ai -1) * (w_textTimeNum + w_timePlot + w_deltax_timePlots);
-    w_inner_left = 0;
-    w_outer_diff = w_timePlot + w_hold_yright;
-    w_inner_right = w_hold_yright;
-    if show_timeLabel
-        w_outer_left = w_outer_left - w_textTime;
-        w_inner_left = w_inner_left + w_textTime;
-        w_outer_diff = w_outer_diff + w_textTime;
-    end
-    if show_timeNum
-        w_outer_diff = w_outer_diff + w_textTimeNum;
-        w_inner_left = w_inner_left + w_textTimeNum;
-    end
-    w_outer_right = fig_width - (w_outer_left + w_outer_diff);
 
-
-    
-    % h_outer_top h_inner_top h_outer_bottom h_inner_bottom
-    h_outer_top = h_top;
-    h_inner_top = 0;
-    h_inner_bottom = 0;
-    h_outer_diff = h_timePlot;
-    if show_animalLabel
-        h_inner_top = h_inner_top + h_textAnimal;
-    end
-    if show_condLabel
-        h_inner_bottom = h_inner_bottom + h_textCondLabel;
-        h_outer_diff = h_outer_diff + h_textCondLabel;
-    end
-    h_outer_bottom = fig_height -  (h_outer_top + h_outer_diff);
-    
-    % outer and inner margin
-    subplot_outerMargin = [w_outer_left h_outer_top w_outer_right h_outer_bottom];
-    subplot_innerposMargin = [w_inner_left h_inner_top w_inner_right h_inner_bottom];
-    
-    plot_1timeStatiscal(t_reaction, 'fig', fig, 'outerposMargin', subplot_outerMargin, 'innerposMargin', subplot_innerposMargin, ...
-        'show_xticklabels', show_condLabel, 'show_ylabel', show_timeLabel, 'show_yticklabels', show_timeNum, ...
-        'titlename', ['Animal ' upper(animal(1))], 'FontName', 'Times New Roman')
-    
-    
-    ifig = figure('Position', [150 150 300 200]);
+    ifig = figure('Position', pos_ifig);
     plot_1timeStatiscal(t_reaction, 'fig', ifig, ...
         'show_xticklabels', show_condLabel, 'show_ylabel', show_timeLabel, 'show_yticklabels', show_timeNum, ...
         'titlename', ['Animal ' upper(animal(1))], 'FontName', 'Times New Roman')
     subfilename = ['time-' animal]; % 'Jo-mild-Bnormal-preMove'
-    print(ifig, fullfile(savefolder, subfilename), '-painters', '-depsc')
-    print(ifig, fullfile(savefolder, subfilename), '-dpng', '-r1000')
+    savefile = fullfile(savefolder, subfilename);
+    print(ifig, savefile, '-painters', '-depsc')
+    print(ifig, savefile, '-dpng', '-r1000')
+    if ~isempty(copy2folder)
+        print(ifig, fullfile(copy2folder, subfilename), '-painters', '-depsc')
+    end
     close(ifig)
-    
-    
-    clear animal cond_cell nconds ci input_folder
-    clear show_timeLabel show_animalLabel show_timeNum
-    clear w_outer_left  w_inner_left w_outer_diff w_outer_right
-    clear h_outer_top h_inner_top h_outer_bottom h_inner_bottom
-    clear subplot_outerMargin subplot_innerposMargin
+
+
+    clear animal cond_cell input_folder nconds ci 
     clear t_reaction
+    clear show_timeLabel show_timeNum show_condLabel
+    clear ifig subfilename savefile
 end
-
-
 
 
 function plot_1timeStatiscal(t_reaction, varargin)
@@ -434,229 +319,72 @@ function fig_freezeExample(varargin)
 %   Inputs:
 %
 %       Name-Value: 
-%           'fig' - figure handle to show the image (default [] to create a new one)
-%           'h_top' - distance between the subplot top and fig top, default 0
-%           'w_left' - distance between the subplot left and fig left, default 0
-%           'h_sublotb' - width  for the time plot, default 200
-%           'w_subplotb' - height for the time plot, default 360
-%           'h_delta_b' - width  for the time plot, default 20
-%           'w_delta_b' - height for the time plot, default 10
-%           'w_textSpeedFreq' - width  for the time plot, default 30
-%           'w_SpeedFreqTicks' - height for the time plot, default 30
-%           'w_colorbar' - width  for the time plot, default 40
-%           'h_textTime' - height for the time plot, default 30
-%           'h_TimeTicks' - width  for the time plot, default 20
-%           'holdplace_SpeedFreqTicks' - hold place for SpeedFreqTicks (true) or not (false, default) 
-%           'savefolder' - 
-
-
+%           'pos_ifig' - position and size of the figure [left bottom fig_width fig_height], default [150 150 400 300]
+%
+%           'savefolder'
+%           'copy2folder'
 
 % parse params
 p = inputParser;
-addParameter(p, 'fig', [], @(x) assert(isa(x, 'matlab.ui.Figure')));
-addParameter(p, 'h_top', 0, @(x) assert(isscalar(x)&&isnumeric(x)));
-addParameter(p, 'w_left', 0, @(x) assert(isscalar(x)&&isnumeric(x)));
-addParameter(p, 'h_sublotb', 360, @(x) assert(isscalar(x)&&isnumeric(x)));
-addParameter(p, 'w_subplotb', 300, @(x) assert(isscalar(x)&&isnumeric(x)));
-addParameter(p, 'h_delta_b', 20, @(x) assert(isscalar(x)&&isnumeric(x)));
-addParameter(p, 'w_delta_b', 10, @(x) assert(isscalar(x)&&isnumeric(x)));
-addParameter(p, 'w_textSpeedFreq', 30, @(x) assert(isscalar(x)&&isnumeric(x)));
-addParameter(p, 'w_SpeedFreqTicks', 30, @(x) assert(isscalar(x)&&isnumeric(x)));
-addParameter(p, 'w_colorbar', 40, @(x) assert(isscalar(x)&&isnumeric(x)));
-addParameter(p, 'h_textTime', 30, @(x) assert(isscalar(x)&&isnumeric(x)));
-addParameter(p, 'h_TimeTicks', 20, @(x) assert(isscalar(x)&&isnumeric(x)));
-addParameter(p, 'holdplace_SpeedFreqTicks', false, @(x) assert(islogical(x) && isscalar(x)));
-addParameter(p, 'savefolder', '.', @isstr);
-
-
-
+addParameter(p, 'savefolder', '.', @ischar);
+addParameter(p, 'pos_ifig', [150 150 400 300], @(x) assert(isvector(x) && isnumeric(x) && length(x)==4));
+addParameter(p, 'copy2folder', '', @ischar);
 
 parse(p,varargin{:});
-fig = p.Results.fig;
-h_top = p.Results.h_top;
-w_left = p.Results.w_left;
-h_sublotb = p.Results.h_sublotb;
-w_subplotb = p.Results.w_subplotb;
-h_delta_b = p.Results.h_delta_b;
-w_delta_b = p.Results.w_delta_b;
-w_textSpeedFreq = p.Results.w_textSpeedFreq;
-w_SpeedFreqTicks = p.Results.w_SpeedFreqTicks;
-w_colorbar = p.Results.w_colorbar;
-h_textTime = p.Results.h_textTime;
-h_TimeTicks = p.Results.h_TimeTicks;
-holdplace_SpeedFreqTicks = p.Results.holdplace_SpeedFreqTicks;
+pos_ifig = p.Results.pos_ifig;
 savefolder = p.Results.savefolder;
- 
+copy2folder= p.Results.copy2folder;
 
-
-%% Input 
+% Input 
 [~, ~, pipelinefolder, ~] = exp_subfolders();
+input_Freeze_file = fullfile(pipelinefolder, 'NHPs', 'Kitty', '0_dataPrep', 'SKT', 'fs500Hz', 'm3_fs500Hz_freezeSKTData_EpisodeExtract', 'Kitty_freezeEpisodes_moderate-tThesFreezeReach5s_20150408_bktdt2.mat');
 
-input_InitReachFreeze_file = fullfile(pipelinefolder, 'NHPs', 'Kitty', '0_dataPrep', 'SKT', 'fs500Hz', 'm3_fs500Hz_freezeSKTData_EpisodeExtract', 'Kitty_freezeEpisodes_moderate-tThesFreezeReach5s_20150408_bktdt2.mat');
-input_ManiFreeze_file = fullfile(pipelinefolder, 'NHPs', 'Kitty', '0_dataPrep', 'SKT', 'fs500Hz', 'm3_fs500Hz_freezeSKTData_EpisodeExtract', 'Kitty_freezeEpisodes_moderate-tThesFreezeReach5s_20150408_bktdt2.mat');
+tri = 12;
+colors4freezeline = {'k', 'b'};
 
-tri_InitReachFreeze = 12;
-tri_ManiFreeze = 4;
+% load data
+load(input_Freeze_file, 'freezStruct', 'fs_ma', 'smoothWspeed_trial', 'T_idxevent_ma');
 
-colors4freezeline_InitReachFreeze = {'k', 'b'};
-colors4freezeline_ManiFreeze = {'r'};
+ma = smoothWspeed_trial{tri};
+ts = (1: length(ma))/fs_ma;
+tevents_ma = T_idxevent_ma{tri, :} / fs_ma;
 
-freezeTypeInEpi_InitReachFreeze = {'freeze during init Move'; 'freeze during React-Reach'};
-freezeTypeInEpi_ManiFreeze = {'freeze during Manipulation'};
+% find tFreezePhases for each freezeTypeInEpi in freezeTypeInEpis
+freezEpisodes = freezStruct.freezEpisodes;
+tFreezePhases = [];
+freezeTypeInEpis = {'freeze during init Move'; 'freeze during React-Reach'};
+for fTi = 1: length(freezeTypeInEpis)
+    freezeTypeInEpi = freezeTypeInEpis{fTi};
 
-
-%% Code Start here
-ncols = 2;
-nrows = 2;
-
-if isempty(fig)
-    fig_width = w_subplotb * 2 + w_delta_b;
-    fig_height = h_sublotb * 2 + h_delta_b;
-    fig = figure('Units', 'pixels', 'Position', [150 150 fig_width fig_height]);
-    clear fig_width fig_height
-end
-pos = get(gcf, 'Position');
-fig_width = pos(3);
-fig_height = pos(4);
-clear pos
-
-
-
-for coli = 1: ncols
-    show_TextSpeedFreq = false;
-    show_Colorbar = false;
-    show_SpeedFreqTicks = false;
-    if coli == 1
-        show_TextSpeedFreq = true;
-        show_SpeedFreqTicks = true;
-    end
-    if coli == ncols
-        show_Colorbar = true;
-    end
-    
-    % w_out_left w_inner_left w_outer_right w_inner_right
-    w_outer_left = w_left + w_textSpeedFreq + w_SpeedFreqTicks + (coli -1)* (w_subplotb + w_delta_b);
-    w_inner_left = 0;
-    w_inner_right = 0;
-    w_outer_diff = w_subplotb;
-    if show_TextSpeedFreq
-        w_outer_left = w_outer_left - w_textSpeedFreq;
-        w_inner_left = w_inner_left + w_textSpeedFreq;
-        w_outer_diff = w_outer_diff + w_textSpeedFreq;
-    end
-    if show_SpeedFreqTicks || holdplace_SpeedFreqTicks
-        w_outer_left = w_outer_left - w_SpeedFreqTicks;
-        w_inner_left = w_inner_left + w_SpeedFreqTicks;
-        w_outer_diff = w_outer_diff + w_SpeedFreqTicks;
-    end   
-    if show_Colorbar
-        w_inner_right = w_inner_right + w_colorbar;
-        w_outer_diff = w_outer_diff + w_colorbar;
-    end
-    w_outer_right = fig_width - (w_outer_left + w_outer_diff);
-    
-    % load data
-    if coli == 1
-        input_Freeze_file = input_InitReachFreeze_file;
-        tri = tri_InitReachFreeze;
-        freezeTypeInEpis = freezeTypeInEpi_InitReachFreeze;
-        colors4freezeline = colors4freezeline_InitReachFreeze;
-    else
-        input_Freeze_file = input_ManiFreeze_file;
-        tri = tri_ManiFreeze;
-        freezeTypeInEpis = freezeTypeInEpi_ManiFreeze;
-        colors4freezeline = colors4freezeline_ManiFreeze;
-    end
-    load(input_Freeze_file, 'freezStruct', 'fs_ma', 'smoothWspeed_trial', 'T_idxevent_ma');
-    ma = smoothWspeed_trial{tri};
-    ts = (1: length(ma))/fs_ma;
-    tevents_ma = T_idxevent_ma{tri, :} / fs_ma;
-    
-    
-    % find fei for each freezeTypeInEpi in freezeTypeInEpis
-    freezEpisodes = freezStruct.freezEpisodes;  
-    frzis = [];
-    tFreezePhases = [];
-    for fTi = 1: length(freezeTypeInEpis)
-        freezeTypeInEpi = freezeTypeInEpis{fTi};
-        
-        % find freezEpisodes index fei
-        frzi = 0;
-        for fi = 1 : length(freezEpisodes)
-            if(freezEpisodes{fi}.triali == tri && strcmp(freezEpisodes{fi}.freezeType, freezeTypeInEpi))
-                frzi = fi;
-                break;
-            end
+    % find freezEpisodes index fei
+    frzi = 0;
+    for fi = 1 : length(freezEpisodes)
+        if(freezEpisodes{fi}.triali == tri && strcmp(freezEpisodes{fi}.freezeType, freezeTypeInEpi))
+            frzi = fi;
+            break;
         end
-        if frzi == 0
-            disp(['Can not find freeze episode index for tri = ' num2str(tri) ':' freezeTyp]);
-            return;
-        end
-        frzis = [frzis; frzi];
-        
-        tFreezePhases = [tFreezePhases; freezEpisodes{frzi}.freezeTPhaseS];
-        
-        clear freezeTypeInEpi fei
+    end
+    if frzi == 0
+        disp(['Can not find freeze episode index for tri = ' num2str(tri) ':' freezeTyp]);
+        return;
     end
 
-    for rowi = 1 : nrows
-        show_TextTime = false;
-        show_TimeTicks = false;
-        if rowi == nrows
-            show_TextTime = true;
-            show_TimeTicks = true;
-        end
-        
-        % h_outer_top h_inner_top h_outer_bottom h_inner_bottom
-        h_outer_top = h_top;
-        h_inner_top = 0;
-        h_inner_bottom = 0;
-        h_outer_diff = h_sublotb;
-        if show_TimeTicks
-            h_inner_bottom = h_inner_bottom + h_TimeTicks;
-            h_outer_diff = h_outer_diff + h_TimeTicks;
-        end 
-        if show_TextTime
-            h_inner_bottom = h_inner_bottom + h_textTime;
-            h_outer_diff = h_outer_diff + h_textTime;
-        end
-        h_outer_bottom = fig_height -  (h_outer_top + h_outer_diff);
-        
-        
-        % outer and inner margin
-        subplot_outerMargin = [w_outer_left h_outer_top w_outer_right h_outer_bottom];
-        subplot_innerposMargin = [w_inner_left h_inner_top w_inner_right h_inner_bottom];
-        
-        
-        if rowi == 1
-            plot_1freezeTrial(ma, ts, tevents_ma, tFreezePhases, colors4freezeline,...
-                'fig', fig,...
-                'show_xlabel', show_TextTime, 'show_xticklabels', show_TimeTicks, 'show_ylabel', show_TextSpeedFreq, 'show_yticklabels', show_SpeedFreqTicks, ...
-                'outerposMargin', subplot_outerMargin, 'innerposMargin', subplot_innerposMargin)
-            
-            
-            ifig = figure('Position', [150 150 400 300]);
-            plot_1freezeTrial(ma, ts, tevents_ma, tFreezePhases, colors4freezeline,...
-                'fig', ifig, 'show_xlabel', false)
-            subfilename = ['freezTrial-' num2str(coli)]; 
-            print(ifig, fullfile(savefolder, subfilename), '-painters', '-depsc')
-            print(ifig, fullfile(savefolder, subfilename), '-dpng', '-r1000')
-            close(ifig)
-        end
-        
-        
-        clear show_TextTime show_TimeTicks
-        clear h_outer_top h_inner_top h_outer_bottom h_inner_bottom
-        clear subplot_outerMargin subplot_innerposMargin
-        
-    end
-    
-    clear show_TextSpeedFreq show_Colorbar show_SpeedFreqTicks
-    clear w_outer_left w_outer_right w_inner_left w_inner_right w_outer_diff
-    clear('freezStruct', 'fs_ma', 'smoothWspeed_trial', 'T_idxevent_ma')
-    clear ma ts tevents_ma freezEpisodes frzis tFreezePhases colors4freezeline
+    tFreezePhases = [tFreezePhases; freezEpisodes{frzi}.freezeTPhaseS];
+
+    clear freezeTypeInEpi fei
 end
 
+
+ifig = figure('Position', pos_ifig);
+plot_1freezeTrial(ma, ts, tevents_ma, tFreezePhases, colors4freezeline,...
+    'fig', ifig, 'show_xlabel', false)
+subfilename = 'freezTrial';
+print(ifig, fullfile(savefolder, subfilename), '-painters', '-depsc')
+print(ifig, fullfile(savefolder, subfilename), '-dpng', '-r1000')
+if ~isempty(copy2folder)
+    print(ifig, fullfile(copy2folder, subfilename), '-painters', '-depsc')
+end
+close(ifig)
 
 function plot_1freezeTrial(ma, ts, tevents_ma, tFreezePhases, colors4freezeline, varargin)
 %   Inputs:
@@ -677,7 +405,7 @@ function plot_1freezeTrial(ma, ts, tevents_ma, tFreezePhases, colors4freezeline,
 %           'show_eventLine' - show (true, default) or not show (false) event lines
 %           'show_eventName' - show (true, default) or not show (false) event Names
 %           'tlimit' - time show limit, default [] represents [min(ts) max(ts)]
-
+%           'plotFreezeLines' - plot freeze lines or not (defalut false)
 
 
 
@@ -695,6 +423,7 @@ addParameter(p, 'fontname', 'Times New Roman', @ischar);
 addParameter(p, 'show_eventLine', true, @(x) assert(islogical(x) && isscalar(x)));
 addParameter(p, 'show_eventName', true, @(x) assert(islogical(x) && isscalar(x)));
 addParameter(p, 'tlimit', [], @(x) assert(isempty(x) || (isvector(x) && isnumeric(x) && length(x)==2)));
+addParameter(p, 'plotFreezeLines', false, @(x) assert(islogical(x) && isscalar(x)));
 
 
 
@@ -711,6 +440,7 @@ fontname = p.Results.fontname;
 show_eventLine = p.Results.show_eventLine;
 show_eventName = p.Results.show_eventName;
 tlimit = p.Results.tlimit;
+plotFreezeLines = p.Results.plotFreezeLines;
 
 
 
@@ -744,7 +474,7 @@ xlim(tlimit);
 
 % plot threshold
 speedThres_Move = 30;
-plot(xlim, [speedThres_Move speedThres_Move], 'b-.');
+plot(xlim, [speedThres_Move speedThres_Move], 'r-.');
 %text(pi,0,'\leftarrow sin(\pi)')
 
 
@@ -777,21 +507,25 @@ if show_eventName
     clear xtks xtklabs tei
 end
 
+if plotFreezeLines
 
-% plot start and end freeze lines
-ys = ylim;
-ys = [ys(1) ys(2)/2];
-for tfi = 1 : size(tFreezePhases, 1)
-    plot([tFreezePhases(tfi, 1) tFreezePhases(tfi, 1)], ys, [colors4freezeline{tfi} '-'], 'LineWidth',1);
-    plot([tFreezePhases(tfi, 2) tFreezePhases(tfi, 2)], ys, [colors4freezeline{tfi} '-'], 'LineWidth',1);
+    % plot start and end freeze lines
+    ys = ylim;
+    ys = [ys(1) ys(2)/2];
+    for tfi = 1 : size(tFreezePhases, 1)
+        plot([tFreezePhases(tfi, 1) tFreezePhases(tfi, 1)], ys, [colors4freezeline{tfi} '-'], 'LineWidth',1);
+        plot([tFreezePhases(tfi, 2) tFreezePhases(tfi, 2)], ys, [colors4freezeline{tfi} '-'], 'LineWidth',1);
+    end
+
+    % plot t_touch and t_returnonset as ManiFreeze
+    eveNames = {'CueOnset', 'ReachOnset', 'Touch', 'ReturnOnset', 'Mouth'};
+    t_touch = tevents_ma(cellfun(@(x) strcmp(x,'Touch'), eveNames));
+    t_returnonset = tevents_ma(cellfun(@(x) strcmp(x,'ReturnOnset'), eveNames));
+    plot([t_touch t_touch], ys, ['r-'], 'LineWidth',1);
+    plot([t_returnonset t_returnonset], ys, ['r-'], 'LineWidth',1);
 end
 
-% plot t_touch and t_returnonset as ManiFreeze
-eveNames = {'CueOnset', 'ReachOnset', 'Touch', 'ReturnOnset', 'Mouth'};
-t_touch = tevents_ma(cellfun(@(x) strcmp(x,'Touch'), eveNames));
-t_returnonset = tevents_ma(cellfun(@(x) strcmp(x,'ReturnOnset'), eveNames));
-plot([t_touch t_touch], ys, ['r-'], 'LineWidth',1);
-plot([t_returnonset t_returnonset], ys, ['r-'], 'LineWidth',1);
+
 
 
 if show_xticklabels
@@ -812,6 +546,3 @@ end
 if show_ylabel
     ylabel('Speed of Wrist (cm/s)', 'FontSize', 12, 'FontWeight', 'bold', 'FontName', fontname)
 end
-
-
-
