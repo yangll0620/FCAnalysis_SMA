@@ -1,7 +1,7 @@
 function fig2_timeStatiscal_freezeExample(varargin)
 %   
 %   Usage:
-%       fig2_timeStatiscal_freezeExample('plot_timeStatiscal', true, 'plot_freezeExample', true)
+%       fig2_timeStatiscal_freezeExample('plot_timeStatiscal', false, 'plot_freezeExample', false, 'plot_reachTimehist', true)
 %       fig2_timeStatiscal_freezeExample('plot_timeStatiscal', false, 'plot_freezeExample', true)
 %       fig2_timeStatiscal_freezeExample('plot_timeStatiscal', true, 'plot_freezeExample', false)
 %
@@ -10,17 +10,20 @@ function fig2_timeStatiscal_freezeExample(varargin)
 %       Name-Value:
 %           'plot_timeStatiscal' - tag plotting timeStatiscal (default true)
 %           'plot_freezeExample' - tag plotting freeze Example (default true)
+%           'plot_reachTimehist' - tag plotting reach time histogram (default true)
 
 
 % parse params
 p = inputParser;
 addParameter(p, 'plot_timeStatiscal', true, @(x) assert(islogical(x) && isscalar(x)));
 addParameter(p, 'plot_freezeExample', true, @(x) assert(islogical(x) && isscalar(x)));
+addParameter(p, 'plot_reachTimehist', true, @(x) assert(islogical(x) && isscalar(x)));
 
 
 parse(p,varargin{:});
 plot_timeStatiscal = p.Results.plot_timeStatiscal;
 plot_freezeExample = p.Results.plot_freezeExample;
+plot_reachTimehist = p.Results.plot_reachTimehist;
 
 
 codefilepath = mfilename('fullpath');
@@ -70,6 +73,104 @@ end
 if plot_freezeExample
     fig_freezeExample('pos_ifig', [150 150 350 250],...
         'savefolder', savefolder, 'copy2folder', aisavefolder);
+end
+
+
+if plot_reachTimehist
+    fig_reachTimehist('pos_ifig', [150 150 350 250],...
+        'savefolder', savefolder, 'copy2folder', aisavefolder);
+end
+
+
+function fig_reachTimehist(varargin)
+%   Inputs:
+%
+%       Name-Value:
+%           'pos_ifig' - position and size of the figure [left bottom fig_width fig_height], default [150 150 400 300]
+%
+%           'savefolder'
+%           'copy2folder'
+
+% parse params
+p = inputParser;
+addParameter(p, 'savefolder', '.', @ischar);
+addParameter(p, 'pos_ifig', [150 150 400 300], @(x) assert(isvector(x) && isnumeric(x) && length(x)==4));
+addParameter(p, 'copy2folder', '', @ischar);
+
+parse(p,varargin{:});
+pos_ifig = p.Results.pos_ifig;
+savefolder = p.Results.savefolder;
+copy2folder = p.Results.copy2folder;
+
+
+
+% Input
+[~, ~, pipelinefolder, ~] = exp_subfolders();
+input_folder_K = fullfile(pipelinefolder, 'NHPs', 'Kitty', '0_dataPrep', 'SKT', 'fs500Hz', 'm2_segSKTData_SelectTrials_chnOfI');
+
+conds_K = cond_cell_extract('Kitty');
+
+coli_reachonset = 2;
+coli_touch = 3;
+
+animals = {'Kitty'};
+
+
+%  Reach time histogram
+for ai = 1 : length(animals)
+    animal = animals{ai};
+    if strcmpi(animal, 'Kitty')
+        cond_cell = conds_K;
+        input_folder = input_folder_K;
+    end
+    nconds = length(cond_cell);
+
+    % extract t_reaction
+    for ci = 1 : nconds
+        pdcond  = cond_cell{ci};
+        files = dir(fullfile(input_folder, ['*_' pdcond '_*.mat']));
+        t_event = [];
+        for fi = 1: length(files)
+            load(fullfile(input_folder, files(fi).name), 'T_idxevent_lfp', 'fs_lfp');
+            if strcmpi(animal, 'Jo')
+                load(fullfile(input_folder, files(fi).name), 'goodTrials');
+            else
+                load(fullfile(input_folder, files(fi).name), 'selectedTrials');
+                goodTrials = selectedTrials;
+                clear selectedTrials
+            end
+            t_event = cat(1, t_event, T_idxevent_lfp{goodTrials, :}/ fs_lfp);
+            clear T_idxevent_lfp fs_lfp goodTrials
+        end
+        t_reach.(pdcond) = t_event(:, coli_touch) - t_event(:, coli_reachonset);
+        clear pdcond files t_event fi
+    end
+
+
+    ifig = figure('Position', pos_ifig);
+    ax = axes(ifig);
+    histogram(ax, t_reach.moderate, 25);
+    title(['reach time histogram, ntrials = ' num2str(length(t_reach.moderate))])
+
+    xlimits = xlim();
+    tmp1 = round(xlimits(1)*10)/10;
+    tmp2 = round(xlimits(2)*10)/10;
+    xticks([tmp1 : 0.2: tmp2 ])
+    
+    subfilename = ['reachTimeHist-' animal]; 
+    savefile = fullfile(savefolder, subfilename);
+    print(ifig, savefile, '-painters', '-depsc')
+    print(ifig, savefile, '-dpng', '-r1000')
+    if ~isempty(copy2folder)
+        print(ifig, fullfile(copy2folder, subfilename), '-painters', '-depsc')
+    end
+    close(ifig)
+
+
+    clear animal cond_cell input_folder nconds ci 
+    clear t_reach
+    clear show_timeLabel show_timeNum show_condLabel
+    clear ifig subfilename savefile
 end
 
 
@@ -145,7 +246,7 @@ for ai = 1 : length(animals)
             t_event = cat(1, t_event, T_idxevent_lfp{goodTrials, :}/ fs_lfp);
             clear T_idxevent_lfp fs_lfp goodTrials
         end
-        t_reaction.(pdcond) = t_event(:, coli_touch) - t_event(:, coli_reachonset);
+        t_reach.(pdcond) = t_event(:, coli_touch) - t_event(:, coli_reachonset);
         clear pdcond files t_event fi
     end
 
@@ -157,7 +258,7 @@ for ai = 1 : length(animals)
     show_condLabel = true;
 
     ifig = figure('Position', pos_ifig);
-    plot_1timeStatiscal(t_reaction, 'fig', ifig, ...
+    plot_1timeStatiscal(t_reach, 'fig', ifig, ...
         'show_xticklabels', show_condLabel, 'show_ylabel', show_timeLabel, 'show_yticklabels', show_timeNum, ...
         'titlename', ['Animal ' upper(animal(1))], 'FontName', 'Times New Roman')
     subfilename = ['time-' animal]; % 'Jo-mild-Bnormal-preMove'
@@ -171,7 +272,7 @@ for ai = 1 : length(animals)
 
 
     clear animal cond_cell input_folder nconds ci 
-    clear t_reaction
+    clear t_reach
     clear show_timeLabel show_timeNum show_condLabel
     clear ifig subfilename savefile
 end

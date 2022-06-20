@@ -1,4 +1,41 @@
-function fig3_Spectrogram()
+function fig3_Spectrogram(varargin)
+%   
+%   Usage:
+%       fig3_Spectrogram('plot_psd', true, 'plot_spectrogram', true)
+%       fig3_Spectrogram('plot_psd', false, 'plot_spectrogram', true, 'ai_str_spectro', 1, 'ai_end_spectro', 2)
+%       fig3_Spectrogram('plot_psd', true, , 'ai_str_psd', 1, 'ai_end_psd', 2, 'plot_spectrogram', false)
+%
+%   Inputs:
+%
+%       Name-Value:
+%           'plot_psd' - tag plotting psd (default true)
+%           'plot_spectrogram' - tag plotting spectrogram(default true)
+%           'ai_str_psd' - animal start index for psd plotting, default 1
+%           'ai_end_psd' - animal start index for psd plotting, default length(animals)
+%           'ai_str_spectro' - animal start index for spectrogram plotting, default 1
+%           'ai_end_spectro' - animal start index for spectrofram plotting, default length(animals)
+
+
+
+
+% parse params
+p = inputParser;
+addParameter(p, 'plot_psd', true, @(x) assert(islogical(x) && isscalar(x)));
+addParameter(p, 'plot_spectrogram', true, @(x) assert(islogical(x) && isscalar(x)));
+addParameter(p, 'ai_str_psd', 1, @(x) assert(isnumeric(x) && isscalar(x)));
+addParameter(p, 'ai_end_psd', [], @(x) assert(isnumeric(x) && isscalar(x)));
+addParameter(p, 'ai_str_spectro', 1, @(x) assert(isnumeric(x) && isscalar(x)));
+addParameter(p, 'ai_end_spectro', [], @(x) assert(isnumeric(x) && isscalar(x)));
+
+
+parse(p,varargin{:});
+plot_psd = p.Results.plot_psd;
+plot_spectrogram = p.Results.plot_spectrogram;
+ai_str_psd = p.Results.ai_str_psd;
+ai_end_psd = p.Results.ai_end_psd;
+ai_str_spectro = p.Results.ai_str_spectro;
+ai_end_spectro = p.Results.ai_end_spectro;
+
 
 codefilepath = mfilename('fullpath');
 
@@ -37,16 +74,16 @@ tdur_trials_J.normal = [-0.8 0.8];
 tdur_trials_J.mild = [-0.8 0.8];
 tdur_trials_J.moderate = [-0.8 0.8];
 
-tdur_trials_K.normal = [-0.6 1];
-tdur_trials_K.moderate = [-0.6 1];
+tdur_trials_K.normal = [-0.8 0.8];
+tdur_trials_K.moderate = [-0.8 0.8];
 
 
 clims_J.STN = [-30 -15];
 clims_J.GP = [-30 -15];
 clims_J.M1 = [-30 -10];
-clims_K.STN =  [-40 0];
-clims_K.GP =  [-40 0];
-clims_K.M1 =  [-40 0];
+clims_K.STN = [-30 -5];
+clims_K.GP = [-30 -15];
+clims_K.M1 = [-30 -10];
 
 
 t_min_reach = 0.2;
@@ -67,10 +104,13 @@ savefilename = funcname;
 %% Code start here
 
 animals = {'Jo', 'Kitty'};
+if isempty(ai_end_psd)
+    ai_end = length(animals); 
+end
 
 %%% plot Rest PSD
-if true
-    for ai = 1 : length(animals)
+if plot_psd
+    for ai = ai_str_psd : ai_end_psd
         animal = animals{ai};
         input_restfile = input_restfiles.(animal(1));
         chnsused = chnsuseds.(animal(1));
@@ -84,25 +124,25 @@ end
 
 
 %%% plot spectrogram
-for ai = 1 : length(animals) 
-    animal = animals{ai};
-    inputfolder = input_SKTfolders.(animal(1));
-    cond_cell = cond_cell_extract(animal);
-    chnsused = chnsuseds.(animal(1));
-    if strcmp(animal, 'Jo')
-        tdur_trials = tdur_trials_J;
-        clims = clims_J;
-    end
-    if strcmp(animal, 'Kitty')
-        tdur_trials = tdur_trials_K;
-        clims = clims_K;
+if plot_spectrogram
+    for ai = ai_str_spectro : ai_end_spectro
+        animal = animals{ai};
+        inputfolder = input_SKTfolders.(animal(1));
+        cond_cell = cond_cell_extract(animal);
+        chnsused = chnsuseds.(animal(1));
+        if strcmp(animal, 'Jo')
+            tdur_trials = tdur_trials_J;
+            clims = clims_J;
+        end
+        if strcmp(animal, 'Kitty')
+            tdur_trials = tdur_trials_K;
+            clims = clims_K;
+        end
+
+        plotAllSpectrograms(cond_cell, inputfolder, animal, chnsused, tdur_trials, SKTEvent.ReachOnset, t_min_reach, clims, savefolder);
+            
     end
 
-    %plotAllSpectrograms(cond_cell, inputfolder, animal, chnsused, tdur_trials, SKTEvent.ReachOnset, t_min_reach, clims, savefolder);
-    
-    if strcmp(animal, 'Kitty')
-        plotAllSpectrograms(cond_cell, inputfolder, animal, chnsused, tdur_trials, SKTEvent.PeakV, t_min_reach, clims, savefolder);
-    end
 end
 
 
@@ -171,7 +211,7 @@ for ci = 1 : nconds
         end
         
         % plot
-        fig = figure('Position', [150 150 400 200]);
+        fig = figure('Position', [150 150 450 270]);
         plot_spectrogram_1chn(psd_1chn, freqs, times, align2, clim, ...
             'fig', fig, ...
             'show_xlabel', show_timeLabel, 'show_xticklabels', show_timeNum, 'show_ylabel', show_freqLabel, 'show_yticklabels', show_freqNum, 'show_colorbar', show_colorbar);
@@ -718,6 +758,10 @@ set(ax,'YDir','normal', 'CLim', clim)
 colormap(jet)
 c = colorbar;
 c.Visible = 'off';
+c.Label.String = 'Power (dB/Hz)';
+climits = c.Limits;
+cticks = (ceil(climits(1)/5)*5) : 5 : (floor(climits(2)/5)*5);
+c.Ticks = cticks;
 
 
 % plot reach onset line
@@ -758,6 +802,5 @@ end
 
 if show_colorbar
   c.Visible = 'on';
-  c.Label.String = 'Power (dB/Hz)';
 end
 
