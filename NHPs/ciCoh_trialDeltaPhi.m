@@ -2,7 +2,7 @@ function [deltaphis_allChnsTrials, ciCoh, f_selected]= ciCoh_trialDeltaPhi(lfptr
 %
 %
 %  Inputs:
-%       lfptrials
+%       lfptrials: nchns * ntemp * ntrials
 %       fs:
 %       f_AOI
 %   

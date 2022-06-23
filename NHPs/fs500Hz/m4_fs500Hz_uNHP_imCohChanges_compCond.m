@@ -88,7 +88,9 @@ f_AOI = [8 40];
 
 
 %% Code start here
+
 EventPhases = SKT_eventPhases_extract(animal, 'codesavefolder', savecodefolder);
+
 if isempty(ei_end)
     ei_end = length(EventPhases);
 end

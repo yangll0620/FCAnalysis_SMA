@@ -1,4 +1,4 @@
-function plot_ciCohHistogram2(ciCoh_flatten, chnPairNames, f_selected, titlename, varargin)
+function plot_ciCohHistogram(ciCoh_flatten, chnPairNames, f_selected, titlename, varargin)
 %
 %   Inputs:
 %       ciCoh_flatten:

@@ -98,14 +98,16 @@ savecodefolder = fullfile(savefolder, 'code');
 copyfile2folder(codefilepath, savecodefolder);
 
 
-savefilename = funcname;
-
 
 %% Code start here
+ifig_height = 270;
 
 animals = {'Jo', 'Kitty'};
 if isempty(ai_end_psd)
-    ai_end = length(animals); 
+    ai_end_psd = length(animals); 
+end
+if isempty(ai_end_spectro)
+    ai_end_spectro = length(animals); 
 end
 
 %%% plot Rest PSD
@@ -115,7 +117,7 @@ if plot_psd
         input_restfile = input_restfiles.(animal(1));
         chnsused = chnsuseds.(animal(1));
         
-        RestPSD(input_restfile, plotF_AOI, chnsused, savefolder, animal);
+        RestPSD(input_restfile, plotF_AOI, chnsused, savefolder, animal, 300, ifig_height);
         
         clear animal input_restfile chnsused
     end
@@ -139,7 +141,7 @@ if plot_spectrogram
             clims = clims_K;
         end
 
-        plotAllSpectrograms(cond_cell, inputfolder, animal, chnsused, tdur_trials, SKTEvent.ReachOnset, t_min_reach, clims, savefolder);
+        plotAllSpectrograms(cond_cell, inputfolder, animal, chnsused, tdur_trials, SKTEvent.ReachOnset, t_min_reach, clims, savefolder, 400,ifig_height);
             
     end
 
@@ -147,7 +149,7 @@ end
 
 
 
-function plotAllSpectrograms(cond_cell, inputfolder, animal, chnsused, tdur_trials, align2, t_min_reach, clims, savefolder)
+function plotAllSpectrograms(cond_cell, inputfolder, animal, chnsused, tdur_trials, align2, t_min_reach, clims, savefolder, ifig_width, ifig_height)
 %
 %
 nconds = length(cond_cell);
@@ -211,14 +213,14 @@ for ci = 1 : nconds
         end
         
         % plot
-        fig = figure('Position', [150 150 450 270]);
+        fig = figure('Position', [150 150 ifig_width ifig_height]);
         plot_spectrogram_1chn(psd_1chn, freqs, times, align2, clim, ...
             'fig', fig, ...
             'show_xlabel', show_timeLabel, 'show_xticklabels', show_timeNum, 'show_ylabel', show_freqLabel, 'show_yticklabels', show_freqNum, 'show_colorbar', show_colorbar);
         
-        subsavefile = ['Spectrogram-' animal '-' pdcond '-' brainarea];
+        subsavefile = ['Spectrogram-' animal '-' brainarea '-' pdcond];
         if align2 == SKTEvent.PeakV
-            subsavefile = ['Spectrogram-' animal '-peakV-' pdcond '-' brainarea];
+            subsavefile = ['Spectrogram-' animal '-peakV-' brainarea '-' pdcond];
         end
         print(fig, fullfile(savefolder, subsavefile), '-painters', '-depsc');
         print(fig, fullfile(savefolder, subsavefile), '-dpng', '-r1000')
@@ -238,6 +240,61 @@ for ci = 1 : nconds
     clear show_freqLabel show_freqNum show_colorbar
     clear w_outer_left w_outer_right w_inner_left w_inner_right w_outer_diff
 end
+
+function RestPSD(input_restfile, plotF_AOI, chnsused, savefolder, animal, ifig_width, ifig_height)
+load(input_restfile, 'pxxs_allfiles_normal', 'pxxs_allfiles_moderate', 'F_pxx');
+vars = whos('-file',input_restfile, 'pxxs_allfiles_mild');
+if ~isempty(vars)
+    load(input_restfile, 'pxxs_allfiles_mild');
+end
+idx_FOI = find(F_pxx >= plotF_AOI(1) & F_pxx <= plotF_AOI(2));
+freqs = F_pxx(idx_FOI);
+
+
+%pxxs_allfiles_moderate = pxxs_allfiles_moderate(idx_AOI, :);
+nrows = length(chnsused);
+show_PowerLabel = true;
+show_PowerNum = true;
+for rowi = 1 : nrows
+    chnname = chnsused{rowi};
+    
+    psds.normal = pxxs_allfiles_normal.(chnname);
+    psds.normal = psds.normal(idx_FOI, :);
+    if exist('pxxs_allfiles_mild', 'var')
+        psds.mild = pxxs_allfiles_mild.(chnname);
+        psds.mild = psds.mild(idx_FOI, :);
+    end
+    psds.moderate = pxxs_allfiles_moderate.(chnname);
+    psds.moderate = psds.moderate(idx_FOI, :);
+    
+    show_FreqNum = false;
+    show_FreqLabel = false;
+    show_legend = false;
+    
+    if rowi == 1
+        show_legend = true;
+    end
+    if rowi == nrows
+        show_FreqNum = true;
+        show_FreqLabel = true;
+    end
+    
+    ifig = figure('Position', [150 150 ifig_width ifig_height]);
+    plotPSD_comp_1chn(psds, freqs,...
+        'fig', ifig,...
+        'show_xlabel', show_FreqLabel, 'show_xticklabels', show_FreqNum, ...
+        'show_ylabel', show_PowerLabel, 'show_yticklabels', show_PowerNum, 'show_legend', show_legend);
+    
+    subsavefile = ['RestPSD-' animal '-' chnname];
+    print(ifig, fullfile(savefolder, subsavefile), '-vector', '-depsc');
+    print(ifig, fullfile(savefolder, subsavefile), '-dpng', '-r1000')
+    close(ifig)
+    
+
+    clear chnname psds 
+    clear show_FreqNum show_FreqLabel
+end
+
 
 function [lfptrials, fs_lfp, T_chnsarea] = lfptrials_K_selectedTrials_align2(files, align2, tdur_trial, t_min_reach)
 % extract lfp seg data respect to targetonset, reachonset, reach and returnonset separately
@@ -505,61 +562,6 @@ for chi = 1 : size(lfp_phase_trials, 1)
     
     psd_allchns = cat(3, psd_allchns, psd_plot); % psd_allchns: nf * nt * nchns
     clear psds psd psd_plot idx_t idx_f
-end
-
-
-function RestPSD(input_restfile, plotF_AOI, chnsused, savefolder, animal, ifig_width, ifig_height)
-load(input_restfile, 'pxxs_allfiles_normal', 'pxxs_allfiles_moderate', 'F_pxx');
-vars = whos('-file',input_restfile, 'pxxs_allfiles_mild');
-if ~isempty(vars)
-    load(input_restfile, 'pxxs_allfiles_mild');
-end
-idx_FOI = find(F_pxx >= plotF_AOI(1) & F_pxx <= plotF_AOI(2));
-freqs = F_pxx(idx_FOI);
-
-
-%pxxs_allfiles_moderate = pxxs_allfiles_moderate(idx_AOI, :);
-nrows = length(chnsused);
-show_PowerLabel = true;
-show_PowerNum = true;
-for rowi = 1 : nrows
-    chnname = chnsused{rowi};
-    
-    psds.normal = pxxs_allfiles_normal.(chnname);
-    psds.normal = psds.normal(idx_FOI, :);
-    if exist('pxxs_allfiles_mild', 'var')
-        psds.mild = pxxs_allfiles_mild.(chnname);
-        psds.mild = psds.mild(idx_FOI, :);
-    end
-    psds.moderate = pxxs_allfiles_moderate.(chnname);
-    psds.moderate = psds.moderate(idx_FOI, :);
-    
-    show_FreqNum = false;
-    show_FreqLabel = false;
-    show_legend = false;
-    
-    if rowi == 1
-        show_legend = true;
-    end
-    if rowi == nrows
-        show_FreqNum = true;
-        show_FreqLabel = true;
-    end
-    
-    ifig = figure('Position', [150 150 300 200]);
-    plotPSD_comp_1chn(psds, freqs,...
-        'fig', ifig,...
-        'show_xlabel', show_FreqLabel, 'show_xticklabels', show_FreqNum, ...
-        'show_ylabel', show_PowerLabel, 'show_yticklabels', show_PowerNum, 'show_legend', show_legend);
-    
-    subsavefile = ['RestPSD-' animal '-' chnname];
-    print(ifig, fullfile(savefolder, subsavefile), '-vector', '-depsc');
-    print(ifig, fullfile(savefolder, subsavefile), '-dpng', '-r1000')
-    close(ifig)
-    
-
-    clear chnname psds 
-    clear show_FreqNum show_FreqLabel
 end
 
 
