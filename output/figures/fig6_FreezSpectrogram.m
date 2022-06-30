@@ -36,35 +36,13 @@ copyfile2folder(codefilepath, savecodefolder);
 savefilename = funcname;
 
 
-%% plot figure parameters
-w_colormap = 350; % width  for the colormap
-h_colormap = 120; % height for the colormap
-
-w_deltax1_colormap = 5; % x distance between two color map within the same NHP
-w_deltax2_colormap = 10; % x distance between two color map of different NHPs
-
-w_textMovePhase = 70; % width showing the moveing phase, i.e. preMove
-w_textpair = 80; % width showing the pair name, i.e. M1-STN
-w_textColorbar = 80; % width showing the colarbar 
-
-h_deltay_colormap_J = 80; % y distance between two color map of animal J
-h_deltay_colormap_K = 10; % y distance between two color map of animal K
-
-h_textAnimal = 30; % height showing the animal name, i.e. animal J/K
-h_textCond = 30; % height showing the condition, i.e. Mild-Normal
-h_textFreNum = 10; % height showing the frequency number, i.e. 10 12
-h_textFreLabel = 40; % height showing the frequency label, i.e. Frequences/Hz
-
-
-fontname = 'Times New Roman';
-
 
 %% Code start here
 
-files = dir(fullfile(inputfolder, ['*moderate*.mat']));
+files = dir(fullfile(inputfolder, '*moderate*.mat'));
 
 % extract freeze tbl_freezEpisodes
-[tbl_freezEpisodes]= tbl_freezEpisodes_extract(files, 't_bef', 0.8, 't_aft', 1);
+[tbl_freezEpisodes]= tbl_freezEpisodes_extract(files, 't_bef', 1.6, 't_aft', 1);
 
 [~, combFreeTypes] = optFreezeTypes_extract();
 
@@ -369,7 +347,7 @@ function [tbl_freezEpisodes]= tbl_freezEpisodes_extract(files, varargin)
 % 
 %   Inputs
 %       Name-Value: 
-%           't_bef': including t_bef before freeze start time (default = 0.8),
+%           't_bef_': including t_bef before freeze start time (default = 0.8),
 %
 %           't_aft': including t_aft after freeze end time (default = 1),
 

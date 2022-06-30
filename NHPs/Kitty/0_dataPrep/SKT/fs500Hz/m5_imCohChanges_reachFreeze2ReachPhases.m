@@ -4,11 +4,14 @@ function m5_imCohChanges_reachFreeze2ReachPhases(varargin)
 %
 %   Example Usage:
 %           m5_imCohChanges_reachFreeze2ReachPhases('shuffleN_psedoTest', 500, 'newRun', true)
+%           m5_imCohChanges_reachFreeze2ReachPhases('plotCiCohChanges', false, 'plotCiCoh', true)
 %   
 %   Input:
 %       Name-Value:
 %           newRun - true or false(default), for running new or not
 %           shuffleN_psedoTest -  default 500
+%           plotCiCohChanges - plot ciCohChanges true (default) or false
+%           plotCiCoh - plot ciCoh true (default) or false
 
 codefilepath = mfilename('fullpath');
 
@@ -29,10 +32,15 @@ addpath(genpath(fullfile(codefolder,'toolbox')));
 p = inputParser;
 addParameter(p, 'shuffleN_psedoTest', 500, @(x) assert(isnumeric(x) && isscalar(x)));
 addParameter(p, 'newRun', false, @(x) assert(islogical(x) && isscalar(x)));
+addParameter(p, 'plotCiCohChanges', true, @(x) assert(islogical(x) && isscalar(x)));
+addParameter(p, 'plotCiCoh', true, @(x) assert(islogical(x) && isscalar(x)));
 
 parse(p,varargin{:});
 shuffleN_psedoTest = p.Results.shuffleN_psedoTest;
 newRun = p.Results.newRun;
+plotCiCohChanges = p.Results.plotCiCohChanges;
+plotCiCoh = p.Results.plotCiCoh;
+
 
 
 % codecorresfolder, codecorresParentfolder
@@ -125,24 +133,85 @@ clear('lfpsegs_Freeze', 'lfptrials_Reach', 'fs', 'f_AOI')
 
 
 % plot
-load(ciCoh_Changes_file, 'ciCohChanges','psedociCohChanges', 'f_selected',  'T_chnsarea')
-for ebi = 1 : length(eBasePhases)
-    eBasePhase = eBasePhases{ebi};
+
+% plot ciCohChanges
+if plotCiCohChanges 
+    load(ciCoh_Changes_file, 'ciCohChanges','psedociCohChanges', 'f_selected',  'T_chnsarea')
+    for ebi = 1 : length(eBasePhases)
+        eBasePhase = eBasePhases{ebi};
+    
+        show_xticklabels = false;
+        show_xlabel = false;
+        if ebi == length(eBasePhases)
+            show_xticklabels = true;
+            show_xlabel = true;
+        end
+        for fri = 1 : length(reachfreezeTypes)
+            subfreezeType = reachfreezeTypes{fri};
+    
+            ciCohchange = ciCohChanges.(['b_' eBasePhase]).ReachFreeze.(subfreezeType);
+            psedoiCohChange = psedociCohChanges.(['b' eBasePhase]).ReachFreeze.(subfreezeType);
+    
+            [sigciCohChanges]= sigciCoh_extract(psedoiCohChange, ciCohchange);
+            [sigciCohChanges_flatten, chnPairNames] = ciCohFlatten_chnPairNames_extract(sigciCohChanges, T_chnsarea);
+    
+    
+            show_titlename = false;
+            show_yticklabels = false;
+            show_colorbar = false;
+            if fri == 1
+                show_yticklabels = true;
+            end
+            if fri == length(reachfreezeTypes)
+                show_colorbar = true;
+            end
+    
+    
+            % plot and save ciCoh Histogram image
+            ifig = figure('Position', [50 50 400 200]);
+            set(ifig, 'PaperUnits', 'points');
+            plot_ciCohHistogram2(sigciCohChanges_flatten, chnPairNames, f_selected, ['reachFreeze ' subfreezeType '-' eBasePhase], 'histClim', [-1 1],...
+                'codesavefolder', savecodefolder, 'cbarStr', 'ciCohChange', 'cbarTicks', [-1 0 1], ...
+                'show_xticklabels', show_xticklabels, 'show_yticklabels', show_yticklabels, 'show_xlabel', show_xlabel, 'show_titlename', show_titlename,'show_colorbar', show_colorbar, ...
+                'fig', ifig);
+            subfilename = ['reachFreeze2ReachPhase-' eBasePhase '-' subfreezeType]; 
+            print(ifig, fullfile(savefolder, subfilename), '-painters', '-depsc')
+            print(ifig, fullfile(savefolder, subfilename), '-dpng', '-r1000')
+            close(ifig)
+
+
+            clear subfreezeType 
+            clear ciCohchange psedoiCohChange sigciCohChanges sigciCohChanges_flatten chnPairNames
+            clear show_titlename show_yticklabels show_colorbar
+            clear ifig subfilename
+    
+        end
+    
+        clear eBasePhase show_xlabel show_xticklabels fri
+    end
+    clear('ciCohChanges','psedociCohChanges', 'f_selected',  'T_chnsarea')
+end
+
+
+% plot ciCoh
+if plotCiCoh
+    load(ciCoh_Changes_file, 'ciCohs','psedociCohs', 'f_selected',  'T_chnsarea');
+
+    cbarStr = 'ciCoh';
+    cbarTicks = [0 0.5 1];
+    histClim = [0 1];
 
     show_xticklabels = false;
     show_xlabel = false;
-    if ebi == length(eBasePhases)
-        show_xticklabels = true;
-        show_xlabel = true;
-    end
+
     for fri = 1 : length(reachfreezeTypes)
         subfreezeType = reachfreezeTypes{fri};
 
-        ciCohchange = ciCohChanges.(['b_' eBasePhase]).ReachFreeze.(subfreezeType);
-        psedoiCohChange = psedociCohChanges.(['b' eBasePhase]).ReachFreeze.(subfreezeType);
+        ciCoh = ciCohs.ReachFreeze.(subfreezeType);
+        psedociCoh = psedociCohs.ReachFreeze.(subfreezeType);
 
-        [sigciCohChanges]= sigciCoh_extract(psedoiCohChange, ciCohchange);
-        [sigciCohChanges_flatten, chnPairNames] = ciCohFlatten_chnPairNames_extract(sigciCohChanges, T_chnsarea);
+        [sigciCoh]= sigciCoh_extract(psedociCoh, ciCoh);
+        [sigciCoh_flatten, chnPairNames] = ciCohFlatten_chnPairNames_extract(sigciCoh, T_chnsarea);
 
 
         show_titlename = false;
@@ -155,21 +224,27 @@ for ebi = 1 : length(eBasePhases)
             show_colorbar = true;
         end
 
-
-
         % plot and save ciCoh Histogram image
         ifig = figure('Position', [50 50 400 200]);
         set(ifig, 'PaperUnits', 'points');
-        plot_ciCohHistogram2(sigciCohChanges_flatten, chnPairNames, f_selected, ['reachFreeze ' subfreezeType '-' eBasePhase], 'histClim', [-1 1],...
-            'codesavefolder', savecodefolder, 'cbarStr', 'ciCohChange', 'cbarTicks', [-1 0 1], ...
+        plot_ciCohHistogram2(sigciCoh_flatten, chnPairNames, f_selected, ['reachFreeze ' subfreezeType], ...
+            'histClim', histClim, 'cbarTicks', cbarTicks, 'cbarStr', cbarStr, ...
+            'codesavefolder', savecodefolder, ...
             'show_xticklabels', show_xticklabels, 'show_yticklabels', show_yticklabels, 'show_xlabel', show_xlabel, 'show_titlename', show_titlename,'show_colorbar', show_colorbar, ...
             'fig', ifig);
-        subfilename = ['reachFreeze2ReachPhase-' eBasePhase '-' subfreezeType]; 
+        subfilename = ['reachFreeze-' subfreezeType];
         print(ifig, fullfile(savefolder, subfilename), '-painters', '-depsc')
         print(ifig, fullfile(savefolder, subfilename), '-dpng', '-r1000')
         close(ifig)
 
+        clear subfreezeType 
+        clear ciCoh psedociCoh sigciCoh sigciCoh_flatten chnPairNames
+        clear show_titlename show_yticklabels show_colorbar
+        clear ifig subfilename
     end
+
+    clear show_xlabel show_xticklabels fri
+    clear('ciCohs','psedociCohs', 'f_selected',  'T_chnsarea')
 end
 
 
