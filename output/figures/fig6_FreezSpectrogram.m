@@ -17,12 +17,19 @@ addpath(genpath(fullfile(codefolder,'NHPs')));
 addpath(genpath(fullfile(codefolder,'connAnalyTool')));
 addpath(genpath(fullfile(codefolder,'toolbox')));
 
-%% Input & save
+%% Input 
 [~, ~, pipelinefolder, outputfolder] = exp_subfolders();
 [~, funcname, ~]= fileparts(codefilepath);
 
-inputfolder = fullfile(pipelinefolder, 'NHPs', 'Kitty', '0_dataPrep', 'SKT', 'fs500Hz', 'm3_fs500Hz_freezeSKTData_EpisodeExtract');
+inputfolder = fullfile(pipelinefolder, 'NHPs', 'Kitty', '0_dataPrep', 'SKT', 'fs500Hz', 'longerTrials','m3_freezeSKTData_EpisodeExtract');
 
+% time before freeze onset and after freeze end
+t_bef = 2.6;
+t_aft = 1;
+
+t_AOI = [-1.6 5]; % time duration of interest respected to freeze onset
+
+%% save
 savefolder = fullfile(outputfolder, 'results', 'figures', funcname);
 if ~exist(savefolder, 'dir')
     mkdir(savefolder)
@@ -37,28 +44,31 @@ savefilename = funcname;
 
 
 
+
 %% Code start here
 
 files = dir(fullfile(inputfolder, '*moderate*.mat'));
 
 % extract freeze tbl_freezEpisodes
-[tbl_freezEpisodes]= tbl_freezEpisodes_extract(files, 't_bef', 1.6, 't_aft', 1);
+[tbl_freezEpisodes]= tbl_freezEpisodes_extract(files, 't_bef', t_bef, 't_aft', t_aft);
 
 [~, combFreeTypes] = optFreezeTypes_extract();
 
 ncols = length(combFreeTypes);
 time0names = {'CueOnset', 'FreezeStart', 'Touch'};
 chnNames = {'M1', 'STN', 'GP'};
-for coli = 3: ncols
+for coli = 1: ncols
     show_textFreLabel = false;
     show_textFreNum = false;
     show_colorbar = false;
     show_legends_speed = false;
     show_textSpeed = false;
+    show_numSpeed = false;
     if coli == 1
         show_textFreLabel = true;
         show_textFreNum = true;
         show_textSpeed = true;
+        show_numSpeed = true;
     end
     if coli == ncols
         show_colorbar = true;
@@ -66,7 +76,7 @@ for coli = 3: ncols
     end
     
     freezeType = combFreeTypes{coli};
-    [psds, freqs_psd, times_psd, wSpeeds, times_wSpeed]= extract_spectrogramMA_acrossTrials(tbl_freezEpisodes, freezeType);
+    [psds, freqs_psd, times_psd, wSpeeds, times_wSpeed]= extract_spectrogramMA_acrossTrials(tbl_freezEpisodes, freezeType, 't_AOI', t_AOI);
     nrows = size(psds, 3);
     for rowi = 1 : nrows
         psds_1chn = squeeze(psds(:, :, rowi));
@@ -85,7 +95,7 @@ for coli = 3: ncols
         plot_spectrogramMA_1chn(psds_1chn, freqs_psd, times_psd, wSpeeds, times_wSpeed,...
             'show_ylabel_spect', show_textFreLabel, 'show_colorbar_spect', show_colorbar, 'show_yticklabels_spect', show_textFreNum, ...
             'show_xticklabels_spect',show_textTimeLabel, 'show_xlabel_spect', show_textTimeNum, ...
-            'show_speedplot', show_speedplot, 'show_legends_speed', show_legends_speed, 'show_ylabel_speed', show_textSpeed, ...
+            'show_speedplot', show_speedplot, 'show_legends_speed', show_legends_speed, 'show_ylabel_speedtext', show_textSpeed, 'show_ylabel_speednum', show_numSpeed, ...
             'time0name', time0names{coli}, 'titlename_speed', freezeType);
         
         fig = gcf;
@@ -140,7 +150,8 @@ addParameter(p, 'show_ylabel_spect', true, @(x) assert(islogical(x) && isscalar(
 addParameter(p, 'show_yticklabels_spect', true, @(x) assert(islogical(x) && isscalar(x)));
 addParameter(p, 'show_colorbar_spect', true, @(x) assert(islogical(x) && isscalar(x)));
 addParameter(p, 'show_titlename_speed', true, @(x) assert(islogical(x) && isscalar(x)));
-addParameter(p, 'show_ylabel_speed', true, @(x) assert(islogical(x) && isscalar(x)));
+addParameter(p, 'show_ylabel_speedtext', true, @(x) assert(islogical(x) && isscalar(x)));
+addParameter(p, 'show_ylabel_speednum', true, @(x) assert(islogical(x) && isscalar(x)));
 addParameter(p, 'show_MoveThres_speed', true, @(x) assert(islogical(x) && isscalar(x)));
 addParameter(p, 'show_legends_speed', true, @(x) assert(islogical(x) && isscalar(x)));
 addParameter(p, 'time0name', '0', @isstr);
@@ -155,16 +166,18 @@ show_xticklabels_spect = p.Results.show_xticklabels_spect;
 show_ylabel_spect = p.Results.show_ylabel_spect;
 show_yticklabels_spect = p.Results.show_yticklabels_spect;
 show_colorbar_spect = p.Results.show_colorbar_spect;
-show_titlename_speed = p.Results.show_titlename_speed;
-show_ylabel_speed = p.Results.show_ylabel_speed;
-show_MoveThres_speed = p.Results.show_MoveThres_speed;
-show_legends_speed = p.Results.show_legends_speed;
 time0name = p.Results.time0name;
-titlename_speed = p.Results.titlename_speed;
+
 show_speedplot = p.Results.show_speedplot;
 
-
-
+if show_speedplot
+    show_titlename_speed = p.Results.show_titlename_speed;
+    show_ylabel_speedtext = p.Results.show_ylabel_speedtext;
+    show_ylabel_speednum = p.Results.show_ylabel_speednum;
+    show_MoveThres_speed = p.Results.show_MoveThres_speed;
+    show_legends_speed = p.Results.show_legends_speed;
+    titlename_speed = p.Results.titlename_speed;
+end
 
 %%% plot 
 
@@ -237,8 +250,6 @@ for tri = 1 : size(wSpeeds, 2)
     clear wSpeed
 end
 
-% time 0 line
-plot([0 0], ylim, 'k--')
 
 % adjust pos, xlim, ylim
 pos_speed = get(ax_speed, 'Position');
@@ -246,12 +257,12 @@ pos_speed(1) = pos_spec(1);
 pos_speed(3) = pos_spec(3);
 set(ax_speed, 'Position', pos_speed)
 xlim(get(ax_spec, 'XLim'));
-ylimit = ylim;
-if ylimit(2) < 32
-    ylim([0 32])
-end
+ylim([0 180])
 
 set(ax_speed, 'XTick', [])
+
+% time 0 line
+plot([0 0], ylim, 'k--')
 
 
 % show inf speed
@@ -259,9 +270,16 @@ if show_titlename_speed
     title(ax_speed, titlename_speed, 'FontSize', 12, 'FontWeight', 'bold', 'FontName', 'Times New Roma')
 end
 
-if show_ylabel_speed
+
+if show_ylabel_speedtext
     ylabel(ax_speed, 'Speed', 'fontsize', 12, 'FontName', 'Times New Roma', 'FontWeight', 'bold')
 end
+
+if show_ylabel_speednum
+else
+    yticks([]);
+end
+
 
 if show_MoveThres_speed
     h = plot(ax_speed, xlim, [30 30], 'r--', 'DisplayName', 'MoveThres');
@@ -274,7 +292,14 @@ if show_legends_speed
 end
 
 
-function [psds, freqs_psd, times_psd, wSpeeds, times_wSpeed]= extract_spectrogramMA_acrossTrials(tbl_freezEpisodes, freezeType)
+function [psds, freqs_psd, times_psd, wSpeeds, times_wSpeed]= extract_spectrogramMA_acrossTrials(tbl_freezEpisodes, freezeType, varargin)
+%
+%   Inputs
+%
+%        Name-Value: 
+%           'f_AOI' - frequences of interest, default [8 40]
+%           't_AOI' - time duration of interest, default [-2 5] respected
+%                     to freeze onset
 %
 %
 %  Return:
@@ -284,8 +309,19 @@ function [psds, freqs_psd, times_psd, wSpeeds, times_wSpeed]= extract_spectrogra
 %       wSpeeds: speed of all trials nts_speed * ntrials
 %       times_wSpeed : time point for speed 1 * nts_speed
 
-tdur = 5;
-f_AOI = [8 40];
+
+% parse params
+p = inputParser;
+addParameter(p, 'f_AOI', [8 40], @(x) assert(isnumeric(x) && isvector(x) && length(x)==2));
+addParameter(p, 't_AOI', [-0.5 0.5], @(x) assert(isnumeric(x) && isvector(x) && length(x)==2));
+
+
+parse(p,varargin{:});
+f_AOI = p.Results.f_AOI;
+t_AOI = p.Results.t_AOI;
+
+taft0 = t_AOI(2);
+
 
 tbl_subfreezEpi = tbl_freezEpisodes(tbl_freezEpisodes.freezType == freezeType, :);
 
@@ -295,38 +331,39 @@ wSpeeds = []; % wSpeeds: ntemp * ntrials
 for tbi = 1 : height(tbl_subfreezEpi)
     
     % extract lfp_freeze duration
-    lfp = tbl_subfreezEpi.lfp{tbi}; % lfp: nchns * ntemp
     fs_lfp = tbl_subfreezEpi.fs_lfp(tbi);
-
     idx_lfpStrendFreez = tbl_subfreezEpi.idx_lfpStrendFreez{tbi};
-    
     t_freeze = (idx_lfpStrendFreez(2) - idx_lfpStrendFreez(1))/fs_lfp;
-    if t_freeze < tdur
-        disp(['less than ' num2str(tdur)])
+    if t_freeze < taft0
+        disp(['less than ' num2str(taft0)])
         continue;
     end
-    lfp = lfp(:,1: round(idx_lfpStrendFreez(1)+fs_lfp*tdur));
+    
     
     % extract wSpeed_freeze duration
     fs_ma = tbl_subfreezEpi.fs_ma(tbi);
     idx_wSpeedStrendFreez = tbl_subfreezEpi.idx_wSpeedStrendFreez{tbi};
     wSpeed = tbl_subfreezEpi.wSpeed{tbi};
-    wSpeed = wSpeed(1: round(idx_wSpeedStrendFreez(1)+fs_ma*tdur), 1); % wSpeed: ntemp * 1
+    wSpeed = wSpeed(1: round(idx_wSpeedStrendFreez(1)+fs_ma*taft0), 1); % wSpeed: ntemp * 1
     wSpeeds = cat(2, wSpeeds, wSpeed);
     clear fs_ma  idx_wSpeedStrendFreez wSpeed
     
     % calc psd
+    lfp = tbl_subfreezEpi.lfp{tbi}; % lfp: nchns * ntemp
+    lfp = lfp(:,1: round(idx_lfpStrendFreez(1) + fs_lfp * t_AOI(2)));
     [psd, freqs, times] = calc_psd_allchns(lfp, fs_lfp);% psds: nf * nt * nchns
     
     if tbi == 1
         % extract based on f_AOI and align times with t_lfpfreezstr as time 0s
-        idx_f = (freqs >= f_AOI(1) &  freqs <=f_AOI(2));
+        idx_f = (freqs >= f_AOI(1) &  freqs <= f_AOI(2));
         freqs_psd =  freqs(idx_f);
         idx_lfpfreezstr = idx_lfpStrendFreez(1);
-        times_psd = times - idx_lfpfreezstr/fs_lfp;
+        times = times - idx_lfpfreezstr/fs_lfp;
+        idx_t = (times >= t_AOI(1)) & (times <= t_AOI(2));
+        times_psd = times(idx_t);
         clear idx_lfpfreezstr   
     end
-    psd = psd(idx_f, :, :);
+    psd = psd(idx_f, idx_t, :);
     
     % append
     psds_alltrials = cat(4,psds_alltrials,psd);
@@ -457,9 +494,9 @@ function [psd_allchns, freqs, times] = calc_psd_allchns(lfp, fs, varargin)
 %       fs: sample rate
 %
 %       Name-Value:
-%               twin: used in spectrogram, time window for segment (default 0.2 s)
+%               twin: used in spectrogram, time window for segment (default 0.5 s)
 %
-%               toverlap: used in spectrogram, time window for overlap (default 0.18 s)
+%               toverlap: used in spectrogram, time window for overlap (default 0.4 s)
 %
 %   Return:
 %       psd_allchns: nf * nt * nchns
