@@ -6,6 +6,7 @@ plot_fig5 = true;
 if plot_fig1
     plot_normalSpeed = true;
     plot_reachTime = true;
+    
     if plot_normalSpeed
         fig1_normalTrial_SpeedExample('pos_ifig', [150 150 500 120]);
     end
@@ -18,7 +19,13 @@ end
 
 if plot_fig5
     plot_freezeSpeed = true;
+    plot_freezeImCoh = false;
+    
     if plot_freezeSpeed
-        fig5_freeze_SpeedExample('pos_ifig', [150 150 500 250])
+        fig5_freeze_SpeedExample('pos_ifig', [150 150 400 200])
+    end
+
+    if plot_freezeImCoh
+        fig5_freeze_imCoh('pos_ifig', [50 50 400 200])
     end
 end
