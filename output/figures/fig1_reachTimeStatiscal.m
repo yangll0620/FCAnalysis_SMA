@@ -1,28 +1,30 @@
-function fig2_timeStatiscal_freezeExample(varargin)
+function fig1_reachTimeStatiscal(varargin)
 %   
 %   Usage:
-%       fig2_timeStatiscal_freezeExample('plot_timeStatiscal', false, 'plot_freezeExample', false, 'plot_reachTimehist', true)
-%       fig2_timeStatiscal_freezeExample('plot_timeStatiscal', false, 'plot_freezeExample', true)
-%       fig2_timeStatiscal_freezeExample('plot_timeStatiscal', true, 'plot_freezeExample', false)
+%       fig1_reachTimeStatiscal('plot_timeStatiscal', false, 'plot_reachTimehist', true)
+%       fig1_reachTimeStatiscal('plot_timeStatiscal', true, 'pos_ifig_reachTimeStatiscal', [150 150 300 250])
 %
 %   Inputs:
 %
 %       Name-Value:
+%           'pos_ifig_reachTimeStatiscal' - position and size of the reachtime statistical figure [left bottom fig_width fig_height], default [150 150 300 250]
+%           'pos_ifig_reachTimehist' - position and size of the reachtime hist figure [left bottom fig_width fig_height], default [150 150 300 250]
 %           'plot_timeStatiscal' - tag plotting timeStatiscal (default true)
-%           'plot_freezeExample' - tag plotting freeze Example (default true)
-%           'plot_reachTimehist' - tag plotting reach time histogram (default true)
+%           'plot_reachTimehist' - tag plotting reach time histogram (default false)
 
 
 % parse params
 p = inputParser;
+addParameter(p, 'pos_ifig_reachTimeStatiscal', [150 150 300 250], @(x) assert(isvector(x) && isnumeric(x) && length(x)==4));
+addParameter(p, 'pos_ifig_reachTimehist', [150 150 300 250], @(x) assert(isvector(x) && isnumeric(x) && length(x)==4));
 addParameter(p, 'plot_timeStatiscal', true, @(x) assert(islogical(x) && isscalar(x)));
-addParameter(p, 'plot_freezeExample', true, @(x) assert(islogical(x) && isscalar(x)));
-addParameter(p, 'plot_reachTimehist', true, @(x) assert(islogical(x) && isscalar(x)));
+addParameter(p, 'plot_reachTimehist', false, @(x) assert(islogical(x) && isscalar(x)));
 
 
 parse(p,varargin{:});
+pos_ifig_reachTimeStatiscal = p.Results.pos_ifig_reachTimeStatiscal;
+pos_ifig_reachTimehist = p.Results.pos_ifig_reachTimehist;
 plot_timeStatiscal = p.Results.plot_timeStatiscal;
-plot_freezeExample = p.Results.plot_freezeExample;
 plot_reachTimehist = p.Results.plot_reachTimehist;
 
 
@@ -66,18 +68,14 @@ copyfile2folder(codefilepath, savecodefolder);
 
 %% Code start Here
 if plot_timeStatiscal
-    fig_timeStatiscal('pos_ifig', [150 150 300 250], ...
+    fig_timeStatiscal('pos_ifig', pos_ifig_reachTimeStatiscal, ...
         'savefolder', savefolder, 'copy2folder', aisavefolder);
 end
 
-if plot_freezeExample
-    fig_freezeExample('pos_ifig', [150 150 350 250],...
-        'savefolder', savefolder, 'copy2folder', aisavefolder);
-end
 
 
 if plot_reachTimehist
-    fig_reachTimehist('pos_ifig', [150 150 350 250],...
+    fig_reachTimehist('pos_ifig', pos_ifig_reachTimehist,...
         'savefolder', savefolder, 'copy2folder', aisavefolder);
 end
 

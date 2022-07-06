@@ -1,9 +1,22 @@
-function fig5_freezeExample()
+function fig1_normalTrial_SpeedExample(varargin)
 %   
 %   Usage:
-%       fig5_freezeExample()
+%       fig1_normalTrial_SpeedExample('pos_ifig', [150 150 300 250])
 %
+%   Inputs:
+%
+%       Name-Value:
+%           'pos_ifig' - position and size of the reachtime statistical figure [left bottom fig_width fig_height], default [150 150 300 250]
+%  
 
+
+% parse params
+p = inputParser;
+addParameter(p, 'pos_ifig', [150 150 300 250], @(x) assert(isvector(x) && isnumeric(x) && length(x)==4));
+
+
+parse(p,varargin{:});
+pos_ifig = p.Results.pos_ifig;
 
 
 codefilepath = mfilename('fullpath');
@@ -45,12 +58,12 @@ savecodefolder = fullfile(savefolder, 'code');
 copyfile2folder(codefilepath, savecodefolder);
 
 %% Code start Here
-fig_freezeExample('pos_ifig', [150 150 500 250],...
+fig_normaltrialSpeed_Example('pos_ifig', pos_ifig,...
     'savefolder', savefolder, 'copy2folder', aisavefolder);
 
 
 
-function fig_freezeExample(varargin)
+function fig_normaltrialSpeed_Example(varargin)
 %   Inputs:
 %
 %       Name-Value: 
@@ -72,99 +85,24 @@ copy2folder= p.Results.copy2folder;
 
 % Input 
 [~, ~, pipelinefolder, ~] = exp_subfolders();
-input_Freeze_file = fullfile(pipelinefolder, 'NHPs', 'Kitty', '0_dataPrep', 'SKT', 'fs500Hz', 'm3_fs500Hz_freezeSKTData_EpisodeExtract', 'Kitty_freezeEpisodes_moderate-tThesFreezeReach5s_20150408_bktdt2.mat');
+input_file = fullfile(pipelinefolder, 'NHPs', 'Kitty', '0_dataPrep', 'SKT', 'm2_segSKTData_SelectTrials_goodReach', 'Kitty_TrialsWMarkers_moderate_20150408_bktdt2.mat');
 
-tri_Mani = 4;
-tri_InitReach = 12;
-colors4freezeline = {'k', 'b', 'c'};
+tri = 2;
+
 
 % load data
-load(input_Freeze_file, 'freezStruct', 'fs_ma', 'smoothWspeed_trial', 'T_idxevent_ma');
+load(input_file, 'fs_ma', 'smoothWspeed_trial', 'T_idxevent_ma');
 
+ma = smoothWspeed_trial{tri};
+ts = [1 : length(ma)] / fs_ma;
+tevents_ma = T_idxevent_ma{tri, :} / fs_ma;
 
-% find tFreezePhases for each freezeTypeInEpi in freezeTypeInEpis
-tri = tri_InitReach;
-freezEpisodes = freezStruct.freezEpisodes;
-tFreezePhases = [];
-freezeTypeInEpis = {'freeze during init Move'; 'freeze during React-Reach'};
-for fTi = 1: length(freezeTypeInEpis)
-    freezeTypeInEpi = freezeTypeInEpis{fTi};
-
-    % find freezEpisodes index fei
-    frzi = 0;
-    for fi = 1 : length(freezEpisodes)
-        if(freezEpisodes{fi}.triali == tri && strcmp(freezEpisodes{fi}.freezeType, freezeTypeInEpi))
-            frzi = fi;
-            break;
-        end
-    end
-    if frzi == 0
-        disp(['Can not find freeze episode index for tri = ' num2str(tri) ':' freezeTyp]);
-        return;
-    end
-
-    tFreezePhases = [tFreezePhases; freezEpisodes{frzi}.freezeTPhaseS];
-
-    clear freezeTypeInEpi fei
-end
-
-tFreezePhases_InitReach = tFreezePhases;
-clear tFreezePhases
-
-
-tri = tri_Mani;
-freezEpisodes = freezStruct.freezEpisodes;
-tFreezePhases = [];
-freezeTypeInEpis = {'freeze during Manipulation'};
-for fTi = 1: length(freezeTypeInEpis)
-    freezeTypeInEpi = freezeTypeInEpis{fTi};
-
-    % find freezEpisodes index fei
-    frzi = 0;
-    for fi = 1 : length(freezEpisodes)
-        if(freezEpisodes{fi}.triali == tri && strcmp(freezEpisodes{fi}.freezeType, freezeTypeInEpi))
-            frzi = fi;
-            break;
-        end
-    end
-    if frzi == 0
-        disp(['Can not find freeze episode index for tri = ' num2str(tri) ':' freezeTyp]);
-        return;
-    end
-
-    tFreezePhases = [tFreezePhases; freezEpisodes{frzi}.freezeTPhaseS];
-
-    clear freezeTypeInEpi fei
-end
-
-tFreezePhases_Mani = tFreezePhases;
-clear tFreezePhases
-
-
-% combined freeze phases from two trials
-idx_Touch_inInitReach = T_idxevent_ma{tri_InitReach, 3};
-ma_befTouch = smoothWspeed_trial{tri_InitReach}(1:idx_Touch_inInitReach);
-idx_Touch_inMani = T_idxevent_ma{tri_Mani, 3};
-ma_aftTouch = smoothWspeed_trial{tri_Mani}(idx_Touch_inMani+1:end);
-ma = [ma_befTouch; ma_aftTouch];
-
-idxevent_ma_befTouch = T_idxevent_ma{tri_InitReach, 1:3};
-idxevent_ma_aftTouch = T_idxevent_ma{tri_Mani, 4:5} - idx_Touch_inMani + idx_Touch_inInitReach;
-tevents_ma = [idxevent_ma_befTouch idxevent_ma_aftTouch] / fs_ma;
-ts = (1: length(ma))/fs_ma;
-tFreezePhases = [tFreezePhases_InitReach; tFreezePhases_Mani + ( -idx_Touch_inMani + idx_Touch_inInitReach)/fs_ma];
-clear idx_Touch_inInitReach ma_befTouch idx_Touch_inMani ma_aftTouch
-clear idxevent_ma_befTouch idxevent_ma_aftTouch
-
-% + 2s for freeze onset of Init and Mani Freeze 
-tFreezePhases(1, 1) = tFreezePhases(1, 1) +2;
-tFreezePhases(3, 1) = tFreezePhases(3, 1) +2;
 
 % plot
 ifig = figure('Position', pos_ifig);
-plot_1freezeTrial(ma, ts, tevents_ma, tFreezePhases, colors4freezeline,...
-    'fig', ifig, 'show_xlabel', false, 'plotFreezeLines', true)
-subfilename = 'freezTrial';
+plot_1freezeTrial(ma, ts, tevents_ma, ...
+    'fig', ifig, 'show_xlabel', false)
+subfilename = 'normalTrial_Speed_Example';
 print(ifig, fullfile(savefolder, subfilename), '-painters', '-depsc')
 print(ifig, fullfile(savefolder, subfilename), '-dpng', '-r1000')
 if ~isempty(copy2folder)
@@ -172,13 +110,11 @@ if ~isempty(copy2folder)
 end
 close(ifig)
 
-function plot_1freezeTrial(ma, ts, tevents_ma, tFreezePhases, colors4freezeline, varargin)
+function plot_1freezeTrial(ma, ts, tevents_ma, varargin)
 %   Inputs:
 %       ma: 1d vector 
 %       ts: 1d time points length same as ma
 %       tevents_ma: event time points for ma data, 1 * nevents vector
-%       tFreezePhase: start and end time point for all freeze Phases nfreezePhases * 3 [t_start t_end]
-%       colors4freezeline:  color used for freeze line, length = nfreezePhases e.g. {'k', 'b', 'r'};
 %
 %       Name-Value: 
 %           'fig' - figure handle to show the image (default [] to create a new one)
@@ -191,7 +127,6 @@ function plot_1freezeTrial(ma, ts, tevents_ma, tFreezePhases, colors4freezeline,
 %           'show_eventLine' - show (true, default) or not show (false) event lines
 %           'show_eventName' - show (true, default) or not show (false) event Names
 %           'tlimit' - time show limit, default [] represents [min(ts) max(ts)]
-%           'plotFreezeLines' - plot freeze lines or not (defalut false)
 
 
 
@@ -209,7 +144,7 @@ addParameter(p, 'fontname', 'Times New Roman', @ischar);
 addParameter(p, 'show_eventLine', true, @(x) assert(islogical(x) && isscalar(x)));
 addParameter(p, 'show_eventName', true, @(x) assert(islogical(x) && isscalar(x)));
 addParameter(p, 'tlimit', [], @(x) assert(isempty(x) || (isvector(x) && isnumeric(x) && length(x)==2)));
-addParameter(p, 'plotFreezeLines', false, @(x) assert(islogical(x) && isscalar(x)));
+
 
 
 
@@ -226,7 +161,7 @@ fontname = p.Results.fontname;
 show_eventLine = p.Results.show_eventLine;
 show_eventName = p.Results.show_eventName;
 tlimit = p.Results.tlimit;
-plotFreezeLines = p.Results.plotFreezeLines;
+
 
 
 
@@ -261,7 +196,7 @@ xlim(tlimit);
 % plot threshold
 speedThres_Move = 30;
 plot(xlim, [speedThres_Move speedThres_Move], 'r-.');
-%text(pi,0,'\leftarrow sin(\pi)')
+
 
 
 % plot event line
@@ -288,37 +223,10 @@ if show_eventName
     end
     [xtks, idxs]= sort(xtks);
     xtklabs = xtklabs(idxs);
-    set(ax,'XTick', xtks, 'XTickLabel', xtklabs, 'XTickLabelRotation', 45, ...
+    set(ax,'XTick', xtks, 'XTickLabel', xtklabs, 'XTickLabelRotation', 15, ...
         'FontName', 'Times New Roman');
     clear xtks xtklabs tei
 end
-
-if plotFreezeLines
-
-    % plot start and end freeze lines
-    ys = ylim;
-    ys = [ys(1) ys(2)/2];
-    for tfi = 1 : size(tFreezePhases, 1)
-        plot([tFreezePhases(tfi, 1) tFreezePhases(tfi, 1)], ys, 'k-', 'LineWidth',1);
-        plot([tFreezePhases(tfi, 2) tFreezePhases(tfi, 2)], ys, 'k-', 'LineWidth',1);
-    end
-
-    % add cueonset+2 and touch + 2 xticklabels
-    xtks = get(ax, 'XTick');
-    xtklabs = get(ax, 'XTickLabel');
-    xtks = [xtks tFreezePhases(1, 1)];
-    xtklabs = [xtklabs; 'CueOnset+2'];
-    xtks = [xtks tFreezePhases(3, 1)];
-    xtklabs = [xtklabs; 'Touch+2'];
-    [xtks, idxs]= sort(xtks);
-    xtklabs = xtklabs(idxs);
-    set(ax,'XTick', xtks, 'XTickLabel', xtklabs, 'XTickLabelRotation', 45, ...
-        'FontName', 'Times New Roman');
-
-    clear xtks xtklabs
-end
-
-
 
 
 if show_xticklabels

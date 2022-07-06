@@ -1,9 +1,9 @@
-function fig3_Spectrogram(varargin)
+function fig3_PSD_Spectrogram(varargin)
 %   
 %   Usage:
-%       fig3_Spectrogram('plot_psd', true, 'plot_spectrogram', true)
-%       fig3_Spectrogram('plot_psd', false, 'plot_spectrogram', true, 'ai_str_spectro', 1, 'ai_end_spectro', 2)
-%       fig3_Spectrogram('plot_psd', true, , 'ai_str_psd', 1, 'ai_end_psd', 2, 'plot_spectrogram', false)
+%       fig3_PSD_Spectrogram('plot_psd', true, 'plot_spectrogram', true)
+%       fig3_PSD_Spectrogram('plot_psd', false, 'plot_spectrogram', true, 'ai_str_spectro', 2, 'ai_end_spectro', 2)
+%       fig3_PSD_Spectrogram('plot_psd', true, , 'ai_str_psd', 1, 'ai_end_psd', 2, 'plot_spectrogram', false)
 %
 %   Inputs:
 %
@@ -60,7 +60,7 @@ addpath(genpath(fullfile(codefolder,'toolbox')));
 [~, funcname, ~]= fileparts(codefilepath);
 
 input_SKTfolders.J = fullfile(pipelinefolder, 'NHPs', 'Jo', '0_dataPrep', 'SKT', 'fs500Hz', 'm2_SKTData_SelectTrials');
-input_SKTfolders.K = fullfile(pipelinefolder, 'NHPs', 'Kitty', '0_dataPrep', 'SKT', 'fs500Hz', 'm2_segSKTData_SelectTrials_chnOfI');
+input_SKTfolders.K = fullfile(pipelinefolder, 'NHPs', 'Kitty', '0_dataPrep', 'SKT', 'fs500Hz', 'longerTrials', 'm2_segSKTData_SelectTrials_chnOfI');
 
 input_restfiles.J = fullfile(pipelinefolder, 'NHPs', 'Jo', '0_dataPrep', 'Rest', 'm4_restData_PSD', 'psd__allsegs_normalmildmoderate.mat');
 input_restfiles.K = fullfile(pipelinefolder, 'NHPs', 'Kitty', '0_dataPrep', 'Rest', 'm2_restData_PSD', 'psd__allsegs_normalmildmoderate.mat');
@@ -74,8 +74,8 @@ tdur_trials_J.normal = [-0.8 0.8];
 tdur_trials_J.mild = [-0.8 0.8];
 tdur_trials_J.moderate = [-0.8 0.8];
 
-tdur_trials_K.normal = [-0.8 0.8];
-tdur_trials_K.moderate = [-0.8 0.8];
+tdur_trials_K.normal = [-1.6 1.6];
+tdur_trials_K.moderate = [-1.6 1.6];
 
 
 clims_J.STN = [-30 -15];
@@ -85,6 +85,8 @@ clims_K.STN = [-30 -5];
 clims_K.GP = [-30 -15];
 clims_K.M1 = [-30 -10];
 
+spectT_AOI_K = [-1.5 1.5];
+spectT_AOI_J = [-0.5 0.5];
 
 t_min_reach = 0.2;
 
@@ -100,7 +102,7 @@ copyfile2folder(codefilepath, savecodefolder);
 
 
 %% Code start here
-ifig_height = 270;
+ifig_height = 200;
 
 animals = {'Jo', 'Kitty'};
 if isempty(ai_end_psd)
@@ -135,13 +137,19 @@ if plot_spectrogram
         if strcmp(animal, 'Jo')
             tdur_trials = tdur_trials_J;
             clims = clims_J;
+            t_AOI = spectT_AOI_J;
         end
         if strcmp(animal, 'Kitty')
             tdur_trials = tdur_trials_K;
             clims = clims_K;
+            t_AOI = spectT_AOI_K;
         end
 
-        plotAllSpectrograms(cond_cell, inputfolder, animal, chnsused, tdur_trials, SKTEvent.ReachOnset, t_min_reach, clims, savefolder, 400,ifig_height);
+        plotAllSpectrograms(cond_cell, inputfolder, animal, chnsused, tdur_trials, SKTEvent.ReachOnset, t_min_reach, clims, savefolder, 400, ifig_height, ...
+            'f_AOI', plotF_AOI, 't_AOI', t_AOI);
+
+        clear animal inputfolder cond_cell chnsused 
+        clear tdur_trials clims t_AOI
             
     end
 
@@ -149,9 +157,28 @@ end
 
 
 
-function plotAllSpectrograms(cond_cell, inputfolder, animal, chnsused, tdur_trials, align2, t_min_reach, clims, savefolder, ifig_width, ifig_height)
+function plotAllSpectrograms(cond_cell, inputfolder, animal, chnsused, tdur_trials, align2, t_min_reach, clims, savefolder, ifig_width, ifig_height, varargin)
 %
+% Inputs:
 %
+%       Name-Value: 
+%           'f_AOI' - frequences of interest, default [8 40]
+%           't_AOI' - time duration of interest, default [-0.5 0.5]
+
+
+% parse params
+p = inputParser;
+addParameter(p, 'f_AOI', [8 40], @(x) assert(isnumeric(x) && isvector(x) && length(x)==2));
+addParameter(p, 't_AOI', [-0.5 0.5], @(x) assert(isnumeric(x) && isvector(x) && length(x)==2));
+
+
+parse(p,varargin{:});
+f_AOI = p.Results.f_AOI;
+t_AOI = p.Results.t_AOI;
+
+plotMa = true;
+plotedMa = false;
+
 nconds = length(cond_cell);
 for ci = 1 : nconds
     pdcond = cond_cell{ci};
@@ -160,14 +187,14 @@ for ci = 1 : nconds
     files = dir(fullfile(inputfolder, ['*_' pdcond '_*.mat']));   
     tdur_trial = tdur_trials.(pdcond);
     if strcmpi(animal, 'Kitty')
-        [lfptrials, fs, T_chnsarea] = lfptrials_K_selectedTrials_align2(files, align2, tdur_trial, t_min_reach);
+        [lfptrials, fs_lfp, wspeedtrials, fs_ma, T_chnsarea] = lfptrials_K_selectedTrials_align2(files, align2, tdur_trial, t_min_reach);
     end
     if strcmpi(animal, 'Jo')      
-        [lfptrials, fs, T_chnsarea] = lfptrials_J_goodTrials_align2(files, align2, tdur_trial, t_min_reach);
+        [lfptrials, fs_lfp, wspeedtrials, fs_ma, T_chnsarea] = lfptrials_J_goodTrials_align2(files, align2, tdur_trial, t_min_reach);
     end
        
     %%% calc psd_allchns
-    [psd_allchns, freqs, times] = calc_spectrogram(lfptrials, fs, tdur_trial);
+    [psd_allchns, freqs, times] = calc_spectrogram(lfptrials, fs_lfp, tdur_trial, 'f_AOI', f_AOI, 't_AOI', t_AOI);
     
     %%% set show inf and position
     show_freqLabel = false;
@@ -185,6 +212,8 @@ for ci = 1 : nconds
     %%% plot
     T_chnsarea.brainarea = cellfun(@(x) strrep(x, '-', '_'), T_chnsarea.brainarea, 'UniformOutput', false);
     mask_used = cellfun(@(x) contains(x, chnsused), T_chnsarea.brainarea);
+    
+    % plot spectrogram
     psd_allchns = psd_allchns(:, :, mask_used);
     T_chnsarea = T_chnsarea(mask_used, :);
     nchns = size(psd_allchns, 3);
@@ -208,7 +237,6 @@ for ci = 1 : nconds
         show_timeLabel = false;
         show_timeNum = false;
         if chi == nchns
-            show_timeLabel = true;
             show_timeNum = true;
         end
         
@@ -224,6 +252,47 @@ for ci = 1 : nconds
         end
         print(fig, fullfile(savefolder, subsavefile), '-painters', '-depsc');
         print(fig, fullfile(savefolder, subsavefile), '-dpng', '-r1000')
+        
+        if plotMa && chi==1
+            avgWspeed = mean(wspeedtrials,2);
+            times_ma = [1:length(avgWspeed)]/fs_ma + tdur_trial(1);
+
+            ax_spect = findall(fig, 'type', 'Axes');
+            fig_ma = figure('Position', [150 350 ifig_width ifig_height]);
+            ax_ma = axes(fig_ma, 'Units', 'pixels');
+            plot(ax_ma, times_ma, avgWspeed); hold on
+            
+
+            pos_axma = ax_ma.Position;
+            h_axma = pos_axma(4);
+            pos_axma = ax_spect.Position;
+            pos_axma(4) = h_axma;
+            set(ax_ma, 'Position', pos_axma, 'XLim', ax_spect.XLim);
+
+
+            % plot line 0
+            plot(ax_ma, [0 0], ylim, 'r--', 'LineWidth',1.5)
+
+
+            subsavefile = ['wSpeed-' animal '-' pdcond];
+            if align2 == SKTEvent.PeakV
+                subsavefile = ['wSpeed-' animal '-peakV-' pdcond];
+            end
+            print(fig_ma, fullfile(savefolder, subsavefile), '-painters', '-depsc');
+            print(fig_ma, fullfile(savefolder, subsavefile), '-dpng', '-r1000')
+
+            
+
+            close(fig_ma);
+
+            
+            plotedMa = true;
+
+            clear avgWspeed times_ma
+            clear ax_spect fig_ma ax_ma pos_ma h_axma
+            clear subsavefile
+        end
+        
         close(fig)
         
         
@@ -233,9 +302,10 @@ for ci = 1 : nconds
         clear brainarea
     end
     
+
     
     %%% final clear
-    clear pdcond files tdur_trial lfptrials fs T_chnsarea
+    clear pdcond files tdur_trial lfptrials fs_lfp T_chnsarea
     clear psd_allchns freqs times
     clear show_freqLabel show_freqNum show_colorbar
     clear w_outer_left w_outer_right w_inner_left w_inner_right w_outer_diff
@@ -296,7 +366,7 @@ for rowi = 1 : nrows
 end
 
 
-function [lfptrials, fs_lfp, T_chnsarea] = lfptrials_K_selectedTrials_align2(files, align2, tdur_trial, t_min_reach)
+function [lfptrials, fs_lfp, wspeedtrials, fs_ma, T_chnsarea] = lfptrials_K_selectedTrials_align2(files, align2, tdur_trial, t_min_reach)
 % extract lfp seg data respect to targetonset, reachonset, reach and returnonset separately
 % [lfptrials, fs, T_chnsarea] = lfpseg_selectedTrials_align2PeakV(files, [t_AOI(1) t_AOI(2)], 'codesavefolder', savecodefolder);
 %
@@ -313,6 +383,8 @@ function [lfptrials, fs_lfp, T_chnsarea] = lfptrials_K_selectedTrials_align2(fil
 % 
 %         return:
 %             lfptrials: nchns * ntemp * ntrials
+%       
+%             wspeedtrials: smooth wrist speed ntemp * ntrials
 % 
 %             chnAreas:
 % 
@@ -326,6 +398,7 @@ load(fullfile(files(1).folder, files(1).name),  'fs_lfp', 'T_chnsarea');
 
 nfiles = length(files);
 lfptrials = [];
+wspeedtrials = [];
 for filei = 1 : nfiles
     
     % load data, lfpdata: [nchns, ntemps, ntrials]
@@ -352,6 +425,7 @@ for filei = 1 : nfiles
             clear t_reach
             continue
         end
+        clear t_reach 
         
         if align2 == SKTEvent.PeakV
             % find peakV and its timepoint
@@ -370,30 +444,48 @@ for filei = 1 : nfiles
             
             % extract trial with t_dur
             idx_peakV_lfp = round(idx_peakV_ma / fs_ma * fs_lfp);
-            idx_time0 = idx_peakV_lfp;
+            idx_lfp_time0 = idx_peakV_lfp;
+            idx_ma_time0 = idx_peakV_ma;
             
             clear idx idx_reachonset_ma idx_reach_ma idx_peakV_ma
             clear t_reachonset2peakV  t_peakV2reach
             clear idx_peakV_lfp
         else
-            idx_time0 = T_idxevent_lfp{tri, coli_align2}; 
+            idx_lfp_time0 = T_idxevent_lfp{tri, coli_align2}; 
+            idx_ma_time0 = T_idxevent_ma{tri, coli_align2};
         end
         
         
-        % extract phase for 1 trial
+        % extract lfp phase for 1 trial
         lfp_1trial = lfpdata{tri};
-        idxdur = round(tdur_trial * fs_lfp) + idx_time0;
-        if idxdur(1) == 0
-            idxdur(1) = 1;
+        idxdur_lfp = round(tdur_trial * fs_lfp) + idx_lfp_time0;
+        if idxdur_lfp(1) == 0
+            idxdur_lfp(1) = 1;
         else
-            idxdur(1) = idxdur(1) + 1;
+            idxdur_lfp(1) = idxdur_lfp(1) + 1;
         end
-        lfp_phase_1trial = lfp_1trial(:,idxdur(1) :idxdur(2));
+        lfp_phase_1trial = lfp_1trial(:,idxdur_lfp(1) :idxdur_lfp(2));
+        clear lfp_1trial idxdur_lfp 
+
+        % extract wspeed phase for 1 trial
+        wspeed_1trial = smoothWspeed_trial{tri};
+        idxdur_ma = round(tdur_trial * fs_ma) + idx_ma_time0;
+        if idxdur_ma(1) == 0
+            idxdur_ma(1) = 1;
+        else
+            idxdur_ma(1) = idxdur_ma(1) + 1;
+        end
+        wspeed_phase_1trial = wspeed_1trial(idxdur_ma(1) :idxdur_ma(2),1);
+        clear wspeed_1trial idxdur_ma 
+
+
            
         % cat into lfptrials
         lfptrials = cat(3, lfptrials, lfp_phase_1trial);
+        wspeedtrials = cat(2, wspeedtrials, wspeed_phase_1trial);
         
-        clear t_reach idxdur lfp_phase_1trial lfp_1trial
+        
+        clear lfp_phase_1trial  wspeed_phase_1trial
     end
 end
 
@@ -515,20 +607,35 @@ for filei = 1 : nfiles
 end
 
 
-function [psd_allchns, freqs, times] = calc_spectrogram(lfp_phase_trials, fs, tdur_trial)
+function [psd_allchns, freqs, times] = calc_spectrogram(lfp_phase_trials, fs, tdur_trial, varargin)
 %
 % Inputs:
 %    lfp_phase_trials: nchns * ntemp * ntrials
+%
+%
+%       Name-Value: 
+%           'f_AOI' - frequences of interest, default [8 40]
+%           't_AOI' - time duration of interest, default [-0.5 0.5]
 %
 % Return:
 %   psd_allchns: nf * nt * nchns
 %   freqs: nf * 1
 %   times: 1 * nt
   
+
+% parse params
+p = inputParser;
+addParameter(p, 'f_AOI', [8 40], @(x) assert(isnumeric(x) && isvector(x) && length(x)==2));
+addParameter(p, 't_AOI', [-0.5 0.5], @(x) assert(isnumeric(x) && isvector(x) && length(x)==2));
+
+
+parse(p,varargin{:});
+f_AOI = p.Results.f_AOI;
+t_AOI = p.Results.t_AOI;
+
+
 twin = 0.2;
 toverlap = 0.18;
-f_AOI = [8 40];
-t_AOI = [-0.5 0.5];
 
 nwin = round(twin * fs);
 noverlap = round(toverlap * fs);
