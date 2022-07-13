@@ -1,4 +1,24 @@
-function fig4_imCohChanges_compCond()
+function fig2_imCohChanges_compCond(varargin)
+%   
+%   Usage:
+%       fig2_imCohChanges_compCond('pos_ifig', [50 50 400 200])
+%
+%   Inputs:
+%
+%       Name-Value:
+%           'pos_ifig' - position and size of the reachtime statistical figure [left bottom fig_width fig_height], default [50 50 400 200]
+%  
+
+
+% parse params
+p = inputParser;
+addParameter(p, 'pos_ifig', [50 50 400 200], @(x) assert(isvector(x) && isnumeric(x) && length(x)==4));
+
+
+parse(p,varargin{:});
+pos_ifig = p.Results.pos_ifig;
+
+
 
 codefilepath = mfilename('fullpath');
 
@@ -32,7 +52,16 @@ if ~exist(savefolder, 'dir')
     mkdir(savefolder)
 end
 
+aisavefolder = fullfile(outputfolder,'results','figures', 'Illustrator', funcname);
+if ~exist(aisavefolder, 'dir')
+    mkdir(aisavefolder)
+end
+copy2folder = aisavefolder;
+
 savecodefolder = fullfile(savefolder, 'code');
+if exist(savecodefolder, "dir")
+    rmdir(savecodefolder, 's');
+end
 copyfile2folder(codefilepath, savecodefolder);
 
 
@@ -50,7 +79,7 @@ compconds_K(strcmp(compconds_K, basepd)) = [];
 
 
 
-ePhases_J = {'preMove'; 'earlyReach';  'lateReach'};
+ePhases_J = {'preMove'; 'earlyReach';  'PeakV'; 'lateReach'};
 ePhases_K = {'preMove'; 'earlyReach';  'PeakV'; 'lateReach'};
 
 animals = {'Jo'; 'Kitty'};
@@ -73,26 +102,23 @@ for ai = 1 : length(animals)
 
     ciCohChangesfile_prefix =[animal '-ciCohChanges'];
 
-    show_yticklabels = false;
-    show_colorbar = false;
     nconds = length(compconds);
     for ci = 1 : nconds
         comppd = compconds{ci};
 
-        if ci == 1
+        show_yticklabels = false;
+        show_colorbar = false;
+        if ci == 1 && ai == 1
             show_yticklabels = true;
         end
-        if ci == nconds
+        if ci == nconds && ai == length(animals)
             show_colorbar = true;
         end
 
 
-        show_titlename = false;
-        show_xlabel = false;
-        show_xticklabels = false;
         nphases = length(ePhases);
         for npi = 1 : nphases
-        
+
             % extract sigciCohChanges_flatten
             event = ePhases{npi};
             [~, ~, align2name] = SKT_EventPhase_align2_tAOI_extract(event, animal, comppd, 'codesavefolder', savecodefolder);
@@ -101,13 +127,27 @@ for ai = 1 : length(animals)
                 clear event align2name ciCohChangesfile
                 continue;
             end
-            load(ciCohChangesfile, 'ciCohChanges', 'psedoiCohChanges', 'f_selected',  'T_chnsarea')
+            
+            load(ciCohChangesfile, 'ciCoh_base','ciCoh_comp','psedociCohs_comp','psedociCohs_base','ciCohChanges', 'psedoiCohChanges', 'f_selected', 'T_chnsarea')
+            
             [sigciCohChanges]= sigciCoh_extract(psedoiCohChanges, ciCohChanges);
+
+
+            % remove sig changes where both original ciCoh not sig
+            [sigciCoh_base]= sigciCoh_extract(psedociCohs_base, ciCoh_base);
+            [sigciCoh_comp]= sigciCoh_extract(psedociCohs_comp, ciCoh_comp);
+            masks_BothNosigs = (sigciCoh_base == 0) & (sigciCoh_comp == 0);
+            sigciCohChanges(masks_BothNosigs)= 0;
+
+            
             [sigciCohChanges_flatten, chnPairNames] = ciCohFlatten_chnPairNames_extract(sigciCohChanges, T_chnsarea);
-        
-        
+
+
+            show_titlename = false;
+            show_xlabel = false;
+            show_xticklabels = false;
             if npi == 1
-               show_titlename = true;
+                show_titlename = true;
             end
             if npi == nphases
                show_xlabel = true;
@@ -115,7 +155,7 @@ for ai = 1 : length(animals)
             end
         
             % plot subfigure
-            ifig = figure('Position', [50 50 400 200]);
+            ifig = figure('Position', pos_ifig);
             set(ifig, 'PaperUnits', 'points');
             plot_ciCohHistogram(sigciCohChanges_flatten, chnPairNames, f_selected, [comppd '-' basepd], 'histClim', [-1 1],...
                 'codesavefolder', savecodefolder, 'cbarStr', 'ciCohChange', 'cbarTicks', [-1 0 1], ...
@@ -125,9 +165,14 @@ for ai = 1 : length(animals)
             subfilename = [savefilename '-' animal '-' comppd '-B' basepd '-' event]; % 'Jo-mild-Bnormal-preMove'
             print(ifig, fullfile(savefolder, subfilename), '-painters', '-depsc')
             print(ifig, fullfile(savefolder, subfilename), '-dpng', '-r1000')
+
+            if ~isempty(copy2folder)
+                print(ifig, fullfile(copy2folder, subfilename), '-painters', '-depsc')
+            end
+
             close(ifig)
-        
-          
+
+
             clear event align2name ciCohChangesfile
             clear ciCohChanges psedoiCohChanges f_selected  T_chnsarea
             clear sigciCohChanges sigciCohChanges_flatten chnPairNames

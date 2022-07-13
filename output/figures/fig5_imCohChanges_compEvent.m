@@ -1,4 +1,4 @@
-function fig5_imCohChanges_compEvent()
+function fig3_imCohChanges_compEvent()
 codefilepath = mfilename('fullpath');
 
 

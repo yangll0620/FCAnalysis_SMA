@@ -15,7 +15,7 @@ if strcmpi(animal, 'Kitty')
 end
 
 if strcmpi(animal, 'Jo')
-    EventPhases = {'preMove'; 'earlyReach';  'lateReach'};
+    EventPhases = {'preMove'; 'earlyReach';  'peakV'; 'lateReach'};
 end
 
 

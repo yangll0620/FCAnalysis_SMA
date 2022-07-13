@@ -116,7 +116,7 @@ for ci = 1: length(chnPairNames)
     end
     
     if ~strcmp(chnPair_prev, '') && ~strcmp(chnPair_prev, chnPair) % a new site pairs
-        hold on; plot(gca, xlim, [(ci + ci -1)/2 (ci + ci -1)/2], 'w--')
+        hold on; plot(gca, xlim, [(ci + ci -1)/2 (ci + ci -1)/2], 'w--', 'LineWidth', 1)
         % Create line
     end
     chnPair_prev = chnPair;

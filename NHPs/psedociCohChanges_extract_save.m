@@ -42,8 +42,8 @@ for si = shuffi_str : suffi_end
     masksBase = logical([1: ntotal]);
     masksBase(randomSKTInds) = 0;
    
-    psedolfp_SKT = lfp_combined(:, :, masksBase);
-    psedolfp_Base = lfp_combined(:, :, ~masksBase);
+    psedolfp_SKT = lfp_combined(:, :, ~masksBase);
+    psedolfp_Base = lfp_combined(:, :, masksBase);
     
     [~, psedoiCoh_SKT, ~] = ciCoh_trialDeltaPhi(psedolfp_SKT, fs, f_AOI, 'codesavefolder', codesavefolder);
     [~, psedoiCoh_Base, ~] = ciCoh_trialDeltaPhi(psedolfp_Base, fs, f_AOI);

@@ -1,10 +1,15 @@
 function m4_imCohPhaseUsingFFT_EventPhase_unifiedNHP(animal, varargin)
 %
+%   Example Usage:
+%           m4_imCohPhaseUsingFFT_EventPhase_unifiedNHP('Jo', 'ei_str', 1, 'ci_str', 1)
+%
 %   Input:
 %       Name-Value: 
 %           animal
 %           ei_str - event start index
+%           ei_end - event start index
 %           ci_str - condition start index
+%           ci_end - condition end index
 
 codefilepath = mfilename('fullpath');
 
@@ -21,7 +26,7 @@ addpath(genpath(fullfile(codefolder,'connAnalyTool')));
 addpath(genpath(fullfile(codefolder,'toolbox')));
 
 cond_cell = cond_cell_extract(animal);
-EventPhases = SKT_eventPhases_extract();
+EventPhases = SKT_eventPhases_extract(animal);
 
 % parse params
 p = inputParser;
@@ -37,19 +42,8 @@ ci_end = p.Results.ci_end;
 
 % find animal corresponding folder
 [~, codefilename]= fileparts(codefilepath);
-segVFolder = false;
-if strcmpi(animal, 'Kitty')
-    segVFolder = true;
-end
-    
-if segVFolder  
-    SKTSubfolder = 'SKT_SegV';
-    SKTDataSubfolder = 'm2_segSKTData_SelectTrials_goodReach';
-else
-    SKTSubfolder = 'SKT';
-    SKTDataSubfolder = 'm2_SKTData_SelectTrials';
-end
-NHPCodefilepath = fullfile(codefolder, 'NHPs', animal, '0_dataPrep' , SKTSubfolder, codefilename);
+
+NHPCodefilepath = fullfile(codefolder, 'NHPs', animal, '0_dataPrep' , 'SKT','fs500Hz', codefilename);
 [codecorresfolder, codecorresParentfolder] = code_corresfolder(NHPCodefilepath, true, false);
 
 
@@ -72,19 +66,19 @@ ciCohPhasefile_prefix =[animal ' ciCohPhasefile'];
 %%  input setup
 
 % input folder: extracted raw rest data with grayMatter
+if strcmpi(animal, 'Kitty')
+    inputfolder = fullfile(codecorresParentfolder, 'm2_segSKTData_SelectTrials_goodReach');
+end
+if strcmpi(animal, 'Jo')
+    inputfolder = fullfile(codecorresParentfolder, 'm2_SKTData_SelectTrials');
+end
 
-inputfolder = fullfile(codecorresParentfolder, SKTDataSubfolder);
-
-image_type = 'tif';
 
 f_AOI = [8 40];
 
-histClim = [0 1];
-roseRLim = [0 0.3];
+
 shuffleN_psedoTest = 500;
 
-runCicohHist = true;
-runRosePlot = true;
 
 %% Code start here
 [t_minmax_reach_normal, t_minmax_return_normal, t_minmax_reach_mild, t_minmax_return_mild, t_minmax_reach_moderate, t_minmax_return_moderate] = ...
@@ -122,9 +116,10 @@ for ei = ei_str: ei_end
             end
             
             eval(['t_minmax_reach = t_minmax_reach_' pdcond ';']);
-            if segVFolder
+            if strcmpi(animal, 'Kitty')
                 [lfptrials, fs, T_chnsarea] = lfpseg_selectedTrials_align2(files, align2, [t_AOI(1) t_AOI(2)], t_minmax_reach, 'codesavefolder',savecodefolder);
-            else
+            end
+            if strcmpi(animal, 'Jo')
                 [lfptrials, fs, T_chnsarea] = lfp_goodTrials_align2(files, align2, [t_AOI(1) t_AOI(2)], t_minmax_reach, 'codesavefolder', savecodefolder); % lfptrials: nchns * ntemp * ntrials
             end
             % remove unused chns
@@ -150,9 +145,10 @@ for ei = ei_str: ei_end
         if ~exist('psedociCohs','var')
             eval(['t_minmax_reach = t_minmax_reach_' pdcond ';']);
             files = dir(fullfile(inputfolder, ['*_' pdcond '_*.mat']));
-            if segVFolder
+            if strcmpi(animal, 'Kitty')
                 [lfptrials, fs, T_chnsarea] = lfpseg_selectedTrials_align2(files, align2, [t_AOI(1) t_AOI(2)], t_minmax_reach, 'codesavefolder', savecodefolder);
-            else
+            end
+            if strcmpi(animal, 'Jo')
                 [lfptrials, fs, T_chnsarea] = lfp_goodTrials_align2(files, align2, [t_AOI(1) t_AOI(2)], t_minmax_reach, 'codesavefolder', savecodefolder); % lfptrials: nchns * ntemp * ntrials
             end
             % remove unused chns
@@ -184,40 +180,123 @@ for ei = ei_str: ei_end
             load(ciCohPhasefile, 'psedociCohs');
             clear t_minmax_reach lfptrials
         end
-        nshuffle = size(psedociCohs, 4);
-        
-        % extract sigciCoh
-        [sigciCoh]= sigciCoh_extract(psedociCohs, ciCoh, 'codesavefolder', savecodefolder);
-        
-
-        % extract ciCoh_flatten and chnPairNames, such as M1-stn0-1
-        [sigciCoh_flatten, deltaphis_flatten, chnPairNames] = ciCohDephiFlatten_chnPairNames_extract(sigciCoh, deltaphis_allChnsTrials, T_chnsarea, 'codesavefolder', savecodefolder);
-        [ciCoh_flatten_used, deltaphis_flatten_used, chnPairNames_used]= ciCoh_deltaPhi_Used(chnPairNames, sigciCoh_flatten, deltaphis_flatten, removed_chns, 'codesavefolder', savecodefolder);
-        
-        
-        % plot and save ciCoh Histogram image
-        if runCicohHist
-            titlename = [animal '-'  pdcond '-'  event '['  num2str(t_AOI(1)) ' ' num2str(t_AOI(2))   ']s,' ' align2 = ' align2name ', ntrials = ' num2str(ntrials) ' nshuffle= ' num2str(nshuffle)];
-            plot_ciCohHistogram(ciCoh_flatten_used, chnPairNames_used, f_selected, titlename, histClim, 'codesavefolder', savecodefolder);
-            saveimgname = [animal '_' event '_' pdcond '_align2' char(align2) '.' image_type];
-            saveas(gcf, fullfile(savefolder, saveimgname), image_type);
-            clear titlename  saveimgname
-        end
-        
-        
-        % rose histogram of deltaphis_allChnsTrials
-        if runRosePlot
-            titlename_prefix = [animal '-'  pdcond '-'  event];
-            subtitlename = [event '['  num2str(t_AOI(1)) ' ' num2str(t_AOI(2))   ']s, align2 = ' char(align2) ', ntrials = ' num2str(ntrials)];
-            savefile_prefix = [animal 'trialPhaseDiff'];
-            savefile_suffix = [event '_' pdcond '_align2' char(align2)];
-            plotsave_deltaphirose(deltaphis_flatten_used, ciCoh_flatten_used, chnPairNames_used, f_selected, titlename_prefix, subtitlename, subphsavefolder, savefile_prefix, savefile_suffix, image_type,...
-                'codesavefolder', savecodefolder, 'roseRLim', roseRLim);
-            clear titlename_prefix subtitlename savefile_prefix savefile_suffix
-        end
-        
          
         clear pdcond subpdsavefolder align2 t_AOI align2name ciCohPhasefile
         clear('deltaphis_allChnsTrials', 'ciCoh', 'T_chnsarea', 'ntrials', 'f_selected', 'psedociCohs');
     end
 end
+
+
+function [lfptrials, fs_lfp, T_chnsarea] = lfp_goodTrials_align2(files, align2, tdur_trial, t_minmax_reach, varargin)
+% extract lfp data respect to targetonset, reachonset, reach and returnonset separately
+
+% 
+%         Args:
+%             align2: the event to be aligned (e.g Event.REACHONSET or uint 1-5)
+% 
+%             tdur_trial: the duration of extracted trials respected to event(e.g. [-0.5 0.6])
+%             
+%             t_minmax_reach, t_minmax_return : min and max reach/return (s) for selecting trials (e.g [0.5 1])
+%   
+%           Name-Value: 
+%               'codesavefolder' - code saved folder
+% 
+%         return:
+%             lfptrials: nchns * ntemp * ntrials
+% 
+%             chnAreas:
+% 
+%             fs:
+
+
+% parse params
+p = inputParser;
+addParameter(p, 'codesavefolder', '', @isstr);
+parse(p,varargin{:});
+
+% copy code to savefolder if not empty
+codesavefolder = p.Results.codesavefolder;
+if ~isempty(codesavefolder) 
+    copyfile2folder(mfilename('fullpath'), codesavefolder);
+end
+
+
+coli_align2 = uint32(align2);
+
+coli_reachonset = uint32(SKTEvent.ReachOnset);
+coli_reach = uint32(SKTEvent.Reach);
+
+load(fullfile(files(1).folder, files(1).name),  'fs_lfp', 'T_chnsarea');
+
+nfiles = length(files);
+lfptrials = [];
+for filei = 1 : nfiles
+    filename = files(filei).name;
+    file = fullfile(files(filei).folder, filename);
+    
+    load(file, 'lfpdata', 'T_idxevent_lfp', 'goodTrials', 'T_idxevent_ma', 'smoothWspeed_trial', 'fs_ma');
+
+    if(height(T_idxevent_lfp) == 1)
+        disp([filename ' has only 1 trial, skip!']);
+        continue;
+    end
+    
+
+    ntrials = size(lfpdata, 3);
+    for tri = 1: ntrials
+        
+        % ignore trials marked with 0
+        if ~goodTrials(tri)
+            continue
+        end
+        
+        % select trials based on reach duration
+        t_reach = (T_idxevent_lfp{tri, coli_reach} - T_idxevent_lfp{tri, coli_reachonset}) / fs_lfp;
+        if t_reach < t_minmax_reach(1) 
+            clear t_reach
+            continue
+        end
+
+
+        if align2 == SKTEvent.PeakV
+            % find peakV and its timepoint
+            idx_reachonset_ma = T_idxevent_ma{tri, coli_reachonset};
+            idx_reach_ma = T_idxevent_ma{tri, coli_reach};
+            [~, idx] = max(smoothWspeed_trial(idx_reachonset_ma: idx_reach_ma, tri));
+            idx_peakV_ma = idx + idx_reachonset_ma -1;
+            t_reachonset2peakV = (idx_peakV_ma - idx_reachonset_ma)/ fs_ma;
+            t_peakV2reach = (idx_reach_ma - idx_peakV_ma)/ fs_ma;
+            
+            if t_reachonset2peakV < abs(tdur_trial(1)) || t_peakV2reach < tdur_trial(2)
+                clear idx idx_reachonset_ma idx_reach_ma idx_peakV_ma
+                clear t_reachonset2peakV  t_peakV2reach
+                continue;
+            end
+            
+            % extract trial with t_dur
+            idx_peakV_lfp = round(idx_peakV_ma / fs_ma * fs_lfp);
+            idx_time0 = idx_peakV_lfp;
+            
+            clear idx idx_reachonset_ma idx_reach_ma idx_peakV_ma
+            clear t_reachonset2peakV  t_peakV2reach
+            clear idx_peakV_lfp
+        else
+            idx_time0 = T_idxevent_lfp{tri, coli_align2}; 
+        end
+
+               
+        % extract trial with t_dur
+        idxdur = round(tdur_trial * fs_lfp) + idx_time0;
+        idxdur(1) = idxdur(1) + 1;
+        lfp_phase_1trial = lfpdata(:, idxdur(1):idxdur(2), tri);
+       
+        
+        lfptrials = cat(3, lfptrials, lfp_phase_1trial);
+        
+        clear t_reach t_return idxdur lfp_phase_1trial idx_time0
+    end
+    
+    clear filename file ntrials
+    clear('lfpdata', 'T_idxevent_lfp', 'goodTrials', 'T_idxevent_ma', 'smoothWspeed_trial', 'fs_ma');
+end
+
