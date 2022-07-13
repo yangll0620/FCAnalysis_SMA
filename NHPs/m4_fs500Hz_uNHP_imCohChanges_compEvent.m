@@ -35,7 +35,7 @@ addpath(genpath(fullfile(codefolder,'toolbox')));
 p = inputParser;
 addParameter(p, 'compEi_str', 1, @(x) assert(isnumeric(x) && isscalar(x)));
 addParameter(p, 'compEi_end', [], @(x) assert(isnumeric(x) && isscalar(x)));
-addParameter(p, 'ci_str', 2, @isscalar);
+addParameter(p, 'ci_str', 1, @isscalar);
 addParameter(p, 'ci_end', [], @isscalar);
 addParameter(p, 'shuffleN_psedoTest', 500, @(x) assert(isnumeric(x) && isscalar(x)));
 addParameter(p, 'newRun', false, @(x) assert(islogical(x) && isscalar(x)));
@@ -101,72 +101,58 @@ chnsOfI = chnsOfInterest_extract(animal, 'codesavefolder', savecodefolder);
 for compEi = compEi_str: compEi_end
     baseEvent = tbl_compEvents.baseEvent{compEi};
     compEvent = tbl_compEvents.compEvent{compEi};
+    
+    if ~strcmpi(baseEvent, 'preMove')
+        continue;
+    end
 
     for ci = ci_str : ci_end
         pdcond = cond_cell{ci};
         
-        [align2_base, t_AOI, align2name_base] = SKT_EventPhase_align2_tAOI_extract(baseEvent, animal, pdcond, 'codesavefolder', savecodefolder);
-        [align2, ~, align2name] = SKT_EventPhase_align2_tAOI_extract(compEvent, animal, pdcond, 'codesavefolder', savecodefolder);
+        [align2_base, tdur_base, align2name_base] = SKT_EventPhase_align2_tAOI_extract(baseEvent, animal, pdcond, 'codesavefolder', savecodefolder);
+        [align2_comp, tdur_comp, align2name_comp] = SKT_EventPhase_align2_tAOI_extract(compEvent, animal, pdcond, 'codesavefolder', savecodefolder);
         
-        ciCohChangesfile = fullfile(savefolder, [ciCohChangesfile_prefix '_' pdcond '_b' baseEvent '--' compEvent  '_align2' align2name '.mat']);
+        ciCohChangesfile = fullfile(savefolder, [ciCohChangesfile_prefix '_' pdcond '_b' baseEvent '--' compEvent  '_align2' align2name_comp '.mat']);
 
 
         disp([animal '-' compEvent '-based ' baseEvent '-' pdcond])
 
         %%% ----------- case no ciCohPhasefile or new Run -------- %%%
         if(~exist(ciCohChangesfile, 'file') || newRun)
-            load(fullfile(inputfolder_SKTciCoh, [inputfile_cicoh_prefix pdcond '_' baseEvent '_align2' align2name_base '.mat']), 'ciCoh', 'ntrials', 'f_selected', 'T_chnsarea');
-            ciCoh_base = ciCoh; clear ciCoh
-            load(fullfile(inputfolder_SKTciCoh, [inputfile_cicoh_prefix pdcond '_' compEvent '_align2' align2name '.mat']), 'ciCoh');
-            ciCoh_comp = ciCoh; clear ciCoh
             
-            ciCohChanges = ciCoh_comp - ciCoh_base;
-            if strcmpi(animal, 'Jo')
-                mask_chnOfI = cellfun(@(x) any(strcmp(chnsOfI, x)), T_chnsarea.brainarea);
-                T_chnsarea = T_chnsarea(mask_chnOfI, :);
-                ciCohChanges = ciCohChanges(mask_chnOfI, mask_chnOfI, :);
-                clear mask_chnOfI
-            end
-            
-            save(ciCohChangesfile, 'ciCohChanges', 'ntrials', 'f_selected', 'T_chnsarea')
-            
-            clear ciCoh_base ciCoh_comp 
-            clear ciCohChanges ntrials f_selected
-        end
-
-
-        %%% append to ciCoh_comp, psedociCohs_comp and ciCoh_base, psedociCohs_base if not contained
-        ciCohVars = whos('-file',ciCohChangesfile, 'ciCoh_comp', 'ciCoh_base', 'psedociCohs_comp', 'psedociCohs_base');
-        if length(ciCohVars) < 4
-            load(fullfile(inputfolder_SKTciCoh, [inputfile_cicoh_prefix pdcond '_' baseEvent '_align2' align2name_base '.mat']), 'ciCoh', 'psedociCohs');
+            ciCohfile_base = fullfile(inputfolder_SKTciCoh, [inputfile_cicoh_prefix pdcond '_' baseEvent '_align2' align2name_base '.mat']);
+            load(ciCohfile_base, 'ciCoh', 'psedociCohs', 'ntrials', 'f_selected', 'T_chnsarea');
             ciCoh_base = ciCoh; 
             psedociCohs_base = psedociCohs;
-            clear ciCoh psedociCohs
+            clear ciCohfile_base ciCoh psedociCohs
             
-
-            load(fullfile(inputfolder_SKTciCoh, [inputfile_cicoh_prefix pdcond '_' compEvent '_align2' align2name '.mat']), 'ciCoh', 'psedociCohs');
+            ciCohfile_comp = fullfile(inputfolder_SKTciCoh, [inputfile_cicoh_prefix pdcond '_' compEvent '_align2' align2name_comp '.mat']);
+            load(ciCohfile_comp, 'ciCoh', 'psedociCohs');
             ciCoh_comp = ciCoh; 
             psedociCohs_comp = psedociCohs;
-            clear ciCoh psedociCohs
+            clear ciCohfile_comp ciCoh psedociCohs
+            
             
             if strcmpi(animal, 'Jo')
-                load(fullfile(inputfolder_SKTciCoh, [inputfile_cicoh_prefix pdcond '_' baseEvent '_align2' align2name_base '.mat']), 'T_chnsarea');
-                
                 mask_chnOfI = cellfun(@(x) any(strcmp(chnsOfI, x)), T_chnsarea.brainarea);
+
                 T_chnsarea = T_chnsarea(mask_chnOfI, :);
                 ciCoh_base = ciCoh_base(mask_chnOfI, mask_chnOfI, :);
                 ciCoh_comp = ciCoh_comp(mask_chnOfI, mask_chnOfI, :);
                 psedociCohs_base = psedociCohs_base(mask_chnOfI, mask_chnOfI, :, :);
                 psedociCohs_comp = psedociCohs_comp(mask_chnOfI, mask_chnOfI, :, :);
-                
-                clear mask_chnOfI T_chnsarea
-            end
-            
-            save(ciCohChangesfile, 'ciCoh_comp', 'ciCoh_base', 'psedociCohs_base', 'psedociCohs_comp', '-append');
 
-            clear('ciCoh_base', 'ciCoh_comp')
+                clear mask_chnOfI
+            end
+
+            save(ciCohChangesfile, 'ciCoh_base', 'ciCoh_comp', 'psedociCohs_base', 'psedociCohs_comp', 'ntrials', 'f_selected', 'T_chnsarea')
+            
+            ciCohChanges = ciCoh_comp - ciCoh_base;
+            save(ciCohChangesfile, 'ciCohChanges', '-append');
+
+            clear ciCohChanges
+            clear('ciCoh_base', 'ciCoh_comp', 'psedociCohs_base', 'psedociCohs_comp', 'ntrials', 'f_selected', 'T_chnsarea');
         end
-        clear ciCohVars
             
         
         %%%----------- case no psedociCohs variable or psedociCohs nshuffle < shuffleN_psedoTest -------- %%%
@@ -181,12 +167,12 @@ for compEi = compEi_str: compEi_end
             end
             
             if strcmpi(animal, 'Kitty')
-                [lfptrials_base, fs, T_chnsarea] = lfpseg_selectedTrials_align2(lfpfiles, align2_base,t_AOI, 'codesavefolder', savecodefolder);
-                [lfptrials_comp, ~, ~] = lfpseg_selectedTrials_align2(lfpfiles, align2,t_AOI, 'codesavefolder', savecodefolder);
+                [lfptrials_base, fs, T_chnsarea] = lfpseg_selectedTrials_align2(lfpfiles, align2_base,tdur_base, 'codesavefolder', savecodefolder);
+                [lfptrials_comp, ~, ~] = lfpseg_selectedTrials_align2(lfpfiles, align2_comp,tdur_comp, 'codesavefolder', savecodefolder);
             end
             if strcmpi(animal, 'Jo')
-                [lfptrials_base, fs, T_chnsarea] = lfptrials_goodTrials_align2(lfpfiles, align2_base,t_AOI);
-                [lfptrials_comp, ~, ~] = lfptrials_goodTrials_align2(lfpfiles, align2,t_AOI);
+                [lfptrials_base, fs, T_chnsarea] = lfptrials_goodTrials_align2(lfpfiles, align2_base,tdur_base);
+                [lfptrials_comp, ~, ~] = lfptrials_goodTrials_align2(lfpfiles, align2_comp,tdur_comp);
             end
             
             
@@ -214,7 +200,7 @@ for compEi = compEi_str: compEi_end
         titlename = [imgtitle_prefix ':' pdcond '-' compEvent '/' baseEvent];
         plot_ciCohHistogram(sigciCohChanges_flatten, chnPairNames, f_selected, titlename, 'histClim', [-1 1],...
             'fig_width', 500, 'fig_height', 200, 'codesavefolder', savecodefolder, 'cbarStr', 'ciCohChange', 'cbarTicks', [-1 0 1]);
-        saveimgname = [saveimg_prefix '-' pdcond '-b' baseEvent  '-' compEvent '_align2' char(align2) '.' image_type];
+        saveimgname = [saveimg_prefix '-' pdcond '-b' baseEvent  '-' compEvent '_align2' char(align2_comp) '.' image_type];
         saveas(gcf, fullfile(savefolder, saveimgname), image_type);
         close(gcf)
         
@@ -223,14 +209,15 @@ for compEi = compEi_str: compEi_end
         clear ciCohChanges psedoiCohChanges f_selected ntrials
         clear sigciCohChanges sigciCohChanges_flatten chnPairNames
         clear titlename saveimgname nshuffle
-        clear align2 t_AOI align2name align2name_base align2_base
+        clear align2_comp tdur_base align2name_comp align2name_base align2_base
     end
     
     clear compEvent baseEvent     
 end
 
 
-function [lfptrials, fs_lfp, T_chnsarea] = lfptrials_goodTrials_align2(files, align2, tdur_trial)
+
+function [lfptrials, fs_lfp, T_chnsarea] = lfptrials_goodTrials_align2(files, align2, tdur_trial, varargin)
 % extract lfp data respect to targetonset, reachonset, reach and returnonset separately
 
 % 
@@ -239,6 +226,9 @@ function [lfptrials, fs_lfp, T_chnsarea] = lfptrials_goodTrials_align2(files, al
 % 
 %             tdur_trial: the duration of extracted trials respected to event(e.g. [-0.5 0.6])
 %             
+%   
+%           Name-Value: 
+%               'codesavefolder' - code saved folder
 % 
 %         return:
 %             lfptrials: nchns * ntemp * ntrials
@@ -246,6 +236,16 @@ function [lfptrials, fs_lfp, T_chnsarea] = lfptrials_goodTrials_align2(files, al
 %             chnAreas:
 
 
+% parse params
+p = inputParser;
+addParameter(p, 'codesavefolder', '', @isstr);
+parse(p,varargin{:});
+
+% copy code to savefolder if not empty
+codesavefolder = p.Results.codesavefolder;
+if ~isempty(codesavefolder) 
+    copyfile2folder(mfilename('fullpath'), codesavefolder);
+end
 
 
 coli_align2 = uint32(align2);
@@ -256,17 +256,7 @@ coli_reach = uint32(SKTEvent.Reach);
 t_minmax_reach = 0.2;
 
 % load fs_lfp and T_chnsarea
-file1 = fullfile(files(1).folder, files(1).name);
-listOfVariables = who('-file', file1);
-if ismember('fs_lfp', listOfVariables)
-    load(file1,  'fs_lfp');
-else
-    load(file1,  'fs');
-    fs_lfp = fs;
-    clear fs
-end
-load(file1,  'T_chnsarea');
-clear file1 listOfVariables
+load(fullfile(files(1).folder, files(1).name),  'fs_lfp', 'T_chnsarea');
 
 nfiles = length(files);
 lfptrials = [];
@@ -341,6 +331,125 @@ for filei = 1 : nfiles
     clear filename file 
     clear('lfpdata', 'T_idxevent_lfp', 'goodTrials');
 end
+
+
+
+function [lfptrials, fs_lfp, T_chnsarea] = lfpseg_selectedTrials_align2(files, align2, tdur_trial, varargin)
+% extract lfp seg data respect to targetonset, reachonset, reach and returnonset separately
+% [lfptrials, fs, T_chnsarea] = lfpseg_selectedTrials_align2PeakV(files, [t_AOI(1) t_AOI(2)], 'codesavefolder', savecodefolder);
+%
+%   not include trials with t_reach <0.2s
+% 
+%         Args:
+%             align2: the event to be aligned 
+% 
+%             tdur_trial: the duration of extracted trials respected to event(e.g. [-0.5 0.6])
+%             
+%
+%       Name-Value: 
+%           'codesavefolder' - code saved folder
+% 
+%         return:
+%             lfptrials: nchns * ntemp * ntrials
+% 
+%             chnAreas:
+% 
+%             fs:
+
+
+% parse params
+p = inputParser;
+addParameter(p, 'codesavefolder', '', @isstr);
+parse(p,varargin{:});
+
+% copy code to savefolder if not empty
+codesavefolder = p.Results.codesavefolder;
+if ~isempty(codesavefolder) 
+    copyfile2folder(mfilename('fullpath'), codesavefolder);
+end
+
+coli_align2 = uint32(align2);
+coli_reachonset = uint32(SKTEvent.ReachOnset);
+coli_reach = uint32(SKTEvent.Reach);
+
+t_minmax_reach = 0.2;
+
+load(fullfile(files(1).folder, files(1).name),  'fs_lfp', 'T_chnsarea');
+
+nfiles = length(files);
+lfptrials = [];
+for filei = 1 : nfiles
+    
+    % load data, lfpdata: [nchns, ntemps, ntrials]
+    filename = files(filei).name;
+    load(fullfile(files(filei).folder, filename), 'lfpdata', 'T_idxevent_lfp', 'selectedTrials', 'T_idxevent_ma', 'smoothWspeed_trial', 'fs_ma');
+    
+    if(height(T_idxevent_lfp) == 1)
+        disp([filename ' has only 1 trial, skip!']);
+        continue;
+    end
+    
+    
+    ntrials = length(lfpdata);
+    for tri = 1: ntrials
+        
+        % ignore trials marked with 0
+        if ~selectedTrials(tri)
+            continue
+        end
+        
+        % select trials based on reach duration
+        t_reach = (T_idxevent_lfp{tri, coli_reach} - T_idxevent_lfp{tri, coli_reachonset}) / fs_lfp;
+        if t_reach < t_minmax_reach 
+            clear t_reach
+            continue
+        end
+        
+        if align2 == SKTEvent.PeakV
+            % find peakV and its timepoint
+            idx_reachonset_ma = T_idxevent_ma{tri, coli_reachonset};
+            idx_reach_ma = T_idxevent_ma{tri, coli_reach};
+            [~, idx] = max(smoothWspeed_trial{tri}(idx_reachonset_ma: idx_reach_ma, 1));
+            idx_peakV_ma = idx + idx_reachonset_ma -1;
+            t_reachonset2peakV = (idx_peakV_ma - idx_reachonset_ma)/ fs_ma;
+            t_peakV2reach = (idx_reach_ma - idx_peakV_ma)/ fs_ma;
+            
+            if t_reachonset2peakV < abs(tdur_trial(1)) || t_peakV2reach < tdur_trial(2)
+                clear idx idx_reachonset_ma idx_reach_ma idx_peakV_ma
+                clear t_reachonset2peakV  t_peakV2reach
+                continue;
+            end
+            
+            % extract trial with t_dur
+            idx_peakV_lfp = round(idx_peakV_ma / fs_ma * fs_lfp);
+            idx_time0 = idx_peakV_lfp;
+            
+            clear idx idx_reachonset_ma idx_reach_ma idx_peakV_ma
+            clear t_reachonset2peakV  t_peakV2reach
+            clear idx_peakV_lfp
+        else
+            idx_time0 = T_idxevent_lfp{tri, coli_align2}; 
+        end
+        
+        
+        % extract phase for 1 trial
+        lfp_1trial = lfpdata{tri};
+        idxdur = round(tdur_trial * fs_lfp) + idx_time0;
+        if idxdur(1) == 0
+            idxdur(1) = 1;
+        else
+            idxdur(1) = idxdur(1) + 1;
+        end
+        lfp_phase_1trial = lfp_1trial(:,idxdur(1) :idxdur(2));
+           
+        % cat into lfptrials
+        lfptrials = cat(3, lfptrials, lfp_phase_1trial);
+        
+        clear t_reach idxdur lfp_phase_1trial lfp_1trial
+    end
+end
+
+
 
 
 

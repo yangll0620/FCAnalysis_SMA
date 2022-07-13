@@ -70,6 +70,8 @@ savefilename = funcname;
 
 
 %% Code start here
+disp(['running ' funcname]);
+
 basepd = 'normal';
 
 compconds_J = cond_cell_extract('Jo');
@@ -116,11 +118,10 @@ for ai = 1 : length(animals)
         end
 
 
-        nphases = length(ePhases);
-        for npi = 1 : nphases
+        for ei = 1 : length(ePhases)
 
             % extract sigciCohChanges_flatten
-            event = ePhases{npi};
+            event = ePhases{ei};
             [~, ~, align2name] = SKT_EventPhase_align2_tAOI_extract(event, animal, comppd, 'codesavefolder', savecodefolder);
             ciCohChangesfile = fullfile(input_folder, [ciCohChangesfile_prefix  '_b' basepd '--' comppd '_' event '_align2' align2name '.mat']);
             if ~exist(ciCohChangesfile, 'file')
@@ -138,6 +139,7 @@ for ai = 1 : length(animals)
             [sigciCoh_comp]= sigciCoh_extract(psedociCohs_comp, ciCoh_comp);
             masks_BothNosigs = (sigciCoh_base == 0) & (sigciCoh_comp == 0);
             sigciCohChanges(masks_BothNosigs)= 0;
+            clear masks_BothNosigs
 
             
             [sigciCohChanges_flatten, chnPairNames] = ciCohFlatten_chnPairNames_extract(sigciCohChanges, T_chnsarea);
@@ -146,10 +148,10 @@ for ai = 1 : length(animals)
             show_titlename = false;
             show_xlabel = false;
             show_xticklabels = false;
-            if npi == 1
+            if ei == 1
                 show_titlename = true;
             end
-            if npi == nphases
+            if ei == length(ePhases)
                show_xlabel = true;
                show_xticklabels = true;
             end
