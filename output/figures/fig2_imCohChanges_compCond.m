@@ -131,6 +131,7 @@ for ai = 1 : length(animals)
             
             load(ciCohChangesfile, 'ciCoh_base','ciCoh_comp','psedociCohs_comp','psedociCohs_base','ciCohChanges', 'psedoiCohChanges', 'f_selected', 'T_chnsarea')
             
+            % sig
             [sigciCohChanges]= sigciCoh_extract(psedoiCohChanges, ciCohChanges);
 
 
@@ -141,7 +142,7 @@ for ai = 1 : length(animals)
             sigciCohChanges(masks_BothNosigs)= 0;
             clear masks_BothNosigs
 
-            
+            % flatten
             [sigciCohChanges_flatten, chnPairNames] = ciCohFlatten_chnPairNames_extract(sigciCohChanges, T_chnsarea);
 
 
