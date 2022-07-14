@@ -60,21 +60,31 @@ if exist(savecodefolder, "dir")
 end
 copyfile2folder(codefilepath, savecodefolder);
 
+ciCohChangefile_J = 'JociCohChanges_FastbasedSlowReach_ntrials30.mat';
+ciCohChangefile_K = 'KittyciCohChanges_FastbasedSlowReach_ntrials21.mat';
 
 savefilename = funcname;
 
 %% Code start here
 disp(['running ' funcname]);
 
-animals = {'Kitty'};
+animals = {'Jo';'Kitty'};
+
 
 ePhases = {'earlyReach';  'PeakV'; 'lateReach'};
 for ai = 1 : length(animals)
 
     animal = animals{ai};
+    if strcmpi(animal, 'Jo')
+        ciCohChangefile = ciCohChangefile_J;
+    end
+    if strcmpi(animal, 'Kitty')
+        ciCohChangefile = ciCohChangefile_K;
+    end
     input_folder = fullfile(pipelinefolder, 'NHPs', animal, '0_dataPrep', 'SKT', 'fs500Hz', 'm4_uNHP_imCohChanges_FastbasedSlowReach');
 
-    ciCoh_Changes_file = fullfile(input_folder, 'ciCohs_FastbasedSlowReach_ciCohChanges.mat');
+    ciCoh_Changes_file = fullfile(input_folder, ciCohChangefile);
+    
 
     load(ciCoh_Changes_file, 'ciCohs', 'psedociCohs', 'ciCohChanges', 'psedociCohChanges', 'f_selected',  'T_chnsarea');
 
@@ -92,11 +102,11 @@ for ai = 1 : length(animals)
 
         ciCoh_slow = ciCohs.slowReach.(ePhase);
         ciCoh_fast = ciCohs.fastReach.(ePhase);
-        ciCohChange_fastBslow= ciCohChanges.(ePhase);
+        ciCohChange_fastBslow= ciCohChanges.Fast2Slow.(ePhase);
 
-        psedoCicoh_slow = psedociCohs.(ePhase).slowReach;
-        psedoCicoh_fast = psedociCohs.(ePhase).fastReach;
-        psedociCohChange_fastBslow = psedociCohChanges.(ePhase);
+        psedoCicoh_slow = psedociCohs.slowReach.(ePhase);
+        psedoCicoh_fast = psedociCohs.fastReach.(ePhase);
+        psedociCohChange_fastBslow = psedociCohChanges.Fast2Slow.(ePhase);
 
 
         % sigciCohChanges
@@ -124,10 +134,12 @@ for ai = 1 : length(animals)
         show_xlabel = false;
         show_xticklabels = false;
         show_titlename = false;
+        if ei == 1
+            show_titlename = true;
+        end
         if ei == length(ePhases)
             show_xlabel = true;
             show_xticklabels = true;
-            show_titlename = true;
         end
 
 

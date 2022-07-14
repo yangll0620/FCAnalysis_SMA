@@ -3,6 +3,7 @@ function m5_imCohChanges_reachFreeze2ReachPhases(varargin)
 % relative to premove and early reach
 %
 %   Example Usage:
+%           m5_imCohChanges_reachFreeze2ReachPhases();
 %           m5_imCohChanges_reachFreeze2ReachPhases('shuffleN_psedoTest', 500, 'newRun', true)
 %           m5_imCohChanges_reachFreeze2ReachPhases('plotCiCohChanges', false, 'plotCiCoh', true)
 %   
@@ -77,8 +78,8 @@ if (~exist(ciCoh_Changes_file, 'file') || newRun)
     for ebi = 1 : length(eBasePhases)
         eBasePhase = eBasePhases{ebi};
 
-        lfptrials = lfptrials_Reach.(eBasePhase);
-        [~, ciCoh_trials, f_selected]= ciCoh_trialDeltaPhi(lfptrials, fs, f_AOI);
+        lfpbase = lfptrials_Reach.(eBasePhase);
+        [~, ciCoh_base, f_selected]= ciCoh_trialDeltaPhi(lfpbase, fs, f_AOI);
 
         for fri = 1 : length(reachfreezeTypes)
             subfreezeType = reachfreezeTypes{fri};
@@ -90,12 +91,12 @@ if (~exist(ciCoh_Changes_file, 'file') || newRun)
 
 
             % calculate ciCohChangs
-            ciCohChanges.(['b_' eBasePhase]).ReachFreeze.(subfreezeType) = ciCoh_segs - ciCoh_trials;
+            ciCohChanges.(['b_' eBasePhase]).ReachFreeze.(subfreezeType) = ciCoh_segs - ciCoh_base;
 
 
             clear subfreezeType lfpsegs ciCoh_segs
         end
-        clear eBasePhase lfptrials ciCoh_trials
+        clear eBasePhase lfpbase ciCoh_base
     end
     save(ciCoh_Changes_file, 'lfpsegs_Freeze', 'lfptrials_Reach', 'seg_tseg', 'fs', 'f_AOI','T_chnsarea');
     save(ciCoh_Changes_file, 'ciCohs', 'f_selected', 'ciCohChanges', '-append');
@@ -109,7 +110,10 @@ load(ciCoh_Changes_file, 'lfpsegs_Freeze', 'lfptrials_Reach', 'fs', 'f_AOI')
 for ebi = 1 : length(eBasePhases)
     eBasePhase = eBasePhases{ebi};
 
-    lfptrials = lfptrials_Reach.(eBasePhase);
+    lfpbase = lfptrials_Reach.(eBasePhase);
+
+    % base psedo Cicoh
+    psedoFreezeCiCoh_extract_save(shuffleN_psedoTest, lfpbase, fs, f_AOI, ciCoh_Changes_file, 'Reach', eBasePhase);
 
     for fri = 1 : length(reachfreezeTypes)
         subfreezeType = reachfreezeTypes{fri};
@@ -120,13 +124,13 @@ for ebi = 1 : length(eBasePhases)
 
 
         % psedo ciCohChanges
-        psedoFreezeReachCiCohChanges_extract_save(shuffleN_psedoTest, lfpsegs, lfptrials, fs, f_AOI, ciCoh_Changes_file, ['b' eBasePhase], 'ReachFreeze', subfreezeType);
+        psedoFreezeReachCiCohChanges_extract_save(shuffleN_psedoTest, lfpsegs, lfpbase, fs, f_AOI, ciCoh_Changes_file, ['b' eBasePhase], 'ReachFreeze', subfreezeType);
 
         clear subfreezeType lfpsegs 
     end
 
 
-    clear eBasePhase lfptrials fri
+    clear eBasePhase lfpbase fri
 end
 clear('lfpsegs_Freeze', 'lfptrials_Reach', 'fs', 'f_AOI')
 
@@ -248,7 +252,7 @@ if plotCiCoh
 end
 
 
-function psedoFreezeCiCoh_extract_save(suffi_end, lfptrials, fs, f_AOI, ciCohfile, freezeType, subFreezeType)
+function psedoFreezeCiCoh_extract_save(suffi_end, lfptrials, fs, f_AOI, ciCohfile, moveFreezeType, subType)
 %
 %   Inputs:
 %       suffi_end
@@ -270,11 +274,11 @@ if ~exist('psedociCohs', 'var')
     psedociCohs = struct();
 end
 
-if ~isfield(psedociCohs, freezeType) || ~isfield(psedociCohs.(freezeType), subFreezeType) 
-    psedociCohs.(freezeType).(subFreezeType) = [];
+if ~isfield(psedociCohs, moveFreezeType) || ~isfield(psedociCohs.(moveFreezeType), subType) 
+    psedociCohs.(moveFreezeType).(subType) = [];
     shuffi_str = 1;
 else
-    shuffi_str = size(psedociCohs.(freezeType).(subFreezeType), 4) + 1;
+    shuffi_str = size(psedociCohs.(moveFreezeType).(subType), 4) + 1;
 end
 
 for si = shuffi_str : suffi_end
@@ -295,10 +299,10 @@ for si = shuffi_str : suffi_end
         end
         clear lfp1
     end
-    psedociCohs.(freezeType).(subFreezeType) = cat(4, psedociCohs.(freezeType).(subFreezeType), psedociCohs1Time);
+    psedociCohs.(moveFreezeType).(subType) = cat(4, psedociCohs.(moveFreezeType).(subType), psedociCohs1Time);
     clear psedociCohs1Time
     if(mod(si,100) == 0)
-        disp([freezeType '- ' subFreezeType '- psedo test ' num2str(si) ' times'])
+        disp([moveFreezeType '- ' subType '- psedo test ' num2str(si) ' times'])
         save(ciCohfile, 'psedociCohs', '-append');
     end
 end

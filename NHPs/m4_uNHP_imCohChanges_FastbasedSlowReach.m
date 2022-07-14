@@ -8,7 +8,7 @@ function m4_uNHP_imCohChanges_FastbasedSlowReach(animal, varargin)
 %
 %       Name-Value:
 %           nslowfast_J - fast and slow ntrials used for animal J default 30
-%           nslowfast_K - fast and slow ntrials used for animal K, default 21
+%           nslowfast_K - fast and slow ntrials used for animal K, default 30
 %           newRun - true or false(default), for running new or not
 %           shuffleN_psedoTest -  default 500
 
@@ -30,7 +30,7 @@ addpath(genpath(fullfile(codefolder,'toolbox')));
 % parse params
 p = inputParser;
 addParameter(p, 'nslowfast_J', 30, @(x) assert(isnumeric(x) && isscalar(x)));
-addParameter(p, 'nslowfast_K', 21, @(x) assert(isnumeric(x) && isscalar(x)));
+addParameter(p, 'nslowfast_K', 30, @(x) assert(isnumeric(x) && isscalar(x)));
 addParameter(p, 'shuffleN_psedoTest', 500, @(x) assert(isnumeric(x) && isscalar(x)));
 addParameter(p, 'newRun', false, @(x) assert(islogical(x) && isscalar(x)));
 
@@ -67,7 +67,7 @@ copyfile2folder(codefilepath, savecodefolder);
 
 
 %% Code start here
-pdcond = 'moderate';
+pdcond = 'mild';
 f_AOI = [8 40];
 
 ePhases = {'preMove'; 'earlyReach';  'PeakV'; 'lateReach'};
@@ -81,7 +81,7 @@ t_slowReach_max = t_reachs(end);
 t_fastReach_min = t_reachs(1);
 t_fastReach_max = t_reachs(nslowfast);
 
-ciCoh_Changes_file = fullfile(savefolder, 'ciCohs_FastbasedSlowReach_ciCohChanges.mat');
+ciCoh_Changes_file = fullfile(savefolder, [animal 'ciCohChanges_FastbasedSlowReach_' pdcond '_ntrials'  num2str(nslowfast) '.mat']);
 
 
 if (~exist(ciCoh_Changes_file, 'file') || newRun)
@@ -103,6 +103,13 @@ if (~exist(ciCoh_Changes_file, 'file') || newRun)
                 't_min_reach', t_fastReach_min, 't_max_reach', t_fastReach_max);
             [lfptrials_slow, ~, ~] = lfptrials_animalJ_align2(lfpfiles, align2, t_AOI, ...
                 't_min_reach', t_slowReach_min, 't_max_reach', t_slowReach_max);
+            
+            chnsOfI = chnsOfInterest_extract(animal, 'codesavefolder', savecodefolder);
+            mask_chnOfI = cellfun(@(x) any(strcmp(chnsOfI, x)), T_chnsarea.brainarea);
+            T_chnsarea = T_chnsarea(mask_chnOfI, :);
+            lfptrials_fast = lfptrials_fast(mask_chnOfI, :, :);
+            lfptrials_slow = lfptrials_slow(mask_chnOfI, :, :);
+            clear mask_chnOfI chnsOfI
         end
 
 
@@ -118,7 +125,7 @@ if (~exist(ciCoh_Changes_file, 'file') || newRun)
 
 
         % calculate ciCohChangs
-        ciCohChanges.(ePhase) = ciCoh_fast - ciCoh_slow;
+        ciCohChanges.Fast2Slow.(ePhase) = ciCoh_fast - ciCoh_slow;
         
         clear lfptrials_slow lfptrials_fast
         clear ciCoh_slow ciCoh_fast
@@ -143,11 +150,12 @@ for ei = 1 : length(ePhases)
     lfptrials_fast = lfptrials.fastReach.(ePhase);
 
     % psedo ciCoh for slow and fast individually
-    psedoSlowFastCiCoh_extract_save(shuffleN_psedoTest, lfptrials_slow, fs, f_AOI, ciCoh_Changes_file, ePhase, 'slowReach');
-    psedoSlowFastCiCoh_extract_save(shuffleN_psedoTest, lfptrials_fast, fs, f_AOI, ciCoh_Changes_file, ePhase, 'fastReach');
+    psedoSlowFastCiCoh_extract_save(shuffleN_psedoTest, lfptrials_slow, fs, f_AOI, ciCoh_Changes_file, 'slowReach', ePhase);
+    psedoSlowFastCiCoh_extract_save(shuffleN_psedoTest, lfptrials_fast, fs, f_AOI, ciCoh_Changes_file, 'fastReach', ePhase);
 
     % psedo ciCohChanges
-    psedoSlowFastciCohChanges_extract_save(shuffleN_psedoTest, lfptrials_fast, lfptrials_slow, fs, f_AOI, ciCoh_Changes_file,  ePhase);
+    FastSlowBaseTye = 'Fast2Slow';
+    psedoSlowFastciCohChanges_extract_save(shuffleN_psedoTest, lfptrials_fast, lfptrials_slow, fs, f_AOI, ciCoh_Changes_file, FastSlowBaseTye, ePhase);
 
     clear ePhase lfptrials_slow lfptrials_fast
 end
@@ -193,7 +201,7 @@ for ei = 1 : length(ePhases)
 end
 
 
-function psedoSlowFastciCohChanges_extract_save(suffi_end, lfptrials, lfptrials_base, fs, f_AOI, ciCohChangesfile,  ePhase)
+function psedoSlowFastciCohChanges_extract_save(suffi_end, lfptrials, lfptrials_base, fs, f_AOI, ciCohChangesfile, FastSlowBaseTye, ePhase)
 %
 %   Inputs:
 %       suffi_end
@@ -213,12 +221,14 @@ if(~exist('psedociCohChanges', 'var'))
     psedociCohChanges = struct();
 end
 
-if (~isfield(psedociCohChanges, ePhase))
-    psedociCohChanges.(ePhase) = [];
+if (~isfield(psedociCohChanges, FastSlowBaseTye)) || (~isfield(psedociCohChanges.(FastSlowBaseTye), ePhase))
+    psedociCohChanges.(FastSlowBaseTye).(ePhase) = [];
     shuffi_str = 1;
 else
-    shuffi_str = size(psedociCohChanges.(ePhase), 4) + 1;
+    shuffi_str = size(psedociCohChanges.(FastSlowBaseTye).(ePhase), 4) + 1;
 end
+
+
 lfp_combined = cat(3, lfptrials_base, lfptrials);
 ntotal = size(lfp_combined, 3);
 ntrials = size(lfptrials, 3);
@@ -234,10 +244,10 @@ for si = shuffi_str : suffi_end
     [~, psedoiCoh_comp, ~] = ciCoh_trialDeltaPhi(psedolfp_comp, fs, f_AOI);
     [~, psedoiCoh_Base, ~] = ciCoh_trialDeltaPhi(psedolfp_Base, fs, f_AOI);
     
-    psedociCohChanges.(ePhase) = cat(4, psedociCohChanges.(ePhase), psedoiCoh_comp - psedoiCoh_Base);
+    psedociCohChanges.(FastSlowBaseTye).(ePhase) = cat(4, psedociCohChanges.(FastSlowBaseTye).(ePhase), psedoiCoh_comp - psedoiCoh_Base);
     
     if(mod(si, 100) == 0)
-        disp([ePhase ' pesdo ciCoh Changes test ' num2str(si)])
+        disp([FastSlowBaseTye '-' ePhase ' pesdo ciCoh Changes test ' num2str(si)])
         save(ciCohChangesfile, 'psedociCohChanges', '-append');
     end
     
