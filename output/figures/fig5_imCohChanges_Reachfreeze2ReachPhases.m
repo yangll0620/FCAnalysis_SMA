@@ -1,7 +1,7 @@
-function fig6_imCohChanges_Reachfreeze2ReachPhases(varargin)
+function fig5_imCohChanges_Reachfreeze2ReachPhases(varargin)
 %   
 %   Usage:
-%       fig6_imCohChanges_Reachfreeze2ReachPhases('pos_ifig', [50 50 400 200], 'plot_ciCohs_ReachFreeze', false, 'plot_ciCohChanges_ReachFreeze2Reach', false, 'plot_ciCohChanges_ReachFreezeAlongTime', false,'plot_ciCoh_Reach', false)
+%       fig5_imCohChanges_Reachfreeze2ReachPhases('pos_ifig', [50 50 400 200], 'plot_ciCohs_ReachFreeze', false, 'plot_ciCohChanges_ReachFreeze2Reach', false, 'plot_ciCohChanges_ReachFreezeAlongTime', false,'plot_ciCoh_Reach', false)
 %
 %   Inputs:
 %
@@ -63,7 +63,7 @@ if ~exist(savefolder, 'dir')
     mkdir(savefolder)
 end
 
-aisavefolder = fullfile(outputfolder,'results','figures', 'Illustrator', funcname);
+aisavefolder = fullfile(outputfolder,'results','figures', 'Illustrator', 'current', funcname);
 if ~exist(aisavefolder, 'dir')
     mkdir(aisavefolder)
 end
@@ -85,7 +85,7 @@ disp(['running ' funcname]);
 % plot ciCohs.ReachFreeze.earlyFreeze....
 if plot_ciCohs_ReachFreeze
     load(ciCoh_Changes_file, 'ciCohs','psedociCohs', 'f_selected',  'T_chnsarea')
-    reachfreezeTypes = fieldnames(ciCohs.ReachFreeze);
+    reachfreezeTypes = {'beforeFreeze200ms'; 'earlyFreeze';'middleFreeze';'lateFreeze';'afterFreeze200ms'};
     
     for fri = 1 : length(reachfreezeTypes)
         subfreezeType = reachfreezeTypes{fri};
@@ -145,7 +145,7 @@ end
 if plot_ciCohChanges_ReachFreeze2Reach
     load(ciCoh_Changes_file, 'ciCohs','psedociCohs','ciCohChanges','psedociCohChanges', 'f_selected',  'T_chnsarea')
     eBasePhases = fieldnames(ciCohChanges);
-    reachfreezeTypes = fieldnames(ciCohs.ReachFreeze);
+    reachfreezeTypes = {'beforeFreeze200ms'; 'earlyFreeze';'middleFreeze';'lateFreeze';'afterFreeze200ms'};
 
     for ebi = 1 : length(eBasePhases)
         eBasePhase = eBasePhases{ebi};
@@ -231,7 +231,7 @@ end
 % plot ciCohChanges_middle2EarlyFreeze
 if plot_ciCohChanges_ReachFreezeAlongTime
     load(ciCoh_Changes_file2, 'ciCohs', 'psedociCohs', 'ciCohChanges', 'psedociCohChanges', 'f_selected', 'T_chnsarea');
-    reachfreezeTypes = fieldnames(ciCohs.ReachFreeze);
+    reachfreezeTypes = {'beforeFreeze200ms'; 'earlyFreeze';'middleFreeze';'lateFreeze';'afterFreeze200ms'};
 
     for fri_base = 1 : length(reachfreezeTypes)-1
         subfreezeType_base = reachfreezeTypes{fri_base};

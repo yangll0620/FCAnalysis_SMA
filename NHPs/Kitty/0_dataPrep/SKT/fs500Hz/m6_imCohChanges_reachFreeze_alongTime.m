@@ -97,9 +97,9 @@ end
 
 
 % append ciCohChanges
-load(ciCohFile, 'ciCohs', 'lfpsegs_Freeze');
+load(ciCohFile, 'ciCohs', 'lfpsegs_Freeze', 'psedociCohs');
 load(ciCoh_Changes_file, 'ciCohChanges');
-reachfreezeTypes = fieldnames(ciCohs.ReachFreeze);
+reachfreezeTypes = {'beforeFreeze200ms'; 'earlyFreeze';'middleFreeze';'lateFreeze';'afterFreeze200ms'};
 nfreezeTypes = length(reachfreezeTypes);
 for fri_base = 1 :  nfreezeTypes- 1
     subfreezeType_base = reachfreezeTypes{fri_base};
@@ -115,7 +115,7 @@ for fri_base = 1 :  nfreezeTypes- 1
     end
     clear subfreezeType_base 
 end
-save(ciCoh_Changes_file, 'ciCohs', 'ciCohChanges', 'lfpsegs_Freeze','-append');
+save(ciCoh_Changes_file, 'ciCohs', 'psedociCohs', 'ciCohChanges', 'lfpsegs_Freeze','-append');
 
 clear ciCohs ciCohChanges
 clear reachfreezeTypes nfreezeTypes
@@ -123,13 +123,13 @@ clear reachfreezeTypes nfreezeTypes
 
 % psedoCicohChanges
 load(ciCoh_Changes_file, 'lfpsegs_Freeze', 'fs', 'f_AOI')
-reachfreezeTypes = fieldnames(lfpsegs_Freeze.ReachFreeze);
+reachfreezeTypes = {'beforeFreeze200ms'; 'earlyFreeze';'middleFreeze';'lateFreeze';'afterFreeze200ms'};
 nfreezeTypes =length(reachfreezeTypes);
 for fri_base = 1 : nfreezeTypes - 1
     subfreezeType_base = reachfreezeTypes{fri_base};
     lfpsegs_base = lfpsegs_Freeze.ReachFreeze.(subfreezeType_base);
 
-    for fri_comp = 2 : nfreezeTypes
+    for fri_comp = fri_base + 1 : nfreezeTypes
         subfreezeType_comp = reachfreezeTypes{fri_comp};
         lfpsegs_comp = lfpsegs_Freeze.ReachFreeze.(subfreezeType_comp);
 

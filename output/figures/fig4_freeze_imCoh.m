@@ -1,4 +1,4 @@
-function fig5_freeze_imCoh(varargin)
+function fig4_freeze_imCoh(varargin)
 %   
 %   Usage:
 %       fig5_freeze_imCoh('pos_ifig', [50 50 400 200])
