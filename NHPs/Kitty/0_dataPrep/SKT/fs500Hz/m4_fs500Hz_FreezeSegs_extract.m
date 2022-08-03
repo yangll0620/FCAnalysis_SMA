@@ -1,5 +1,5 @@
 function m4_fs500Hz_FreezeSegs_extract()
-% extract freeze segments
+% extract freeze segments into before, early, middle, after freeze
 %
 %
 
@@ -248,14 +248,17 @@ lfpsegs_freeze.InitFreeze.earlyFreeze = [];
 lfpsegs_freeze.InitFreeze.middleFreeze = [];
 lfpsegs_freeze.InitFreeze.lateFreeze = [];
 lfpsegs_freeze.InitFreeze.afterFreeze200ms = [];
+lfpsegs_freeze.InitFreeze.beforeFreeze200ms = [];
 lfpsegs_freeze.ReachFreeze.earlyFreeze = [];
 lfpsegs_freeze.ReachFreeze.middleFreeze = [];
 lfpsegs_freeze.ReachFreeze.lateFreeze = [];
 lfpsegs_freeze.ReachFreeze.afterFreeze200ms = [];
+lfpsegs_freeze.ReachFreeze.beforeFreeze200ms = [];
 lfpsegs_freeze.ManiFreeze.earlyFreeze = [];
 lfpsegs_freeze.ManiFreeze.middleFreeze = [];
 lfpsegs_freeze.ManiFreeze.lateFreeze = [];
 lfpsegs_freeze.ManiFreeze.afterFreeze200ms = [];
+lfpsegs_freeze.ManiFreeze.beforeFreeze200ms = [];
 
 
 
@@ -321,8 +324,12 @@ for fi = 1: length(files)
 
 
         % afterFreeze 200 ms 
-        t_start_afterFreeze1s = t_end_Late;
-        t_end_afterFreeze200ms = t_start_afterFreeze1s + 0.2;
+        t_start_afterFreeze200ms = t_end_Late;
+        t_end_afterFreeze200ms = t_start_afterFreeze200ms + 0.2;
+
+        % beforeFreeze 200 ms 
+        t_end_beforeFreeze200ms = t_start_Early;
+        t_start_beforeFreeze200ms = t_end_beforeFreeze200ms - 0.2;
         
 
         
@@ -393,7 +400,7 @@ for fi = 1: length(files)
 
 
         % after Freeze 200ms segments
-        t_str = t_start_afterFreeze1s;
+        t_str = t_start_afterFreeze200ms;
         t_end = t_end_afterFreeze200ms;
         idx_str = round(t_str * fs_lfp);
         idx_end = round(t_end * fs_lfp);
@@ -410,6 +417,28 @@ for fi = 1: length(files)
         end
         
         lfpsegs_freeze.(freezeType).afterFreeze200ms = cat(3, lfpsegs_freeze.(freezeType).afterFreeze200ms, shortlfp);
+        clear t_str t_end idx_str idx_end seglfp shortlfp len shortSegn
+
+
+
+        % before Freeze 200ms segments
+        t_str = t_start_beforeFreeze200ms;
+        t_end = t_end_beforeFreeze200ms;
+        idx_str = round(t_str * fs_lfp);
+        idx_end = round(t_end * fs_lfp);
+        seglfp  = lfpdata{tri}(:, idx_str: idx_end);
+        
+        shortlfp = [];
+        len = size(seglfp, 2);
+        shortSegn = floor(len / nseg);
+        for shortsegi = 1 : shortSegn
+            stri = (shortsegi - 1)* nseg + 1;
+            endi = shortsegi * nseg;
+            shortlfp = cat(3, shortlfp, seglfp(:, stri : endi));
+            clear stri endi
+        end
+        
+        lfpsegs_freeze.(freezeType).beforeFreeze200ms = cat(3, lfpsegs_freeze.(freezeType).beforeFreeze200ms, shortlfp);
         clear t_str t_end idx_str idx_end seglfp shortlfp len shortSegn
 
     end   

@@ -47,13 +47,8 @@ plotCiCoh = p.Results.plotCiCoh;
 % codecorresfolder, codecorresParentfolder
 [codecorresfolder, codecorresParentfolder] = code_corresfolder(codefilepath, true, false);
 
-
-% animal
-animal = animal_extract(codecorresfolder);
-
-
 %%  input setup
-lfpfile = fullfile(codecorresParentfolder, 'm5_Kitty_imCoh_reachFreeze', 'ciCohs-reachFreeze.mat');
+ciCohFile = fullfile(codecorresParentfolder, 'm5_imCohChanges_reachFreeze2ReachPhases', 'ciCohs-Changes-reachFreeze2reachPhases.mat');
 
 
 
@@ -64,23 +59,21 @@ copyfile2folder(codefilepath, savecodefolder);
 
 
 %% Code start here
+ciCoh_Changes_file = fullfile(savefolder, 'ciCohsChanges-reachFreeze-alongTime.mat');
 
-load(lfpfile, 'lfpsegs_Freeze');
-reachfreezeTypes = fieldnames(lfpsegs_Freeze.ReachFreeze);
-clear lfpsegs_Freeze
-
-nfreezeTypes = length(reachfreezeTypes);
-ciCoh_Changes_file = fullfile(savefolder, 'ciCohsChanges-reachFreeze-basedPrePhases.mat');
 if (~exist(ciCoh_Changes_file, 'file') || newRun)
     
     % load and save
-    load(lfpfile, 'ciCohs', 'lfpsegs_Freeze', 'lfptrials_Reach', 'seg_tseg', 'fs', 'T_chnsarea', 'f_AOI','f_selected');
-    save(ciCoh_Changes_file, 'ciCohs', 'lfpsegs_Freeze', 'lfptrials_Reach', 'seg_tseg', 'fs', 'f_AOI','T_chnsarea', 'f_selected');
-    clear('ciCohs', 'lfpsegs_Freeze', 'lfptrials_Reach', 'seg_tseg', 'fs', 'T_chnsarea', 'f_AOI', 'f_selected');
+    load(ciCohFile, 'ciCohs', 'psedociCohs', 'lfpsegs_Freeze', 'seg_tseg', 'fs', 'T_chnsarea', 'f_AOI','f_selected');
+    save(ciCoh_Changes_file, 'ciCohs', 'psedociCohs', 'lfpsegs_Freeze' ,'seg_tseg', 'fs', 'T_chnsarea', 'f_AOI','f_selected');
+    clear('ciCohs', 'psedociCohs', 'lfpsegs_Freeze' ,'seg_tseg', 'fs', 'T_chnsarea', 'f_AOI','f_selected');
+
     
     % calculate ciCohChanges
-    load(lfpfile, 'ciCohs');
-    for fri_base = 1 : nfreezeTypes - 1
+    load(ciCohFile, 'ciCohs');
+    reachfreezeTypes = fieldnames(ciCohs.ReachFreeze);
+    nfreezeTypes = length(reachfreezeTypes);
+    for fri_base = 1 :  nfreezeTypes- 1
         subfreezeType_base = reachfreezeTypes{fri_base};
         ciCoh_base = ciCohs.ReachFreeze.(subfreezeType_base);
 
@@ -90,28 +83,58 @@ if (~exist(ciCoh_Changes_file, 'file') || newRun)
             ciCoh_comp = ciCohs.ReachFreeze.(subfreezeType_comp);
 
             % calculate ciCohChangs
-            ciCohChanges.ReachFreeze.(['b_' subfreezeType_base]).(subfreezeType_comp) = ciCoh_comp - ciCoh_base;
+            ciCohChanges.ReachFreeze.([subfreezeType_comp '2' subfreezeType_base]) = ciCoh_comp - ciCoh_base;
 
-            clear subfreezeType ciCoh_comp
+            clear subfreezeType_comp ciCoh_comp
         end
         clear subfreezeType_base ciCoh_base
     end
     save(ciCoh_Changes_file, 'ciCohChanges', '-append');
+
+    clear ciCohs ciCohChanges
+    clear reachfreezeTypes
 end
 
+
+% append ciCohChanges
+load(ciCohFile, 'ciCohs', 'lfpsegs_Freeze');
+load(ciCoh_Changes_file, 'ciCohChanges');
+reachfreezeTypes = fieldnames(ciCohs.ReachFreeze);
+nfreezeTypes = length(reachfreezeTypes);
+for fri_base = 1 :  nfreezeTypes- 1
+    subfreezeType_base = reachfreezeTypes{fri_base};
+
+    for fri_comp = fri_base + 1 : nfreezeTypes
+        subfreezeType_comp = reachfreezeTypes{fri_comp};
+
+        if(~isfield(ciCohChanges.ReachFreeze, [subfreezeType_comp '2' subfreezeType_base])) % append ciCohChangs
+            ciCohChanges.ReachFreeze.([subfreezeType_comp '2' subfreezeType_base]) = ciCohs.ReachFreeze.(subfreezeType_comp) - ciCohs.ReachFreeze.(subfreezeType_base);
+        end
+
+        clear subfreezeType_comp 
+    end
+    clear subfreezeType_base 
+end
+save(ciCoh_Changes_file, 'ciCohs', 'ciCohChanges', 'lfpsegs_Freeze','-append');
+
+clear ciCohs ciCohChanges
+clear reachfreezeTypes nfreezeTypes
+
+
 % psedoCicohChanges
-freezeType = 'ReachFreeze';
 load(ciCoh_Changes_file, 'lfpsegs_Freeze', 'fs', 'f_AOI')
+reachfreezeTypes = fieldnames(lfpsegs_Freeze.ReachFreeze);
+nfreezeTypes =length(reachfreezeTypes);
 for fri_base = 1 : nfreezeTypes - 1
     subfreezeType_base = reachfreezeTypes{fri_base};
     lfpsegs_base = lfpsegs_Freeze.ReachFreeze.(subfreezeType_base);
 
-    for fri_comp = 1 : nfreezeTypes
+    for fri_comp = 2 : nfreezeTypes
         subfreezeType_comp = reachfreezeTypes{fri_comp};
         lfpsegs_comp = lfpsegs_Freeze.ReachFreeze.(subfreezeType_comp);
 
         % psedo ciCohChanges
-        psedoCiCohChanges_FreezeBasePrePhases_extract_save(shuffleN_psedoTest, lfpsegs_comp, lfpsegs_base, fs, f_AOI, ciCoh_Changes_file, ['b' subfreezeType_base], freezeType, subfreezeType_comp);
+        psedoCiCohChanges_FreezeBasePrePhases_extract_save(shuffleN_psedoTest, lfpsegs_comp, lfpsegs_base, fs, f_AOI, ciCoh_Changes_file, 'ReachFreeze', [subfreezeType_comp '2' subfreezeType_base]);
 
         clear subfreezeType lfpsegs_comp 
     end
@@ -140,8 +163,8 @@ if plotCiCohChanges
         for fri_comp = fri_base + 1 : nfreezeTypes
             subfreezeType_comp = reachfreezeTypes{fri_comp};
     
-            ciCohchange = ciCohChanges.ReachFreeze.(['b_' subfreezeType_base]).(subfreezeType_comp);
-            psedoiCohChange = psedociCohChanges.ReachFreeze.(['b' subfreezeType_base]).(subfreezeType_comp);
+            ciCohchange = ciCohChanges.ReachFreeze.([subfreezeType_comp '2' subfreezeType_base]);
+            psedoiCohChange = psedociCohChanges.ReachFreeze.([subfreezeType_comp '2' subfreezeType_base]);
     
             [sigciCohChanges]= sigciCoh_extract(psedoiCohChange, ciCohchange);
             [sigciCohChanges_flatten, chnPairNames] = ciCohFlatten_chnPairNames_extract(sigciCohChanges, T_chnsarea);
@@ -239,7 +262,7 @@ if plotCiCoh
 end
 
 
-function psedoCiCohChanges_FreezeBasePrePhases_extract_save(suffi_end, lfptrials, lfptrials_base, fs, f_AOI, ciCohChangesfile,  eBasePhase, freezeType, subfreezeType)
+function psedoCiCohChanges_FreezeBasePrePhases_extract_save(suffi_end, lfptrials, lfptrials_base, fs, f_AOI, ciCohChangesfile,  freezeType, subfreezeType)
 %
 %   Inputs:
 %       suffi_end
@@ -259,11 +282,11 @@ if(~exist('psedociCohChanges', 'var'))
     psedociCohChanges = struct();
 end
 
-if ~isfield(psedociCohChanges, freezeType) || ~isfield(psedociCohChanges.(freezeType), eBasePhase) || ~isfield(psedociCohChanges.(freezeType).(eBasePhase), subfreezeType)
-    psedociCohChanges.(freezeType).(eBasePhase).(subfreezeType) = [];
+if ~isfield(psedociCohChanges, freezeType) || ~isfield(psedociCohChanges.(freezeType), subfreezeType)
+    psedociCohChanges.(freezeType).(subfreezeType) = [];
     shuffi_str = 1;
 else
-    shuffi_str = size(psedociCohChanges.(freezeType).(eBasePhase).(subfreezeType), 4) + 1;
+    shuffi_str = size(psedociCohChanges.(freezeType).(subfreezeType), 4) + 1;
 end
 lfp_combined = cat(3, lfptrials_base, lfptrials);
 ntotal = size(lfp_combined, 3);
@@ -274,16 +297,17 @@ for si = shuffi_str : suffi_end
     masksBase = logical([1: ntotal]);
     masksBase(randomSKTInds) = 0;
    
-    psedolfp_comp = lfp_combined(:, :, masksBase);
-    psedolfp_Base = lfp_combined(:, :, ~masksBase);
+    psedolfp_Base = lfp_combined(:, :, masksBase);
+    psedolfp_comp = lfp_combined(:, :, ~masksBase);
     
+
     [~, psedoiCoh_comp, ~] = ciCoh_trialDeltaPhi(psedolfp_comp, fs, f_AOI);
     [~, psedoiCoh_Base, ~] = ciCoh_trialDeltaPhi(psedolfp_Base, fs, f_AOI);
     
-    psedociCohChanges.(freezeType).(eBasePhase).(subfreezeType) = cat(4, psedociCohChanges.(freezeType).(eBasePhase).(subfreezeType), psedoiCoh_comp - psedoiCoh_Base);
+    psedociCohChanges.(freezeType).(subfreezeType) = cat(4, psedociCohChanges.(freezeType).(subfreezeType), psedoiCoh_comp - psedoiCoh_Base);
     
     if(mod(si, 100) == 0)
-        disp([freezeType '-' eBasePhase '-' subfreezeType ' pesdo ciCoh Changes test ' num2str(si)])
+        disp([freezeType  '-' subfreezeType ' pesdo ciCoh Changes test ' num2str(si)])
         save(ciCohChangesfile, 'psedociCohChanges', '-append');
     end
     

@@ -6,7 +6,7 @@ function m4_fs500Hz_FreezeSKT_earlyMiddLateFreeze_imCohUsingFFT(varargin)
 %       m4_fs500Hz_FreezeSKT_earlyMiddLateFreeze_imCohUsingFFT('ntrialsUsed', 84);
 %
 %   Input
-%      freezePhase : one of {'earlyFreeze', 'middleFreeze', 'lateFreeze'}
+%      freezePhase : one of { 'earlyFreeze', 'middleFreeze', 'lateFreeze'}
 %
 %       Name-Value: 
 %           'matchSKT' - tag for matchSKT, true or false (default)

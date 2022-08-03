@@ -1,4 +1,4 @@
-function [lfpsegs_freeze, fs, T_chnsarea, FreeTypes]= seg2Short_earlyMiddleLateFreeze_Segments(files, varargin)
+function [lfpsegs_freeze, fs, T_chnsarea, FreeTypes]= seg2Short_beforeEarlyMiddleLateFreeze_Segments(files, varargin)
 %
 %
 %

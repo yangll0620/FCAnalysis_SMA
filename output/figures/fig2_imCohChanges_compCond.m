@@ -72,13 +72,28 @@ savefilename = funcname;
 %% Code start here
 disp(['running ' funcname]);
 
-basepd = 'normal';
+baseconds_K = {'normal'};
+baseconds_J = {'normal';'mild'};
 
 compconds_J = cond_cell_extract('Jo');
 compconds_K = cond_cell_extract('Kitty');
-compconds_J(strcmp(compconds_J, basepd)) = [];
-compconds_K(strcmp(compconds_K, basepd)) = [];
 
+baseconds = baseconds_K;
+for bci = 1 : length(baseconds)
+    basepd = baseconds{bci};
+
+    compconds_K(strcmp(compconds_K, basepd)) = [];
+    clear basepd
+end
+
+baseconds = baseconds_J;
+for bci = 1 : length(baseconds)
+    basepd = baseconds{bci};
+
+    compconds_J(strcmp(compconds_J, basepd)) = [];
+    clear basepd
+end
+    
 
 
 ePhases_J = {'preMove'; 'earlyReach';  'PeakV'; 'lateReach'};
@@ -95,97 +110,107 @@ for ai = 1 : length(animals)
         input_folder = input_folder_J;
         ePhases = ePhases_J;
         compconds = compconds_J;
+        baseconds = baseconds_J;
         
     elseif strcmp(animal, 'Kitty')
         input_folder = input_folder_K;
         ePhases = ePhases_K;
         compconds = compconds_K;
+        baseconds = baseconds_K;
     end
 
     ciCohChangesfile_prefix =[animal '-ciCohChanges'];
+    
+    nconds_comp = length(compconds);
+    for bci = 1 : length(baseconds)
+        basepd = baseconds{bci};
 
-    nconds = length(compconds);
-    for ci = 1 : nconds
-        comppd = compconds{ci};
+        for ci = 1 : nconds_comp
+            comppd = compconds{ci};
 
-        show_yticklabels = false;
-        show_colorbar = false;
-        if ci == 1 && ai == 1
-            show_yticklabels = true;
-        end
-        if ci == nconds && ai == length(animals)
-            show_colorbar = true;
-        end
+            show_yticklabels = false;
+            show_colorbar = false;
+            if ci == 1 && ai == 1 && bci == 1
+                show_yticklabels = true;
+            end
+            if ci == nconds_comp && ai == length(animals)
+                show_colorbar = true;
+            end
 
 
-        for ei = 1 : length(ePhases)
+            for ei = 1 : length(ePhases)
 
-            % extract sigciCohChanges_flatten
-            event = ePhases{ei};
-            [~, ~, align2name] = SKT_EventPhase_align2_tAOI_extract(event, animal, comppd, 'codesavefolder', savecodefolder);
-            ciCohChangesfile = fullfile(input_folder, [ciCohChangesfile_prefix  '_b' basepd '--' comppd '_' event '_align2' align2name '.mat']);
-            if ~exist(ciCohChangesfile, 'file')
+                % extract sigciCohChanges_flatten
+                event = ePhases{ei};
+                [~, ~, align2name] = SKT_EventPhase_align2_tAOI_extract(event, animal, comppd, 'codesavefolder', savecodefolder);
+                ciCohChangesfile = fullfile(input_folder, [ciCohChangesfile_prefix  '_b' basepd '--' comppd '_' event '_align2' align2name '.mat']);
+                if ~exist(ciCohChangesfile, 'file')
+                    clear event align2name ciCohChangesfile
+                    continue;
+                end
+
+                load(ciCohChangesfile, 'ciCoh_base','ciCoh_comp','psedociCohs_comp','psedociCohs_base','ciCohChanges', 'psedoiCohChanges', 'f_selected', 'T_chnsarea')
+
+                % sig
+                [sigciCohChanges]= sigciCoh_extract(psedoiCohChanges, ciCohChanges);
+
+
+                % remove sig changes where both original ciCoh not sig
+                [sigciCoh_base]= sigciCoh_extract(psedociCohs_base, ciCoh_base);
+                [sigciCoh_comp]= sigciCoh_extract(psedociCohs_comp, ciCoh_comp);
+                masks_BothNosigs = (sigciCoh_base == 0) & (sigciCoh_comp == 0);
+                sigciCohChanges(masks_BothNosigs)= 0;
+                clear masks_BothNosigs
+
+                % flatten
+                [sigciCohChanges_flatten, chnPairNames] = ciCohFlatten_chnPairNames_extract(sigciCohChanges, T_chnsarea);
+
+
+                show_titlename = false;
+                show_xlabel = false;
+                show_xticklabels = false;
+                if ei == 1
+                    show_titlename = true;
+                end
+                if ei == length(ePhases)
+                    show_xlabel = true;
+                    show_xticklabels = true;
+                end
+
+                % plot subfigure
+                ifig = figure('Position', pos_ifig);
+                set(ifig, 'PaperUnits', 'points');
+                plot_ciCohHistogram(sigciCohChanges_flatten, chnPairNames, f_selected, [comppd '-' basepd], 'histClim', [-1 1],...
+                    'codesavefolder', savecodefolder, 'cbarStr', 'ciCohChange', 'cbarTicks', [-1 0 1], ...
+                    'show_xticklabels', show_xticklabels, 'show_yticklabels', show_yticklabels, 'show_xlabel', show_xlabel, 'show_titlename', show_titlename,'show_colorbar', show_colorbar, ...
+                    'fig', ifig);
+
+                subfilename = [savefilename '-' animal '-' comppd '-B' basepd '-' event]; % 'Jo-mild-Bnormal-preMove'
+                print(ifig, fullfile(savefolder, subfilename), '-painters', '-depsc')
+                print(ifig, fullfile(savefolder, subfilename), '-dpng', '-r1000')
+
+                if ~isempty(copy2folder)
+                    print(ifig, fullfile(copy2folder, subfilename), '-painters', '-depsc')
+                end
+
+                close(ifig)
+
+
                 clear event align2name ciCohChangesfile
-                continue;
-            end
-            
-            load(ciCohChangesfile, 'ciCoh_base','ciCoh_comp','psedociCohs_comp','psedociCohs_base','ciCohChanges', 'psedoiCohChanges', 'f_selected', 'T_chnsarea')
-            
-            % sig
-            [sigciCohChanges]= sigciCoh_extract(psedoiCohChanges, ciCohChanges);
-
-
-            % remove sig changes where both original ciCoh not sig
-            [sigciCoh_base]= sigciCoh_extract(psedociCohs_base, ciCoh_base);
-            [sigciCoh_comp]= sigciCoh_extract(psedociCohs_comp, ciCoh_comp);
-            masks_BothNosigs = (sigciCoh_base == 0) & (sigciCoh_comp == 0);
-            sigciCohChanges(masks_BothNosigs)= 0;
-            clear masks_BothNosigs
-
-            % flatten
-            [sigciCohChanges_flatten, chnPairNames] = ciCohFlatten_chnPairNames_extract(sigciCohChanges, T_chnsarea);
-
-
-            show_titlename = false;
-            show_xlabel = false;
-            show_xticklabels = false;
-            if ei == 1
-                show_titlename = true;
-            end
-            if ei == length(ePhases)
-               show_xlabel = true;
-               show_xticklabels = true;
-            end
-        
-            % plot subfigure
-            ifig = figure('Position', pos_ifig);
-            set(ifig, 'PaperUnits', 'points');
-            plot_ciCohHistogram(sigciCohChanges_flatten, chnPairNames, f_selected, [comppd '-' basepd], 'histClim', [-1 1],...
-                'codesavefolder', savecodefolder, 'cbarStr', 'ciCohChange', 'cbarTicks', [-1 0 1], ...
-                'show_xticklabels', show_xticklabels, 'show_yticklabels', show_yticklabels, 'show_xlabel', show_xlabel, 'show_titlename', show_titlename,'show_colorbar', show_colorbar, ...
-                'fig', ifig);
-            
-            subfilename = [savefilename '-' animal '-' comppd '-B' basepd '-' event]; % 'Jo-mild-Bnormal-preMove'
-            print(ifig, fullfile(savefolder, subfilename), '-painters', '-depsc')
-            print(ifig, fullfile(savefolder, subfilename), '-dpng', '-r1000')
-
-            if ~isempty(copy2folder)
-                print(ifig, fullfile(copy2folder, subfilename), '-painters', '-depsc')
+                clear ciCohChanges psedoiCohChanges f_selected  T_chnsarea
+                clear sigciCohChanges sigciCohChanges_flatten chnPairNames
+                clear show_titlename show_xlabel show_xticklabels
             end
 
-            close(ifig)
-
-
-            clear event align2name ciCohChangesfile
-            clear ciCohChanges psedoiCohChanges f_selected  T_chnsarea
-            clear sigciCohChanges sigciCohChanges_flatten chnPairNames
+            clear comppd
+            clear show_yticklabels show_colorbar
         end
 
-        clear comppd
-        clear show_titlename show_xlabel show_xticklabels
+        clear basepd
     end
-    clear animal input_folder ePhases compconds nconds
-    clear show_yticklabels show_colorbar
+
+   
+    clear animal input_folder ePhases compconds nconds_comp
     clear ciCohChangesfile_prefix
     
 end
