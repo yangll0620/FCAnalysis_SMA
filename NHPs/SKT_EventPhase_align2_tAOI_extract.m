@@ -1,4 +1,4 @@
-function [align2, t_AOI, align2name] = SKT_EventPhase_align2_tAOI_extract(event, animal, pdcond, varargin)
+function [align2, t_AOI, align2name] = SKT_EventPhase_align2_tAOI_extract(event, animal, varargin)
 %
 %   
 % 
@@ -7,15 +7,23 @@ function [align2, t_AOI, align2name] = SKT_EventPhase_align2_tAOI_extract(event,
 %
 %       Name-Value: 
 %           'codesavefolder' - code saved folder
+%           'pdcond' - if animal == Kitty, required;
 
 
 % parse params
 p = inputParser;
 addParameter(p, 'codesavefolder', '', @isstr);
+addParameter(p, 'pdcond', '', @isstr);
 parse(p,varargin{:});
 
-% copy code to savefolder if not empty
 codesavefolder = p.Results.codesavefolder;
+
+if strcmpi(animal, 'Kitty') && isempty(pdcond)
+    disp('pdcond is required for animal Kitty')
+    return;
+end
+
+% copy code to savefolder if not empty
 if ~isempty(codesavefolder) 
     copyfile2folder(mfilename('fullpath'), codesavefolder);
 end

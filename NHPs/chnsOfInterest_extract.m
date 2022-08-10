@@ -14,9 +14,9 @@ function chnsOfI = chnsOfInterest_extract(animal, varargin)
 p = inputParser;
 addParameter(p, 'codesavefolder', '', @isstr);
 parse(p,varargin{:});
+codesavefolder = p.Results.codesavefolder;
 
 % copy code to savefolder if not empty
-codesavefolder = p.Results.codesavefolder;
 if ~isempty(codesavefolder) 
     copyfile2folder(mfilename('fullpath'), codesavefolder);
 end
