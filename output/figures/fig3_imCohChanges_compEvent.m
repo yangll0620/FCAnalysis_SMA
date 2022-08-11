@@ -11,12 +11,13 @@ function fig3_imCohChanges_compEvent(varargin)
 
 % parse params
 p = inputParser;
-addParameter(p, 'pos_ifig', [50 50 400 200], @(x) assert(isvector(x) && isnumeric(x) && length(x)==4));
+addParameter(p, 'pos_ifig', [50 50 410 150], @(x) assert(isvector(x) && isnumeric(x) && length(x)==4));
+addParameter(p, 'newsavefolder', true, @(x) assert(islogical(x) && isscalar(x)));
 
 
 parse(p,varargin{:});
 pos_ifig = p.Results.pos_ifig;
-
+newsavefolder = p.Results.newsavefolder;
 
 codefilepath = mfilename('fullpath');
 
@@ -51,7 +52,10 @@ if ~exist(savefolder, 'dir')
 end
 
 % copy to ai savefolder
-aisavefolder = fullfile(outputfolder,'results','figures', 'Illustrator', funcname);
+aisavefolder = fullfile(outputfolder,'results','figures', 'Illustrator', 'Current',funcname);
+if(exist(aisavefolder, 'dir') && newsavefolder)
+    rmdir(aisavefolder, 's')
+end
 if ~exist(aisavefolder, 'dir')
     mkdir(aisavefolder)
 end
@@ -60,6 +64,9 @@ copy2folder = aisavefolder;
 
 % save code
 savecodefolder = fullfile(savefolder, 'code');
+if(exist(savefolder, 'dir') && newsavefolder)
+    rmdir(savefolder, 's')
+end
 if exist(savecodefolder, "dir")
     rmdir(savecodefolder, 's');
 end
@@ -79,7 +86,7 @@ baseEvent = 'preMove';
 ePhases_J = {'earlyReach';  'PeakV'; 'lateReach'};
 ePhases_K = {'earlyReach';  'PeakV'; 'lateReach'};
 
-cond_J = {'Normal'; 'Mild';  'Moderate'};
+cond_J = {'Normal';};
 cond_K = {'Normal'; 'Moderate'};
 
 
@@ -87,9 +94,6 @@ animals = {'Jo'; 'Kitty'};
 
 close all
 
-histClim_changes = [-1 1];
-cbarStr_changes = 'ciCohChange';
-cbarTicks_changes = [-1 0 1];
 
 for ai = 1 : length(animals)
     animal = animals{ai};
@@ -111,9 +115,6 @@ for ai = 1 : length(animals)
 
         show_yticklabels = false;
         show_colorbar = false;
-        if ci == 1 && ai == 1
-            show_yticklabels = true;
-        end
         if ci == length(pdconds) && ai == length(animals)
             show_colorbar = true;
         end
@@ -124,7 +125,7 @@ for ai = 1 : length(animals)
             % extract sigciCohChanges_flatten
             compEvent = ePhases{ei};
     
-            [~, ~, align2name_comp] = SKT_EventPhase_align2_tAOI_extract(compEvent, animal, pdcond, 'codesavefolder', savecodefolder);
+            [~, ~, align2name_comp] = SKT_EventPhase_align2_tAOI_extract(compEvent, animal, 'pdcond', pdcond, 'codesavefolder', savecodefolder);
             
             ciCohChangesfile = fullfile(input_folder, [animal '-ciCohChanges_' pdcond '_b' baseEvent '--' compEvent '_align2' align2name_comp '.mat']);
             load(ciCohChangesfile, 'ciCoh_base','ciCoh_comp','psedociCohs_comp','psedociCohs_base','ciCohChanges', 'psedoiCohChanges', 'f_selected', 'T_chnsarea');
@@ -141,36 +142,20 @@ for ai = 1 : length(animals)
             clear masks_BothNosigs sigciCoh_base sigciCoh_comp
 
             [sigciCohChanges_flatten, chnPairNames] = ciCohFlatten_chnPairNames_extract(sigciCohChanges, T_chnsarea);
+            [chnPairNames]= chnPairNames_wonum(chnPairNames);
 
-            show_titlename = false;
+            show_titlename = true;
             show_xlabel = false;
             show_xticklabels = false;
-            if ei == 1
-                show_titlename = true;
-            end
             if ei == length(ePhases)
                show_xlabel = true;
                show_xticklabels = true;
             end
         
             % plot subfigure
-            ifig = figure('Position', pos_ifig);
-            set(ifig, 'PaperUnits', 'points');
-            plot_ciCohHistogram(sigciCohChanges_flatten, chnPairNames, f_selected, pdcond, 'histClim', histClim_changes,...
-                'codesavefolder', savecodefolder, 'cbarStr', cbarStr_changes, 'cbarTicks', cbarTicks_changes, ...
-                'show_xticklabels', show_xticklabels, 'show_yticklabels', show_yticklabels, 'show_xlabel', show_xlabel, 'show_titlename', show_titlename,'show_colorbar', show_colorbar, ...
-                'fig', ifig);
-
-            
-            subfilename = [savefilename '-' animal '-' compEvent '-B' baseEvent '-' pdcond]; 
-            print(ifig, fullfile(savefolder, subfilename), '-painters', '-depsc')
-            print(ifig, fullfile(savefolder, subfilename), '-dpng', '-r1000')
-
-            if ~isempty(copy2folder)
-                print(ifig, fullfile(copy2folder, subfilename), '-painters', '-depsc')
-            end
-
-            close(ifig)
+            plotHist_pairbypair(animal, savefilename, chnPairNames, sigciCohChanges_flatten, pos_ifig, f_selected, savecodefolder, savefolder, copy2folder,...
+                compEvent, baseEvent, pdcond, ...
+                show_xticklabels, show_yticklabels, show_xlabel, show_titlename, show_colorbar)
 
 
             clear compEvent align2name_comp
@@ -182,4 +167,41 @@ for ai = 1 : length(animals)
     clear input_folder pdconds ePhases
 end
 
+function plotHist_pairbypair(animal, savefilename, chnPairNames, sigciCohChanges_flatten, pos_ifig, f_selected, savecodefolder, savefolder, copy2folder,...
+    compEvent, baseEvent, pdcond,...
+    show_xticklabels, show_yticklabels, show_xlabel, show_titlename, show_colorbar)
 
+% plot subfigure
+for cpi = 1 : length(chnPairNames)
+    chnPairName = chnPairNames{cpi};
+    sigciCohChanges_flatten_1pair = sigciCohChanges_flatten(cpi, :);
+
+    ifig = figure('Position', pos_ifig);
+    set(ifig, 'PaperUnits', 'points');
+    plot_ciCohHistogram_1pair(sigciCohChanges_flatten_1pair, chnPairName, f_selected, [compEvent '-' baseEvent], 'histClim', [-1 1],...
+        'codesavefolder', savecodefolder, 'cbarStr', 'ciCohChange', 'cbarTicks', [-1 0 1], ...
+        'show_xticklabels', show_xticklabels, 'show_yticklabels', show_yticklabels, 'show_xlabel', show_xlabel, 'show_titlename', show_titlename,'show_colorbar', show_colorbar, ...
+        'fig', ifig);
+
+    subsavefolder = fullfile(savefolder, chnPairName);
+    if(~exist(subsavefolder,'dir'))
+        mkdir(subsavefolder);
+    end
+
+    subfilename = [savefilename '-' animal '-' chnPairName '-' pdcond '-' compEvent '2' baseEvent];
+    print(ifig, fullfile(subsavefolder, subfilename), '-painters', '-depsc')
+    print(ifig, fullfile(subsavefolder, subfilename), '-dpng', '-r1000')
+
+    if ~isempty(copy2folder)
+        subcopyfolder = fullfile(copy2folder, chnPairName);
+        if(~exist(subcopyfolder,'dir'))
+            mkdir(subcopyfolder);
+        end
+        print(ifig, fullfile(subcopyfolder, subfilename), '-painters', '-depsc')
+    end
+
+    close(ifig)
+
+    clear chnPairName sigciCohChanges_flatten_1pair
+    clear subfilename ifig subcopyfolder subsavefolder
+end

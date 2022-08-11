@@ -12,17 +12,15 @@ function fig2_imCohChanges_compCond(varargin)
 
 % parse params
 p = inputParser;
-addParameter(p, 'pos_ifig', [50 50 400 150], @(x) assert(isvector(x) && isnumeric(x) && length(x)==4));
-addParameter(p, 'newsavefolder', false, @(x) assert(islogical(x) && isscalar(x)));
+addParameter(p, 'pos_ifig', [50 50 410 150], @(x) assert(isvector(x) && isnumeric(x) && length(x)==4));
+addParameter(p, 'newsavefolder', true, @(x) assert(islogical(x) && isscalar(x)));
 
 parse(p,varargin{:});
 pos_ifig = p.Results.pos_ifig;
 newsavefolder = p.Results.newsavefolder;
 
 
-[~, ~, ~, outputfolder] = exp_subfolders();
 codefilepath = mfilename('fullpath');
-
 
 % find the codefolder
 tmp = regexp(codefilepath, '.*\code', 'match');
@@ -40,6 +38,8 @@ addpath(genpath(fullfile(codefolder,'connAnalyTool')));
 addpath(genpath(fullfile(codefolder,'toolbox')));
 
 %% Input & save
+
+[~, ~, ~, outputfolder] = exp_subfolders();
 
 [~, funcname, ~]= fileparts(codefilepath);
 
@@ -86,16 +86,11 @@ for ai = 1 : length(animals)
 
     animal = animals{ai};
 
-
     show_yticklabels = false;
     show_colorbar = false;
-    if ai == 1
-        show_yticklabels = true;
-    end
-    if ai == length(animals)
+    if(ai == length(animals))
         show_colorbar = true;
     end
-
 
     if strcmpi(animal, 'Jo')
         plot_JoChanges(pos_ifig, savefilename, savefolder, savecodefolder, copy2folder, show_yticklabels, show_colorbar)
@@ -104,36 +99,9 @@ for ai = 1 : length(animals)
         plot_KittyChanges(pos_ifig, savefilename, savefolder, savecodefolder, copy2folder, show_yticklabels, show_colorbar)
     end
 
-    clear show_yticklabels show_colorbar
+    clear animal
 
 end
-
-function [chnPairNames]= chnPairNames_wonum(chnPairNames)
-
-for ci = 1: length(chnPairNames)
-    chnPair = chnPairNames{ci};
-    
-    % replace M1-stn0-1 to M1-STN
-    s_stn = regexp(chnPair, 'stn[0-9]*-[0-9]*', 'match');
-    if ~isempty(s_stn)
-        for si = 1 : length(s_stn)
-            chnPair = strrep(chnPair, s_stn{si}, 'STN');
-        end
-    end
-    % replace M1-stn0-1 to M1-STN
-    s_gp = regexp(chnPair, 'gp[0-9]*-[0-9]*', 'match');
-    if ~isempty(s_gp)
-        for si = 1 : length(s_gp)
-            chnPair = strrep(chnPair, s_gp{si}, 'GP');
-        end
-    end
-    
-    chnPairNames{ci} = chnPair;
-    
-    
-    clear s_stn s_gp chnPair
-end
-
 
 function plot_KittyChanges(pos_ifig, savefilename, savefolder, savecodefolder, copy2folder, show_yticklabels, show_colorbar)
 ePhases = {'preMove'; 'earlyReach';  'PeakV'; 'lateReach'};
@@ -184,32 +152,8 @@ for ei = 1 : length(ePhases)
     end
 
     % plot subfigure
-    for cpi = 1 : length(chnPairNames)
-        chnPairName = chnPairNames{cpi};
-        sigciCohChanges_flatten_1pair = sigciCohChanges_flatten(cpi, :);
-
-        ifig = figure('Position', pos_ifig);
-        set(ifig, 'PaperUnits', 'points');
-        plot_ciCohHistogram_1pair(sigciCohChanges_flatten_1pair, chnPairName, f_selected, 'PD-Normal', 'histClim', [-1 1],...
-            'codesavefolder', savecodefolder, 'cbarStr', 'ciCohChange', 'cbarTicks', [-1 0 1], ...
-            'show_xticklabels', show_xticklabels, 'show_yticklabels', show_yticklabels, 'show_xlabel', show_xlabel, 'show_titlename', show_titlename,'show_colorbar', show_colorbar, ...
-            'fig', ifig);
-
-        subfilename = [savefilename '-' animal '-' chnPairName '-PD2Normal' '-' event];
-        print(ifig, fullfile(savefolder, subfilename), '-painters', '-depsc')
-        print(ifig, fullfile(savefolder, subfilename), '-dpng', '-r1000')
-
-        if ~isempty(copy2folder)
-            print(ifig, fullfile(copy2folder, subfilename), '-painters', '-depsc')
-        end
-
-        close(ifig)
-
-        clear chnPairName sigciCohChanges_flatten_1pair
-        clear subfilename ifig
-    end
-
-
+    plot1PairHist(animal, event, savefilename, chnPairNames, sigciCohChanges_flatten, pos_ifig, f_selected, savecodefolder, savefolder, copy2folder,...
+    show_xticklabels, show_yticklabels, show_xlabel, show_titlename, show_colorbar)
 
     clear event align2name ciCohChangesfile
     clear ciCohChanges psedoiCohChanges f_selected  T_chnsarea
@@ -267,31 +211,8 @@ for ei = 1 : length(ePhases)
         show_xticklabels = true;
     end
 
-    % plot subfigure
-    for cpi = 1 : length(chnPairNames)
-        chnPairName = chnPairNames{cpi};
-        sigciCohChanges_flatten_1pair = sigciCohChanges_flatten(cpi, :);
-
-        ifig = figure('Position', pos_ifig);
-        set(ifig, 'PaperUnits', 'points');
-        plot_ciCohHistogram_1pair(sigciCohChanges_flatten_1pair, chnPairName, f_selected, 'PD-normal', 'histClim', [-1 1],...
-            'codesavefolder', savecodefolder, 'cbarStr', 'ciCohChange', 'cbarTicks', [-1 0 1], ...
-            'show_xticklabels', show_xticklabels, 'show_yticklabels', show_yticklabels, 'show_xlabel', show_xlabel, 'show_titlename', show_titlename,'show_colorbar', show_colorbar, ...
-            'fig', ifig);
-
-        subfilename = [savefilename '-' animal '-' chnPairName '-PD2Normal' '-' event];
-        print(ifig, fullfile(savefolder, subfilename), '-painters', '-depsc')
-        print(ifig, fullfile(savefolder, subfilename), '-dpng', '-r1000')
-
-        if ~isempty(copy2folder)
-            print(ifig, fullfile(copy2folder, subfilename), '-painters', '-depsc')
-        end
-
-        close(ifig)
-
-        clear chnPairName sigciCohChanges_flatten_1pair
-        clear subfilename ifig
-    end
+    plot1PairHist(animal, event, savefilename, chnPairNames, sigciCohChanges_flatten, pos_ifig, f_selected, savecodefolder, savefolder, copy2folder,...
+    show_xticklabels, show_yticklabels, show_xlabel, show_titlename, show_colorbar)
 
 
 
@@ -300,3 +221,44 @@ for ei = 1 : length(ePhases)
     clear sigciCohChanges sigciCohChanges_flatten chnPairNames
     clear show_titlename show_xlabel show_xticklabels
 end
+
+
+function plot1PairHist(animal, event, savefilename, chnPairNames, sigciCohChanges_flatten, pos_ifig, f_selected, savecodefolder, savefolder, copy2folder,...
+    show_xticklabels, show_yticklabels, show_xlabel, show_titlename, show_colorbar)
+
+% plot subfigure
+for cpi = 1 : length(chnPairNames)
+    chnPairName = chnPairNames{cpi};
+    sigciCohChanges_flatten_1pair = sigciCohChanges_flatten(cpi, :);
+
+    ifig = figure('Position', pos_ifig);
+    set(ifig, 'PaperUnits', 'points');
+    plot_ciCohHistogram_1pair(sigciCohChanges_flatten_1pair, chnPairName, f_selected, 'PD-Normal', 'histClim', [-1 1],...
+        'codesavefolder', savecodefolder, 'cbarStr', 'ciCohChange', 'cbarTicks', [-1 0 1], ...
+        'show_xticklabels', show_xticklabels, 'show_yticklabels', show_yticklabels, 'show_xlabel', show_xlabel, 'show_titlename', show_titlename,'show_colorbar', show_colorbar, ...
+        'fig', ifig);
+
+    subsavefolder = fullfile(savefolder, chnPairName);
+    if(~exist(subsavefolder,'dir'))
+        mkdir(subsavefolder);
+    end
+
+    subfilename = [savefilename '-' animal '-' chnPairName '-PD2Normal' '-' event];
+    print(ifig, fullfile(subsavefolder, subfilename), '-painters', '-depsc')
+    print(ifig, fullfile(subsavefolder, subfilename), '-dpng', '-r1000')
+
+    if ~isempty(copy2folder)
+        subcopyfolder = fullfile(copy2folder, chnPairName);
+        if(~exist(subcopyfolder,'dir'))
+            mkdir(subcopyfolder);
+        end
+        print(ifig, fullfile(subcopyfolder, subfilename), '-painters', '-depsc')
+    end
+
+    close(ifig)
+
+    clear chnPairName sigciCohChanges_flatten_1pair
+    clear subfilename ifig subcopyfolder subsavefolder
+end
+
+

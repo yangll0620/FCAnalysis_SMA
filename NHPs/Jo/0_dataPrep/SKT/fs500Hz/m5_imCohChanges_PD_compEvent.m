@@ -120,7 +120,7 @@ for compEi = 1: height(tbl_compEvents)
         save(ciCohChangesfile, 'ciCohs', 'psedociCohs', 'lfptrials', 'fs', 'f_selected', 'T_chnsarea') 
 
         % save ciCohChanges
-        ciCohChanges = ciCohs.(compEvent) - ciCohs.(compEvent);
+        ciCohChanges = ciCohs.(compEvent) - ciCohs.(baseEvent);
         save(ciCohChangesfile, 'ciCohChanges', '-append')
         
         clear ciCohs_base  lfptrials_base  psedociCohs_base fs_base f_selected_base   T_chnsarea_base 

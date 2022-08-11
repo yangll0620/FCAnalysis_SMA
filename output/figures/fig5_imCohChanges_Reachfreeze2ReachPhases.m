@@ -7,19 +7,21 @@ function fig5_imCohChanges_Reachfreeze2ReachPhases(varargin)
 %
 %       Name-Value:
 %           'pos_ifig' - position and size of the reachtime statistical figure [left bottom fig_width fig_height], default [50 50 400 200]
-%           'plot_ciCohs_ReachFreeze' - tag plotting ciCoh of early/middle/late/after reach freezes (default true)
+%           'plot_ciCohs_ReachFreeze' - tag plotting ciCoh of early/middle/late/after reach freezes (default false)
 %           'plot_ciCohChanges_ReachFreeze2Reach' - tag plotting ciCohChanges of early/middle/late/after reach freeze relative to preMove/earlyReach(default false)
 %           'plot_ciCohChanges_ReachFreezeAlongTime' - tag plotting ciCohChanges of reach freeze along time, e.g. middleFreeze2earlyFreeze (default true)
-%           'plot_ciCoh_Reach' - tag plotting ciCoh of preMove/earlyReach
+%           'plot_ciCoh_Reach' - tag plotting ciCoh of preMove/earlyReach (default false)
 
 
 % parse params
 p = inputParser;
-addParameter(p, 'pos_ifig', [50 50 400 200], @(x) assert(isvector(x) && isnumeric(x) && length(x)==4));
-addParameter(p, 'plot_ciCohs_ReachFreeze', true, @(x) assert(islogical(x) && isscalar(x)));
-addParameter(p, 'plot_ciCohChanges_ReachFreeze2Reach', true, @(x) assert(islogical(x) && isscalar(x)));
+addParameter(p, 'pos_ifig', [50 50 410 150], @(x) assert(isvector(x) && isnumeric(x) && length(x)==4));
+addParameter(p, 'plot_ciCohs_ReachFreeze', false, @(x) assert(islogical(x) && isscalar(x)));
+addParameter(p, 'plot_ciCohChanges_ReachFreeze2Reach', false, @(x) assert(islogical(x) && isscalar(x)));
 addParameter(p, 'plot_ciCohChanges_ReachFreezeAlongTime', true, @(x) assert(islogical(x) && isscalar(x)));
-addParameter(p, 'plot_ciCoh_Reach', true, @(x) assert(islogical(x) && isscalar(x)));
+addParameter(p, 'plot_ciCoh_Reach', false, @(x) assert(islogical(x) && isscalar(x)));
+addParameter(p, 'newsavefolder', true, @(x) assert(islogical(x) && isscalar(x)));
+
 
 
 parse(p,varargin{:});
@@ -28,6 +30,7 @@ plot_ciCohs_ReachFreeze = p.Results.plot_ciCohs_ReachFreeze;
 plot_ciCohChanges_ReachFreeze2Reach = p.Results.plot_ciCohChanges_ReachFreeze2Reach;
 plot_ciCohChanges_ReachFreezeAlongTime = p.Results.plot_ciCohChanges_ReachFreezeAlongTime;
 plot_ciCoh_Reach = p.Results.plot_ciCoh_Reach;
+newsavefolder = p.Results.newsavefolder;
 
 codefilepath = mfilename('fullpath');
 
@@ -59,11 +62,17 @@ input_folder2 = fullfile(pipelinefolder, 'NHPs', 'Kitty', '0_dataPrep', 'SKT', '
 ciCoh_Changes_file2 = fullfile(input_folder2, 'ciCohsChanges-reachFreeze-alongTime.mat');
 
 savefolder = fullfile(outputfolder, 'results', 'figures', funcname);
+if(exist(savefolder, 'dir') && newsavefolder)
+    rmdir(savefolder, 's')
+end
 if ~exist(savefolder, 'dir')
     mkdir(savefolder)
 end
 
 aisavefolder = fullfile(outputfolder,'results','figures', 'Illustrator', 'current', funcname);
+if(exist(aisavefolder, 'dir') && newsavefolder)
+    rmdir(aisavefolder, 's')
+end
 if ~exist(aisavefolder, 'dir')
     mkdir(aisavefolder)
 end
@@ -264,42 +273,58 @@ if plot_ciCohChanges_ReachFreezeAlongTime
 
             %flatten
             [sigciCohChanges_flatten, chnPairNames] = ciCohFlatten_chnPairNames_extract(sigciCohChanges, T_chnsarea);
+            [chnPairNames]= chnPairNames_wonum(chnPairNames);
 
 
             show_titlename = true;
             show_yticklabels = false;
             show_colorbar = false;
-            if fri_comp == 2
-                show_yticklabels = true;
-            end
             if fri_comp == length(reachfreezeTypes)
                 show_colorbar = true;
             end
 
 
             % plot and save ciCoh Histogram image
-            ifig = figure('Position', pos_ifig);
-            set(ifig, 'PaperUnits', 'points');
-            plot_ciCohHistogram(sigciCohChanges_flatten, chnPairNames, f_selected, [subfreezeType_comp '-' subfreezeType_base], 'histClim', [-1 1],...
-                'codesavefolder', savecodefolder, 'cbarStr', 'ciCohChange', 'cbarTicks', [-1 0 1], ...
-                'show_xticklabels', show_xticklabels, 'show_yticklabels', show_yticklabels, 'show_xlabel', show_xlabel, 'show_titlename', show_titlename,'show_colorbar', show_colorbar, ...
-                'fig', ifig);
+            for cpi = 1 : length(chnPairNames)
+                chnPairName = chnPairNames{cpi};
+                sigciCohChanges_flatten_1pair = sigciCohChanges_flatten(cpi, :);
 
-            subfilename = [savefilename '-' subfreezeType_comp '2' subfreezeType_base];
-            print(ifig, fullfile(savefolder, subfilename), '-painters', '-depsc')
-            print(ifig, fullfile(savefolder, subfilename), '-dpng', '-r1000')
+                ifig = figure('Position', pos_ifig);
+                set(ifig, 'PaperUnits', 'points');
+                plot_ciCohHistogram_1pair(sigciCohChanges_flatten_1pair, chnPairName, f_selected, [subfreezeType_comp '-' subfreezeType_base], 'histClim', [-1 1],...
+                    'codesavefolder', savecodefolder, 'cbarStr', 'ciCohChange', 'cbarTicks', [-1 0 1], ...
+                    'show_xticklabels', show_xticklabels, 'show_yticklabels', show_yticklabels, 'show_xlabel', show_xlabel, 'show_titlename', show_titlename,'show_colorbar', show_colorbar, ...
+                    'fig', ifig);
 
-            if ~isempty(copy2folder)
-                print(ifig, fullfile(copy2folder, subfilename), '-painters', '-depsc')
+                subsavefolder = fullfile(savefolder, chnPairName);
+                if(~exist(subsavefolder,'dir'))
+                    mkdir(subsavefolder);
+                end
+
+                subfilename = [savefilename '-' chnPairName '-' subfreezeType_comp '2' subfreezeType_base];
+                print(ifig, fullfile(subsavefolder, subfilename), '-painters', '-depsc')
+                print(ifig, fullfile(subsavefolder, subfilename), '-dpng', '-r1000')
+
+                if ~isempty(copy2folder)
+                    subcopyfolder = fullfile(copy2folder, chnPairName);
+                    if(~exist(subcopyfolder,'dir'))
+                        mkdir(subcopyfolder);
+                    end
+                    print(ifig, fullfile(subcopyfolder, subfilename), '-painters', '-depsc')
+                    clear subcopyfolder
+                end
+    
+                close(ifig)
+
+                clear ifig subfilename
+                clear chnPairName sigciCohChanges_flatten_1pair
             end
-
-            close(ifig)
 
             clear subfreezeType_comp ciCoh_comp psedociCohs_comp
             clear ciCohChange psedociCohChange sigciCohChanges sigciCohChanges_flatten chnPairNames
             clear sigciCoh_comp masks_BothNosigs
             clear show_titlename show_yticklabels show_colorbar
-            clear ifig subfilename
+            clear subsavefolder
         end
 
         clear subfreezeType_base ciCoh_base psedociCohs_base sigciCoh_base
