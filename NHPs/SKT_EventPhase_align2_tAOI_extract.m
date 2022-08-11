@@ -17,6 +17,7 @@ addParameter(p, 'pdcond', '', @isstr);
 parse(p,varargin{:});
 
 codesavefolder = p.Results.codesavefolder;
+pdcond = p.Results.pdcond;
 
 if strcmpi(animal, 'Kitty') && isempty(pdcond)
     disp('pdcond is required for animal Kitty')
