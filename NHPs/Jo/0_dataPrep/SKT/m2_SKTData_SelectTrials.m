@@ -361,7 +361,7 @@ while(filei <=  nfiles)
             clear t_reach
             continue
         end
-        if t_return < t_minmax_return(1) || t_reach > t_minmax_return(2)
+        if t_return < t_minmax_return(1) || t_return > t_minmax_return(2)
             disp(['trial i = ' num2str(tri) ', t_return = ' num2str(t_reach)])
             goodTrials(tri) = 0;
             clear t_return

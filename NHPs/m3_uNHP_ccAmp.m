@@ -92,7 +92,9 @@ shuffleN_psedoTest = 500;
 
 
 chnsOfI = chnsOfInterest_extract(animal, 'codesavefolder', savecodefolder);
-
+if(strcmpi(animal, 'Jo'))
+    cond_cell = [cond_cell {'PD'}];
+end
 
 for ei = ei_str: ei_end
     event = EventPhases{ei};
@@ -107,10 +109,10 @@ for ei = ei_str: ei_end
         
         disp([codefilename ' ' animal '-' event '-' pdcond])
         
-        [align2, t_AOI, align2name] = SKT_EventPhase_align2_tAOI_extract(event, animal, 'pdcond', pdcond, 'codesavefolder', savecodefolder);
+        [align2, t_AOI, ~] = SKT_EventPhase_align2_tAOI_extract(event, animal, 'pdcond', pdcond, 'codesavefolder', savecodefolder);
         
         % load(and extract) ccAmpfile
-        ccAmpfile = fullfile(savefolder, [ccAmpfile_prefix  '_' pdcond '_' event '_align2' align2name '.mat']);
+        ccAmpfile = fullfile(savefolder, [ccAmpfile_prefix  '_' pdcond '_' event '.mat']);
         if(~exist(ccAmpfile, 'file') || newRun)
             
             files = dir(fullfile(inputfolder, ['*_' pdcond '_*.mat']));
