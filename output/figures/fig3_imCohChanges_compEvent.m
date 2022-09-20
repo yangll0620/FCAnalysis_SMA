@@ -11,7 +11,7 @@ function fig3_imCohChanges_compEvent(varargin)
 
 % parse params
 p = inputParser;
-addParameter(p, 'pos_ifig', [50 50 410 150], @(x) assert(isvector(x) && isnumeric(x) && length(x)==4));
+addParameter(p, 'pos_ifig', [50 50 450 150], @(x) assert(isvector(x) && isnumeric(x) && length(x)==4));
 addParameter(p, 'newsavefolder', true, @(x) assert(islogical(x) && isscalar(x)));
 
 
@@ -41,15 +41,13 @@ addpath(genpath(fullfile(codefolder,'toolbox')));
 [~, ~, pipelinefolder, outputfolder] = exp_subfolders();
 [~, funcname, ~]= fileparts(codefilepath);
 
-input_folder_J = fullfile(pipelinefolder, 'NHPs', 'Jo', '0_dataPrep', 'SKT', 'fs500Hz', 'm4_fs500Hz_uNHP_imCohChanges_compEvent');
+input_folder_J_Normal = fullfile(pipelinefolder, 'NHPs', 'Jo', '0_dataPrep', 'SKT', 'fs500Hz', 'm4_fs500Hz_uNHP_imCohChanges_compEvent');
+input_folder_J_PD = fullfile(pipelinefolder, 'NHPs', 'Jo', '0_dataPrep', 'SKT', 'fs500Hz', 'm5_imCohChanges_PD_compEvent');
 input_folder_K = fullfile(pipelinefolder, 'NHPs', 'Kitty', '0_dataPrep', 'SKT', 'fs500Hz', 'm4_fs500Hz_uNHP_imCohChanges_compEvent');
 
 
-savefolder = fullfile(outputfolder, 'results', 'figures', funcname);
-if ~exist(savefolder, 'dir')
-    mkdir(savefolder)
-    
-end
+
+savefolder = fullfile(outputfolder, 'results', 'figures', 'current', funcname);
 
 % copy to ai savefolder
 aisavefolder = fullfile(outputfolder,'results','figures', 'Illustrator', 'Current',funcname);
@@ -83,10 +81,10 @@ disp(['running ' funcname]);
 
 baseEvent = 'preMove';
 
-ePhases_J = {'earlyReach';  'PeakV'; 'lateReach'};
-ePhases_K = {'earlyReach';  'PeakV'; 'lateReach'};
+ePhases_J = {'earlyReach'; };
+ePhases_K = {'earlyReach'; };
 
-cond_J = {'Normal';};
+cond_J = {'Normal'; 'PD'};
 cond_K = {'Normal'; 'Moderate'};
 
 
@@ -99,7 +97,6 @@ for ai = 1 : length(animals)
     animal = animals{ai};
 
     if strcmpi(animal, 'Jo')
-        input_folder = input_folder_J;
         pdconds = cond_J;
         ePhases = ePhases_J;
         
@@ -111,7 +108,16 @@ for ai = 1 : length(animals)
 
     for ci = 1 : length(pdconds)
         pdcond = pdconds{ci};
-
+        
+        if strcmpi(animal, 'Jo') && strcmpi(pdcond, 'Normal')
+            input_folder = input_folder_J_Normal;
+        end
+        if strcmpi(animal, 'Jo') && strcmpi(pdcond, 'PD')
+            input_folder = input_folder_J_PD;
+        end
+        if strcmpi(animal, 'Kitty') 
+            input_folder = input_folder_K;
+        end
 
         show_yticklabels = false;
         show_colorbar = false;
@@ -124,13 +130,30 @@ for ai = 1 : length(animals)
             
             % extract sigciCohChanges_flatten
             compEvent = ePhases{ei};
-    
-            [~, ~, align2name_comp] = SKT_EventPhase_align2_tAOI_extract(compEvent, animal, 'pdcond', pdcond, 'codesavefolder', savecodefolder);
             
-            ciCohChangesfile = fullfile(input_folder, [animal '-ciCohChanges_' pdcond '_b' baseEvent '--' compEvent '_align2' align2name_comp '.mat']);
-            load(ciCohChangesfile, 'ciCoh_base','ciCoh_comp','psedociCohs_comp','psedociCohs_base','ciCohChanges', 'psedoiCohChanges', 'f_selected', 'T_chnsarea');
+            if strcmpi(animal, 'Jo') && strcmpi(pdcond, 'PD')
+                ciCohChangesfile = fullfile(input_folder, ['Jo-ciCohChanges_PD__PD_b' baseEvent '--' compEvent '.mat']);
+                load(ciCohChangesfile, 'ciCohs', 'psedociCohs', 'ciCohChanges', 'psedociCohChanges', 'f_selected', 'T_chnsarea');
+                
+                ciCoh_base = ciCohs.(baseEvent);
+                ciCoh_comp = ciCohs.(compEvent);
+                psedociCohs_base = psedociCohs.(baseEvent);
+                psedociCohs_comp = psedociCohs.(compEvent);
+                psedoiCohChanges = psedociCohChanges;
+                
+                clear ciCohs psedociCohs psedociCohChanges
+            else
+                [~, ~, align2name_comp] = SKT_EventPhase_align2_tAOI_extract(compEvent, animal, 'pdcond', pdcond, 'codesavefolder', savecodefolder);
+                ciCohChangesfile = fullfile(input_folder, [animal '-ciCohChanges_' pdcond '_b' baseEvent '--' compEvent '_align2' align2name_comp '.mat']);
+                
+                
+                load(ciCohChangesfile, 'ciCoh_base','ciCoh_comp','psedociCohs_comp','psedociCohs_base','ciCohChanges', 'psedoiCohChanges', 'f_selected', 'T_chnsarea');
+                clear align2name_comp
+                
+            end
+            
+            
 
-            
             [sigciCohChanges]= sigciCoh_extract(psedoiCohChanges, ciCohChanges);
 
 
@@ -162,9 +185,11 @@ for ai = 1 : length(animals)
             clear('ciCoh_base','ciCoh_comp','psedociCohs_comp','psedociCohs_base','ciCohChanges', 'psedoiCohChanges', 'f_selected', 'T_chnsarea'); 
             clear sigciCohChanges sigciCohChanges_flatten chnPairNames
         end
+        
+        clear input_folder show_yticklabels show_colorbar
     end
 
-    clear input_folder pdconds ePhases
+    clear pdconds ePhases
 end
 
 function plotHist_pairbypair(animal, savefilename, chnPairNames, sigciCohChanges_flatten, pos_ifig, f_selected, savecodefolder, savefolder, copy2folder,...

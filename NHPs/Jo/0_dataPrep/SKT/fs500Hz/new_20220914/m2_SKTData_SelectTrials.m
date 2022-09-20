@@ -23,20 +23,7 @@ addpath(genpath(fullfile(codefolder,'NHPs')));
 %% global variables
 
 % animal
-if ismac
-    % Code to run on Mac platform
-elseif isunix
-    % Code to run on Linux platform
-    
-    [fi, j] = regexp(codecorresfolder, ['NHPs', '/', '[A-Za-z]*']);
-elseif ispc
-    % Code to run on Windows platform
-    
-    [fi, j] = regexp(codecorresfolder, ['NHPs', '\\', '[A-Za-z]*']);
-else
-    disp('Platform not supported')
-end
-animal = codecorresfolder(fi + length('NHPs') + 1:j);
+animal = animal_extract(codecorresfolder);
 
 %%  input setup
 
@@ -47,31 +34,8 @@ cond_cell = cond_cell_extract(animal);
 [t_minmax_reach_normal, t_minmax_return_normal, t_minmax_reach_mild, t_minmax_return_mild, t_minmax_reach_moderate, t_minmax_return_moderate] = ...
     goodSKTTrials_reachReturn_tcritiria(animal);
 
-if strcmpi(animal, 'bug')
-    
-    tdur_trial_normal = [-0.6 1];
-    tdur_trial_mild = [-0.6 1];
-    tdur_trial_moderate = [-0.6 1];
-end
-if strcmpi(animal, 'jo')
 
-    tdur_trial_normal = [-0.8 0.8];
-    tdur_trial_mild = [-0.8 0.8];
-    tdur_trial_moderate = [-0.8 0.8];
-end
-
-if strcmpi(animal, 'kitty') % Kitty not have mild
-    
-    tdur_trial_normal = [-0.6 2];
-    tdur_trial_moderate = [-0.6 2];
-end
-
-if strcmpi(animal, 'pinky')
-    
-    tdur_trial_normal = [-0.6 1];
-    tdur_trial_mild = [-0.6 1];
-    tdur_trial_moderate = [-0.6 1];
-end
+tdur_trial = [-1 1];
 
 
 coli_targetonset = uint32(SKTEvent.TargetOnset);
@@ -89,6 +53,8 @@ coli_align2 = uint32(align2);
 
 %% save setup
 savefolder = codecorresfolder;
+savecodefolder = fullfile(savefolder, 'code');
+copyfile2folder(codefilepath, savecodefolder);
 
 %% starting
 savefolder_trials = fullfile(savefolder, 'trials');
@@ -142,7 +108,7 @@ clear reply
 
 
 % auto save without click
-reply = input('Auto save mode [y] or no [n] ', 's');
+reply = input('Auto save mode [y] or no [n, default] ', 's');
 if isempty(reply) || ~strcmpi(reply, 'y')
     autoSaveMode =  'n';
 else
@@ -150,6 +116,7 @@ else
 end
 clear reply
 
+chnsOfI = chnsOfInterest_extract(animal, 'codesavefolder', savecodefolder);
 while(filei <=  nfiles)
     
     % load data, lfpdata: [nchns, ntemps, ntrials]
@@ -200,6 +167,11 @@ while(filei <=  nfiles)
     %%%--- show spectrogram of each trial in STN, GP and others groups and select goodTrials ----%%%%
     
     disp(['checking fi = '  num2str(filei) '/' num2str(nfiles) ' ' filename])
+    
+    
+    % extract data of Chns of interest
+    mask_usedChns = cellfun(@(x) contains(x, chnsOfI), T_chnsarea.brainarea);
+    T_chnsarea = T_chnsarea(mask_usedChns, :); T_chnsarea.chni = [1: height(T_chnsarea)]';
     
     % Group chns into STN, GP and others
     mask_STN = contains(T_chnsarea.brainarea, 'stn');
@@ -273,6 +245,7 @@ while(filei <=  nfiles)
         T_chnsarea_1group = T_chnsarea(idxs, :);
         
         
+        % extract clim_Spectrogram and groupname
         if all(contains(T_chnsarea_1group.brainarea, 'stn'))
             clim_Spectrogram = clim_Spectrogram_STN;
             groupname = 'STN';
@@ -325,23 +298,7 @@ while(filei <=  nfiles)
 
     
     
-    %%% --- show one day spectrogram using goodTrials --- %%%
-    if strcmp(pdcond, 'normal')
-        tdur_trial = tdur_trial_normal;
-        t_minmax_reach = t_minmax_reach_normal;
-        t_minmax_return = t_minmax_return_normal;
-    end
-    if strcmp(pdcond, 'mild')
-        tdur_trial = tdur_trial_mild;
-        t_minmax_reach = t_minmax_reach_mild;
-        t_minmax_return = t_minmax_return_mild;
-    end
-    if strcmp(pdcond, 'moderate')
-        tdur_trial = tdur_trial_moderate;
-        t_minmax_reach = t_minmax_reach_moderate;
-        t_minmax_return = t_minmax_return_moderate;
-    end
-    
+    %%% --- show one day spectrogram using goodTrials --- %%%    
     
     % extract phase trials respected to coli_align2
     lfp_phase_trials = [];
@@ -349,22 +306,6 @@ while(filei <=  nfiles)
         
         % ignore trials marked with 0
         if ~goodTrials(tri)
-            continue
-        end
-        
-        % select trials based on reach and return duration
-        t_reach = (T_idxevent_lfp{tri, coli_reach} - T_idxevent_lfp{tri, coli_reachonset}) / fs_lfp;
-        t_return = (T_idxevent_lfp{tri, coli_mouth} - T_idxevent_lfp{tri, coli_returnonset}) / fs_lfp;
-        if t_reach < t_minmax_reach(1) || t_reach > t_minmax_reach(2)
-            disp(['trial i = ' num2str(tri) ', t_reach = ' num2str(t_reach)])
-            goodTrials(tri) = 0;
-            clear t_reach
-            continue
-        end
-        if t_return < t_minmax_return(1) || t_return > t_minmax_return(2)
-            disp(['trial i = ' num2str(tri) ', t_return = ' num2str(t_reach)])
-            goodTrials(tri) = 0;
-            clear t_return
             continue
         end
         
@@ -395,7 +336,7 @@ while(filei <=  nfiles)
     
     if ~strcmpi(autoSaveMode, 'y')
         % Recheck today or Check the next day
-        reply = input(['Check the next day (y) or Recheck this day (n)[y]:'], 's');
+        reply = input(['Check the next day (y) or Recheck this day (n) [y]:'], 's');
         if isempty(reply) || lower(reply) ~= 'n'
             
             saveas(gcf, oneday_spectrogram_img, imFormat);
@@ -415,7 +356,7 @@ while(filei <=  nfiles)
     clear filename lfpdata T_idxevent fs T_chnsarea tbl_goodTrialsMarks
     clear mask_STN mask_GP mask_Others idxGroups
     clear idx_cond datestrmatch pdcond dateofexp bktdt
-    clear tdur_trial t_minmax_reach t_minmax_return
+    clear t_minmax_reach t_minmax_return
     clear lfpdata_origin T_idxevent_origin
 end
 end
@@ -854,7 +795,7 @@ end
         
         
         % add checkbox for showing/not showing ma threshold = 30 line
-        cbx_showMAThreshold = uicontrol('Style','checkbox','Value', 0, 'Position', [1800 400 100 20], 'String', 'Show Threshold = 30');
+        cbx_showMAThreshold = uicontrol('Style','checkbox','Value', 1, 'Position', [1800 400 100 20], 'String', 'Show Threshold = 30');
         cbx_showMAThreshold.Callback = @checkbox_showMAThreshold;
         
         for tri = tri_str: tri_end
@@ -997,7 +938,7 @@ end
                     clear  ma_WSpeed ma_W_X ma_W_Y ma_W_Z
                     
                     % plot MA threshold = 30
-                    plot(xlim, [30 30], 'c--', 'Visible', 'off', 'Tag', ['MAThreshold-tri= ' num2str(tri)]);
+                    plot(xlim, [30 30], 'k--', 'Visible', 'on', 'Tag', ['MAThreshold-tri= ' num2str(tri)]);
                     
                     % plot event lines
                     for eventi = 1 : width(T_idxevent_ma)

@@ -7,12 +7,12 @@ function fig2_imCohChanges_compCond(varargin)
 %
 %       Name-Value:
 %           'pos_ifig' - position and size of the reachtime statistical figure [left bottom fig_width fig_height], default [50 50 400 200]
-%
+%           'newsavefolder' - default true, rm old folder
 
 
 % parse params
 p = inputParser;
-addParameter(p, 'pos_ifig', [50 50 410 150], @(x) assert(isvector(x) && isnumeric(x) && length(x)==4));
+addParameter(p, 'pos_ifig', [50 50 450 150], @(x) assert(isvector(x) && isnumeric(x) && length(x)==4));
 addParameter(p, 'newsavefolder', true, @(x) assert(islogical(x) && isscalar(x)));
 
 parse(p,varargin{:});
@@ -45,7 +45,7 @@ addpath(genpath(fullfile(codefolder,'toolbox')));
 
 
 
-savefolder = fullfile(outputfolder, 'results', 'figures', funcname);
+savefolder = fullfile(outputfolder, 'results', 'figures', 'current',funcname);
 if(exist(savefolder, 'dir') && newsavefolder)
     rmdir(savefolder, 's')
 end
@@ -104,7 +104,7 @@ for ai = 1 : length(animals)
 end
 
 function plot_KittyChanges(pos_ifig, savefilename, savefolder, savecodefolder, copy2folder, show_yticklabels, show_colorbar)
-ePhases = {'preMove'; 'earlyReach';  'PeakV'; 'lateReach'};
+ePhases = {'preMove'; 'earlyReach'; };
 animal = 'Kitty';
 [~, ~, pipelinefolder, ~] = exp_subfolders();
 input_folder = fullfile(pipelinefolder, 'NHPs', 'Kitty', '0_dataPrep', 'SKT', 'fs500Hz', 'm4_fs500Hz_uNHP_imCohChanges_compCond');
@@ -164,7 +164,7 @@ end
 
 
 function plot_JoChanges(pos_ifig, savefilename, savefolder, savecodefolder, copy2folder, show_yticklabels, show_colorbar)
-ePhases = {'preMove'; 'earlyReach';  'PeakV'; 'lateReach'};
+ePhases = {'preMove'; 'earlyReach'; };
 animal = 'Jo';
 [~, ~, pipelinefolder, ~] = exp_subfolders();
 input_folder = fullfile(pipelinefolder, 'NHPs', 'Jo', '0_dataPrep', 'SKT', 'fs500Hz', 'm5_imCohChanges_PD2normal');
