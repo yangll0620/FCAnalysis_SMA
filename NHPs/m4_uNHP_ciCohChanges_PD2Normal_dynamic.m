@@ -43,7 +43,12 @@ end
 
 
 [~,codefilename,~] = fileparts(codefilepath); 
-NHPCodefilepath = fullfile(codefolder, 'NHPs', animal, '0_dataPrep' , 'SKT','fs500Hz', 'longerTrials', codefilename);
+if strcmpi(animal, 'Kitty')
+    NHPCodefilepath = fullfile(codefolder, 'NHPs', animal, '0_dataPrep' , 'SKT','fs500Hz', 'longerTrials', codefilename);
+end
+if strcmpi(animal, 'Jo')
+    NHPCodefilepath = fullfile(codefolder, 'NHPs', animal, '0_dataPrep' , 'SKT','fs500Hz',  codefilename);
+end
 [codecorresfolder, codecorresParentfolder] = code_corresfolder(NHPCodefilepath, true, false);
 
 
@@ -133,23 +138,44 @@ clear('lfptrials_wins', 'f_AOI', 'fs', 'baseCond', 'compCond');
 
 
 
-%%% -- plot and save section --- %%%
+%%% -- plot and save section --- %%% 
+
+% ciCohChanges: nchns * nchns * nf * nt
 load(ciCohChangesfile, 'ciCohChanges', 'psedociCohChanges', 'f_selected',  'T_chnsarea', 't_selected')
 
-% sig and flatten
-[sigciCohChanges]= sigciCoh_extract(psedociCohChanges, ciCohChanges);
-[ciCohChanges_flatten, chnPairNames] = ciCohFlatten_chnPairNames_extract(sigciCohChanges, T_chnsarea);
+time0name = 'reachonset';
+nchns = size(ciCohChanges, 1);
+chnsNames = T_chnsarea.brainarea;
+chnsNames{cellfun(@(x) contains(x, 'stn'), chnsNames)} = 'STN';
+chnsNames{cellfun(@(x) contains(x, 'gp'), chnsNames)} = 'GP';
 
-% plot and save ciCoh Histogram image
-titlename = [imgtitle_prefix ':' pdcond '-' compEvent '/' baseEvent];
-plot_ciCohHistogram(ciCohChanges_flatten, chnPairNames, f_selected, titlename, 'histClim', [-1 1],...
-    'fig_width', 500, 'fig_height', 200, 'codesavefolder', savecodefolder, 'cbarStr', 'ciCohChange', 'cbarTicks', [-1 0 1]);
-saveimgname = [saveimg_prefix '-' pdcond '-' compEvent  '2' baseEvent '.' image_type];
-saveas(gcf, fullfile(savefolder, saveimgname), image_type);
-close(gcf)
-    
+t_AOI = [-1 1];
+mask_tAOI = (t_selected >= t_AOI(1) & t_selected <= t_AOI(2));
+ciCohChanges_tAOI = ciCohChanges(:,:, :, mask_tAOI);
+t_selected_AOI = t_selected(mask_tAOI);
+clear mask_tAOI
 
-
+% plot original ciCohChanges
+title_prefix = 'original-ciCoh-Changes-';
+histClim = [-1 1];
+for chi = 1 : nchns -1
+    chnnamei = chnsNames{chi};
+    for chj = chi + 1 : nchns
+        chnnamej = chnsNames{chj};
+        ciCohChange_1pair = squeeze(ciCohChanges_tAOI(chi, chj, :, :));
+        titlename = [title_prefix chnnamei '-' chnnamej];
+        
+        plot_ciCohHist_dynamic(ciCohChange_1pair, f_selected, t_selected_AOI, titlename, time0name, histClim);
+        
+        saveimgname = titlename;
+        saveas(gcf, fullfile(savefolder, saveimgname), 'tif');
+        close(gcf)
+        
+        clear chnnamej ciCohChange_1pair titlename saveimgname
+    end
+    clear chnnamei
+end
+clear title_prefix histClim
 
 
 function psedociCohChanges_extract_save(suffi_end, lfptrials_comp, lfptrials_base, fs, f_AOI, ciCohChangesfile, ti, varargin)

@@ -7,6 +7,8 @@ function [sigciCoh]= sigciCoh_extract(psedociCohs, ciCoh, varargin)
 %   Input:
 %       psedociCohs: nchns * nchns * nf * nshuffles
 %
+%       ciCoh : nchns * nchns * nf
+%
 %       Name-Value: 
 %           'codesavefolder' - code saved folder
 %
