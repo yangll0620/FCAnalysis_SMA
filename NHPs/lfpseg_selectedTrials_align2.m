@@ -46,11 +46,6 @@ for filei = 1 : nfiles
     % load data, lfpdata: [nchns, ntemps, ntrials]
     filename = files(filei).name;
     load(fullfile(files(filei).folder, filename), 'lfpdata', 'T_idxevent_lfp', 'selectedTrials');
-    if filei == 1
-        load(fullfile(files(filei).folder, filename), 'idxGroups', 'tbl_selectedTrialsMarks');
-        idxGroupNames = tbl_selectedTrialsMarks.Properties.VariableNames;
-        clear tbl_goodTrialsMarks
-    end
     
     if(height(T_idxevent_lfp) == 1)
         disp([filename ' has only 1 trial, skip!']);

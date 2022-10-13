@@ -62,8 +62,8 @@ animals = {'Jo'; 'Kitty'};
 
 for ai = 1 : length(animals)
     animal = animals{ai};
-    inputfolder = fullfile(pipelinefolder, 'NHPs', animal, '0_dataPrep', 'SKT', 'fs500Hz', 'm3_uNHP_SKT_PSD');
-    load(fullfile(inputfolder, 'psd.mat'), 'pxxs', 'f_selected', 'brainareas');
+    inputfolder = fullfile(pipelinefolder, 'NHPs', animal, '0_dataPrep', 'SKT', 'fs500Hz', 'm3_SKTData_PSD');
+    load(fullfile(inputfolder, [animal '_psd.mat']), 'pxxs', 'f_selected', 'brainareas');
     EventPhases = fieldnames(pxxs);
     
     for ei = 1: length(EventPhases)
@@ -74,6 +74,10 @@ for ai = 1 : length(animals)
             % load normal and PD data
             psd_normal = pxxs.(eventname).normal.(brainarea);
             psd_PD = pxxs.(eventname).PD.(brainarea);
+            
+            %
+            psd_normal = exp(psd_normal/10);
+            psd_PD = exp(psd_PD/10);
             
             %  psd_normal, psd_mild: nfs * nsegs
             plotPSD_comp_1chn(pos_ifig, psd_normal, psd_PD, f_selected, plotF_AOI, savefolder, brainarea, animal, eventname)
@@ -97,9 +101,9 @@ function plotPSD_comp_1chn(pos_ifig, psd_normal, psd_PD, F_all, plotF_AOI, savef
 idx_AOI = find(F_all >= plotF_AOI(1) & F_all <= plotF_AOI(2));
 
 % colors setup
-color_normal_range = [224, 255, 255] / 255;
+color_normal_range = [220, 220, 220] / 255;
 color_normal_mean = [128, 128, 128] / 255;
-color_PD_range = [255, 228, 225] / 255;
+color_PD_range = [255, 192, 203] / 255;
 color_PD_mean = [255, 0, 0] / 255;
 
 % plot setup
@@ -146,7 +150,7 @@ h3 = plot(F_AOI, psd_PD_mean, 'Color', color_PD_mean, 'LineWidth', linewidth);
 
 
 xlim([min(F_AOI) max(F_AOI)])
-ylim([0 0.2])
+ylim([0 0.3])
 set(gca,'XTick',[10 15 20 25 30 35 40 45 50],'YTick',[0 0.1 0.2]);
 
 

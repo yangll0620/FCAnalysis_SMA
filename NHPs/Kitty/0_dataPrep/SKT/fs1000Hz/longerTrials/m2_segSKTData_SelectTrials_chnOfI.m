@@ -1,6 +1,16 @@
-function m2_SKTData_SelectTrials()
-%  plot spectrogram of each trial and manually select trials
+function m2_segSKTData_SelectTrials_chnOfI(varargin)
+%  plot spectrogram of each trial and manually select trials only use good
+%  reach trials
 %
+%   Example:
+%       m2_segSKTData_SelectTrials_chnOfI('fi_str', 1, 'autoSaveMode', 'y')
+%   
+%   Input:
+%       Name-Value: 
+%           animal
+%           fi_str - select file start index, default = 1
+%           fi_end - select file end index, default = length(files)
+%           autoSaveMode - auto save mode, 'y' or 'n'(default)
 
 %% folders generate
 % the full path and the name of code file without suffix
@@ -13,8 +23,8 @@ clear idx
 
 % add util path
 addpath(genpath(fullfile(codefolder,'util')));
-
 addpath(genpath(fullfile(codefolder,'NHPs')));
+
 
 
 % codecorresfolder, codecorresParentfolder
@@ -23,19 +33,17 @@ addpath(genpath(fullfile(codefolder,'NHPs')));
 %% global variables
 
 % animal
+global animal
 animal = animal_extract(codecorresfolder);
 
 %%  input setup
 
 % input folder: extracted raw rest data with grayMatter
-inputfolder = fullfile(codecorresParentfolder, 'm1_SKTData_avgArea');
+inputfolder = fullfile(codecorresParentfolder, 'm1_segSKTData_avgArea');
 
 cond_cell = cond_cell_extract(animal);
 [t_minmax_reach_normal, t_minmax_return_normal, t_minmax_reach_mild, t_minmax_return_mild, t_minmax_reach_moderate, t_minmax_return_moderate] = ...
     goodSKTTrials_reachReturn_tcritiria(animal);
-
-
-tdur_trial = [-1 1];
 
 
 coli_targetonset = uint32(SKTEvent.TargetOnset);
@@ -56,7 +64,6 @@ savefolder = codecorresfolder;
 savecodefolder = fullfile(savefolder, 'code');
 copyfile2folder(codefilepath, savecodefolder);
 
-%% starting
 savefolder_trials = fullfile(savefolder, 'trials');
 if ~exist(savefolder_trials, 'dir')
     mkdir(savefolder_trials);
@@ -67,86 +74,67 @@ if ~exist(savefolder_aveDay, 'dir')
     mkdir(savefolder_aveDay);
 end
 
-
+%% Code Start Here
+warning off
 close all
+
 files = dir(fullfile(inputfolder, '*.mat'));
 
-
-% input start file number or start with 1
-reply = input('Input start/end file (e.g.[20 30] or 20 for start) number = ', 's');
-if isempty(reply)
-    filei = 1; 
-    nfiles = length(files);
-else
-    % parse start file number
-    tmp = regexp(reply, '[*\d*', 'match');
-    if ~isempty(tmp)
-        startStr = tmp{1};
-        if contains(startStr, '[')
-            filei = str2num(startStr(2:end));
-        else
-            filei = str2num(startStr);
-        end
-        clear startStr
-    else
-        filei = 1; 
-    end
-    clear tmp
-    
-    % parse end file number
-    tmp = regexp(reply, '\d*]', 'match');
-    if ~isempty(tmp)
-        endStr = tmp{1};
-        nfiles = str2num(endStr(1:end-1));
-        clear endStr
-    else
-        nfiles = length(files);
-    end
-    clear tmp
-end
-clear reply
-
-
-% auto save without click
-reply = input('Auto save mode [y] or no [n, default] ', 's');
-if isempty(reply) || ~strcmpi(reply, 'y')
+% parse params
+p = inputParser;
+addParameter(p, 'fi_str', 1, @isscalar);
+addParameter(p, 'fi_end', length(files), @isscalar);
+addParameter(p, 'autoSaveMode', 'n', @(x) isscalar(x)&&ischar(x));
+parse(p,varargin{:});
+fi_str = p.Results.fi_str;
+fi_end = p.Results.fi_end;
+autoSaveMode =  p.Results.autoSaveMode;
+if ~strcmpi(autoSaveMode, 'y')
     autoSaveMode =  'n';
-else
-    autoSaveMode = 'y';
 end
-clear reply
 
+
+
+[tdur_trial_normal, tdur_trial_mild, tdur_trial_moderate] = SKT_tdurTrial_extact(animal, 'codesavefolder', savecodefolder);
+
+
+cond_cell = cond_cell_extract(animal);
 chnsOfI = chnsOfInterest_extract(animal, 'codesavefolder', savecodefolder);
-while(filei <=  nfiles)
+
+
+filei = fi_str;
+while(filei <=  fi_end)
     
     % load data, lfpdata: [nchns, ntemps, ntrials]
     filename = files(filei).name;
-    load(fullfile(files(filei).folder, filename), 'lfpdata', 'fs_lfp', 'T_chnsarea', 'T_idxevent_lfp', ...
+    load(fullfile(files(filei).folder, filename), 'lfpdata', 'fs_lfp', 'mask_goodreach', 'T_chnsarea', 'T_idxevent_lfp', ...
         'fs_ma', 'T_idxevent_ma', 'smoothWspeed_trial', 'Wpos_smooth_trial', 'Wrist_smooth_trial');
     
     ntrials = size(T_idxevent_lfp, 1);
     if ntrials == 1
         
-        clear('lfpdata', 'fs_lfp', 'T_chnsarea', 'T_idxevent_lfp', ...
+        clear('lfpdata', 'fs_lfp', 'mask_goodreach', 'T_chnsarea', 'T_idxevent_lfp', ...
             'fs_ma', 'T_idxevent_ma', 'smoothWspeed_trial', 'Wpos_smooth_trial', 'Wrist_smooth_trial');
         filei = filei + 1;
         continue;
     end
     
-    %%% zscore the lfp data   
-    [nchns, ~, ~] = size(lfpdata);
-    zscored_lfpdata = zeros(size(lfpdata));
-    for chi = 1: nchns
-        tmp = squeeze(lfpdata(chi, :, :));
-        zscored_lfpdata(chi, :, :) = zscore(tmp);
-        clear tmp
+    %%% zscore the lfp data
+    for tri = 1 : length(lfpdata)
+        lfp_1trial = lfpdata{tri};
+        zscored_lfpdata = zeros(size(lfp_1trial));
+        for chi = 1: size(lfp_1trial, 1)
+            tmp = squeeze(lfp_1trial(chi, :));
+            zscored_lfpdata(chi, :) = zscore(tmp);
+            clear tmp
+        end
+        lfpdata{tri} = zscored_lfpdata;
+        clear lfp_1trial zscored_lfpdata
     end
-    lfpdata = zscored_lfpdata;
-    clear zscored_lfpdata
-    
+   
     
     % extract dateofexp, bktdt and pdcond
-    idx_cond = cellfun(@(x) contains(filename, x), cond_cell);
+    idx_cond = cellfun(@(x) contains(lower(filename), x), cond_cell);
     pdcond = cond_cell{idx_cond};
     datestrmatch = regexp(filename, '_[0-9]*_', 'match');
     dateofexp = datenum(datestrmatch{1}(2:end-1), 'yyyymmdd');
@@ -161,20 +149,20 @@ while(filei <=  nfiles)
         clear bktdt
     end
     
-    [~, ~, ntrials] = size(lfpdata);
-    savefile_selectedTrialsMarkers = fullfile(savefolder, [animal '_TrialsWMarkers_' pdcond '_' datestr(dateofexp, 'yyyymmdd') '_' bkstr  '.mat']);
+    ntrials = length(lfpdata);
+    savefile_selectedTrialsMarkers = fullfile(savefolder, [animal '_chnOfI_TrialsWMarkers_' pdcond '_' datestr(dateofexp, 'yyyymmdd') '_' bkstr  '.mat']);
     
-    %%%--- show spectrogram of each trial in STN, GP and others groups and select goodTrials ----%%%%
     
-    disp(['checking fi = '  num2str(filei) '/' num2str(nfiles) ' ' filename])
-    
+    %%%--- show spectrogram of each trial and select goodTrials ----%%%%
+    disp(['checking fi = '  num2str(filei) '/' num2str(fi_end) ' ' filename])
     
     % extract data of Chns of interest
-    mask_ChnsOfI = cellfun(@(x) contains(x, chnsOfI), T_chnsarea.brainarea);
-    T_chnsarea = T_chnsarea(mask_ChnsOfI, :); T_chnsarea.chni = [1: height(T_chnsarea)]';
-    lfpdata = lfpdata(mask_ChnsOfI, :, :);
-    clear mask_ChnsOfI
-
+    mask_usedChns = cellfun(@(x) contains(x, chnsOfI), T_chnsarea.brainarea);
+    T_chnsarea = T_chnsarea(mask_usedChns, :); T_chnsarea.chni = [1: height(T_chnsarea)]';
+    for tri = 1 : length(lfpdata)
+        lfpdata{tri} = lfpdata{tri}(mask_usedChns, :);
+    end
+    
     
     % reload saved markers if existed
     if exist(savefile_selectedTrialsMarkers, 'file')
@@ -183,44 +171,70 @@ while(filei <=  nfiles)
         selectedTrials = true(ntrials, 1);
     end
 
-    showname = ['fi = ' num2str(filei) ':' animal '-' pdcond '-' datestr(dateofexp, 'yyyymmdd') '-' bkstr];
+    showname = ['fi = ' num2str(filei) '/' num2str(fi_end) ':' animal '-' pdcond '-' datestr(dateofexp, 'yyyymmdd') '-' bkstr];
     
     madata = smoothWspeed_trial;
     madata2 = Wrist_smooth_trial;
     maName = 'Wspeed  XYZ-wrist';
     
+    % check spectrogram trial by trial
     selectedTrials = check_chnOfI_spectrogram(filename, lfpdata, T_idxevent_lfp, T_chnsarea, fs_lfp,... 
         madata, madata2, maName, fs_ma, T_idxevent_ma,showname, ...
-        'inSelectedTrials', selectedTrials, 'savefolder', savefolder_trials, ...
+        'mask_goodReach', mask_goodreach, 'inSelectedTrials', selectedTrials, 'savefolder', savefolder_trials, ...
         'fig_left', 200, 'fig_bottom', 200,  'fig_width', 1200, 'fig_height', 600, ...
         'autoSaveMode', autoSaveMode);
-    
+
+
     save(savefile_selectedTrialsMarkers, 'selectedTrials', 'lfpdata', 'T_idxevent_lfp', 'fs_lfp', 'T_chnsarea',...
         'fs_ma', 'T_idxevent_ma', 'smoothWspeed_trial', 'Wpos_smooth_trial', 'Wrist_smooth_trial');
-
+    
 
     
-    %%% --- show one day spectrogram using goodTrials --- %%%    
+    %%% --- show averaged one day spectrogram using selectedTrials--- %%%
+    if strcmp(pdcond, 'normal')
+        tdur_trial = tdur_trial_normal;
+        t_minmax_reach = t_minmax_reach_normal;
+    end
+    if strcmp(pdcond, 'mild')
+        tdur_trial = tdur_trial_mild;
+        t_minmax_reach = t_minmax_reach_mild;
+    end
+    if strcmp(pdcond, 'moderate')
+        tdur_trial = tdur_trial_moderate;
+        t_minmax_reach = t_minmax_reach_moderate;
+    end
+    
+    disp(['only average across trials reach time larger than ' num2str(t_minmax_reach(1)) ' s'])
+    disp(['tdur =  [' num2str(tdur_trial(1)) ' ' num2str(tdur_trial(2)) '] s'])
     
     % extract phase trials respected to coli_align2
     lfp_phase_trials = [];
-    for tri = 1: size(lfpdata, 3)
+    for tri = 1: length(lfpdata)
         
         % ignore trials marked with 0
         if ~selectedTrials(tri)
             continue
         end
         
+        % select trials based on reach and return duration
+        t_reach = (T_idxevent_lfp{tri, coli_reach} - T_idxevent_lfp{tri, coli_reachonset}) / fs_lfp;
+        if t_reach < t_minmax_reach(1)
+            disp(['trial i = ' num2str(tri) ', t_reach = ' num2str(t_reach)])
+            clear t_reach
+            continue
+        end
+        
         % extract trial with t_dur
         idxdur = round(tdur_trial * fs_lfp) + T_idxevent_lfp{tri, coli_align2};
-        lfp_phase_1trial = lfpdata(:, idxdur(1):idxdur(2), tri); % lfp_phase_1trial: nchns * ntemp
+        lfp_1trial = lfpdata{tri};
+        lfp_phase_1trial = lfp_1trial(:, idxdur(1):idxdur(2)); % lfp_phase_1trial: nchns * ntemp
         
         lfp_phase_trials = cat(3, lfp_phase_trials, lfp_phase_1trial); % lfp_phase_trials: nchns * ntemp * ntrials
         
-        clear t_reach t_return idxdur lfp_phase_1trial
+        clear t_reach t_return idxdur lfp_phase_1trial lfp_1trial
     end
     
-    oneday_spectrogram_img = fullfile(savefolder_aveDay, [animal '_goodTrials_' pdcond '_' datestr(dateofexp, 'yyyymmdd') '_' bkstr]);
+    oneday_spectrogram_img = fullfile(savefolder_aveDay, [animal '_selectedTrials_' pdcond '_' datestr(dateofexp, 'yyyymmdd') '_' bkstr]);
     if isempty(lfp_phase_trials)
         disp('lfp_phase_trials is empty, skip spectrogram across trials')
         if exist(oneday_spectrogram_img, 'file') % delete if exist already
@@ -231,12 +245,13 @@ while(filei <=  nfiles)
     end
     
     % plot spectrogram across all good trials of one day
-    disp(['# of Good Trials for averaged spectrogram across trials: ' num2str(size(lfp_phase_trials, 3))])
+    disp(['# of selected Trials for averaged spectrogram across trials: ' num2str(size(lfp_phase_trials, 3))])
     plot_spectrogram_acrossTrials(lfp_phase_trials, T_chnsarea,  tdur_trial, fs_lfp, animal, pdcond, align2, showname)
+    clear idxGroupNames
     
     if ~strcmpi(autoSaveMode, 'y')
         % Recheck today or Check the next day
-        reply = input(['Check the next day (y) or Recheck this day (n) [y]:'], 's');
+        reply = input(['Check the next day (y) or Recheck this day (n)[y]:'], 's');
         if isempty(reply) || lower(reply) ~= 'n'
             
             saveas(gcf, oneday_spectrogram_img, imFormat);
@@ -256,7 +271,7 @@ while(filei <=  nfiles)
     clear filename lfpdata T_idxevent fs T_chnsarea tbl_goodTrialsMarks
     clear mask_STN mask_GP mask_Others idxGroups
     clear idx_cond datestrmatch pdcond dateofexp bktdt
-    clear t_minmax_reach t_minmax_return
+    clear tdur_trial t_minmax_reach t_minmax_return
     clear lfpdata_origin T_idxevent_origin
 end
 end
@@ -394,7 +409,7 @@ function selectedTrials = check_chnOfI_spectrogram(filename, lfpdata, T_idxevent
 %           selectedTrials: logical array for each trial selected (1) or
 %           not (0), ntrials * 1 logical
 
-ntrials = size(lfpdata, 3);
+ntrials = length(lfpdata);
 
 % parse params
 p = inputParser;
@@ -588,7 +603,7 @@ end
         cbx_showMAThreshold.Callback = @checkbox_showMAThreshold;
         
         for tri = tri_str: tri_end
-            lfp_1trial = squeeze(lfpdata(:, :, tri));
+            lfp_1trial = lfpdata{tri};
             
             coli = mod(tri,ntrials_pSubplot);
             if coli == 0
@@ -731,8 +746,8 @@ end
                 
                 if chi == 1
                     % plot MA data in the first row
-                    madata_1trial = madata(:, tri);
-                    madata2_1trial = madata2(:, :, tri);
+                    madata_1trial = madata{tri};
+                    madata2_1trial = madata2{tri};
                     ma_WSpeed = madata_1trial(1:T_idxevent_ma{tri, coli_mouth});
                     ma_W_X =  squeeze(madata2_1trial(1:T_idxevent_ma{tri, coli_mouth}, 1));
                     ma_W_Y =  squeeze(madata2_1trial(1:T_idxevent_ma{tri, coli_mouth}, 2));
@@ -761,7 +776,7 @@ end
                     clear  ma_WSpeed ma_W_X ma_W_Y ma_W_Z
                     
                     % plot MA threshold = 30
-                    plot(xlim, [30 30], 'k--', 'Visible', 'on', 'Tag', ['MAThreshold-tri= ' num2str(tri)]);
+                    plot(xlim, [30 30], 'c--', 'Visible', 'on', 'Tag', ['MAThreshold-tri= ' num2str(tri)]);
                     
                     % plot event lines
                     for eventi = 1 : width(T_idxevent_ma)
@@ -946,5 +961,3 @@ end
     end
 
 end
-
-

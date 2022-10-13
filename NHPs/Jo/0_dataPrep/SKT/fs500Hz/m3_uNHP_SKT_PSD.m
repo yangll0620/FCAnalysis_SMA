@@ -44,6 +44,7 @@ if strcmpi(animal, 'Jo')
     inputfolder = fullfile(codecorresParentfolder, 'm2_SKTData_SelectTrials');
 end
 
+ylimits = [0 0.25];
 
 %% save setup
 savefolder = codecorresfolder;
@@ -57,6 +58,7 @@ end
 copyfile2folder(codefilepath, savecodefolder);
 
 
+savefilename_prefix = 'psd_';
 
 %% Code Start Here
 EventPhases = {'preMove';'earlyReach'};

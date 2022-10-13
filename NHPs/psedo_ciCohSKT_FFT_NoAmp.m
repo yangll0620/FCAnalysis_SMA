@@ -1,4 +1,4 @@
-function [psedociCoh_NoAmp, f_selected] = psedo_ciCohSKT_FFT_NoAmp(lfp1, lfp2, fs, f_AOI)
+function [psedociCoh_NoAmp, f_selected] = psedo_ciCohSKT_FFT_NoAmp(lfp1, lfp2, fs, f_AOI, varargin)
 %
 %   ref: https://yll0620.medium.com/functional-connectivity-measurement-16423fee3581 
 %      treat ntemp as stationary time series, i.e. twin = ntemp, toverlap = 0
@@ -8,9 +8,23 @@ function [psedociCoh_NoAmp, f_selected] = psedo_ciCohSKT_FFT_NoAmp(lfp1, lfp2, f
 %
 %       f_AOI: frequencies duration of interest, i.e. f_AOI = [8 40]
 %
+%       Name-Value: 
+%           'codesavefolder' - code saved folder 
+%
 % return:
 %       psedociCoh_NoAmp: psedo absolute imaginery coherence nf * 1
 
+
+% parse params
+p = inputParser;
+addParameter(p, 'codesavefolder', '', @isstr);
+parse(p,varargin{:});
+
+% copy code to savefolder if not empty
+codesavefolder = p.Results.codesavefolder;
+if ~isempty(codesavefolder) 
+    copyfile2folder(mfilename('fullpath'), codesavefolder);
+end
 
 % shuffle lfp2
 ntrials = size(lfp2, 2);

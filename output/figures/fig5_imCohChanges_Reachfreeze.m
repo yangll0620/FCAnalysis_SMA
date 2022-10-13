@@ -160,7 +160,7 @@ if plot_ciCohChanges_ReachFreeze2Reach
    
     load(ciCoh_Changes_file_2Reach, 'ciCohs','psedociCohs','ciCohChanges','psedociCohChanges', 'f_selected',  'T_chnsarea')
     eBasePhases = fieldnames(ciCohChanges);
-    reachfreezeTypes = {'beforeFreeze200ms'; 'earlyFreeze';'middleFreeze';'lateFreeze';'afterFreeze200ms'};
+    reachfreezeTypes = {'earlyFreeze';};
 
     for ebi = 1 : length(eBasePhases)
         eBasePhase = eBasePhases{ebi};
@@ -199,9 +199,6 @@ if plot_ciCohChanges_ReachFreeze2Reach
             show_titlename = true;
             show_yticklabels = false;
             show_colorbar = false;
-            if fri == 1
-                show_yticklabels = true;
-            end
             if fri == length(reachfreezeTypes)
                 show_colorbar = true;
             end
