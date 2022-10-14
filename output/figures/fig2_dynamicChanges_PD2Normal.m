@@ -93,7 +93,7 @@ for ai = 1 : length(animals)
     end
     
     ciCohChangesfile = fullfile(input_folder, [animal '-ciCohChanges_PD2normal.mat']);
-    load(ciCohChangesfile, 'ciCohChanges', 'psedociCohChanges', 'f_selected',  'T_chnsarea', 't_selected')
+    load(ciCohChangesfile, 'ciCohChanges', 'psedociCohChanges', 'ciCohs', 'psedociCohss', 'f_selected',  'T_chnsarea', 't_selected')
     
     % extract chnsNames
     nchns = size(ciCohChanges, 1);
@@ -101,15 +101,28 @@ for ai = 1 : length(animals)
     chnsNames{cellfun(@(x) contains(x, 'stn'), chnsNames)} = 'STN';
     chnsNames{cellfun(@(x) contains(x, 'gp'), chnsNames)} = 'GP';
     
-    % extract data from t_AOI
+    %%% extract data from t_AOI
     mask_tAOI = (t_selected >= t_AOI(1) & t_selected <= t_AOI(2));
-    ciCohChanges_tAOI = ciCohChanges(:,:, :, mask_tAOI);
     t_selected_AOI = t_selected(mask_tAOI);
+    
+    ciCohChanges_tAOI = ciCohChanges(:,:, :, mask_tAOI);
     psedociCohChanges_cell = struct2cell(psedociCohChanges);
     psedociCohChanges_AOI = psedociCohChanges_cell(mask_tAOI);
-    clear mask_tAOI psedociCohChanges_cell
     
     
+    ciCohs_base = ciCohs.normal;
+    ciCohs_comp = ciCohs.PD;
+    ciCohs_base_AOI = ciCohs_base(:, :, :, mask_tAOI);
+    ciCohs_comp_AOI = ciCohs_comp(:, :, :, mask_tAOI);
+    
+    psedociCohs_base_1t = struct2cell(psedociCohss.normal);
+    psedociCohs_comp_1t = struct2cell(psedociCohss.PD);
+    psedociCohs_base_AOI = psedociCohs_base_1t(mask_tAOI);
+    psedociCohs_comp_AOI = psedociCohs_comp_1t(mask_tAOI);
+    
+    clear mask_tAOI 
+    clear psedociCoh_cell psedociCohChanges_cell psedociCohs_base psedociCohs_comp
+    clear ciCohs_base ciCohs_comp
    
     % show tags
     show_ylabel = true;
@@ -154,7 +167,9 @@ for ai = 1 : length(animals)
             clear chnnamej ciCohChange_1pair titlename savefilename
         end
     end
-    clear
+    clear title_prefix
+    
+    
 
     %%% plot sig dynamic ciCohChanges
     title_prefix = [animal title_prefix_sig];
@@ -163,8 +178,22 @@ for ai = 1 : length(animals)
     sigCicohChange_tAOI = [];
     for ti = 1 : length(psedociCohChanges_AOI)
         psedociCohChanges_1t = psedociCohChanges_AOI{ti};
-        ciCohChange_tAOI_1t = squeeze(ciCohChanges_tAOI(:, :, :, ti));
+        ciCohChange_tAOI_1t = squeeze(ciCohChanges_tAOI(:, :, :, ti)); 
         sigCicohChange_1t = sigciCoh_extract(psedociCohChanges_1t, ciCohChange_tAOI_1t, 'codesavefolder', savecodefolder);
+        clear psedociCohChanges_1t ciCohChange_tAOI_1t
+        
+        % remove sig changes where both original ciCoh not sig
+        ciCoh_base_1t = squeeze(ciCohs_base_AOI(:, :, :, ti));
+        ciCoh_comp_1t = squeeze(ciCohs_comp_AOI(:, :, :, ti));
+        psedociCohs_base_1t = psedociCohs_base_AOI{ti};
+        psedociCohs_comp_1t = psedociCohs_comp_AOI{ti};
+        [sigciCoh_base_1t]= sigciCoh_extract(psedociCohs_base_1t, ciCoh_base_1t);
+        [sigciCoh_comp_1t]= sigciCoh_extract(psedociCohs_comp_1t, ciCoh_comp_1t);
+        masks_BothNosigs_1t = (sigciCoh_base_1t == 0) & (sigciCoh_comp_1t == 0);
+        sigCicohChange_1t(masks_BothNosigs_1t)= 0;
+        clear ciCoh_base_1t ciCoh_comp_1t psedociCohs_base_1t  psedociCohs_comp_1t 
+        clear sigciCoh_base_1t sigciCoh_comp_1t masks_BothNosigs_1t
+
         
         sigCicohChange_tAOI = cat(4, sigCicohChange_tAOI, sigCicohChange_1t);
         clear tname psedociCohChanges_1t  ciCohChange_tAOI_1t sigCicohChange_1t
@@ -176,7 +205,7 @@ for ai = 1 : length(animals)
             chnnamej = chnsNames{chj};
             sigciCohChange_1pair = squeeze(sigCicohChange_tAOI(chi, chj, :, :));
             
-            titlename = [title_prefix chnnamei '-' chnnamej '-' pdcond];
+            titlename = [title_prefix chnnamei '-' chnnamej];
             
             % plot
             ifig = figure('Position', pos_ifig);
@@ -203,7 +232,7 @@ for ai = 1 : length(animals)
     
     clear animal input_folder 
     clear ciCohChangesfile
-    clear('ciCohChanges', 'psedociCohChanges', 'f_selected',  'T_chnsarea', 't_selected');
+    clear('ciCohChanges', 'psedociCohChanges', 'psedociCohss', 'f_selected',  'T_chnsarea', 't_selected');
     clear ciCohChanges_tAOI  t_selected_AOI
 end
 

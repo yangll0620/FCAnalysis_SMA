@@ -102,7 +102,7 @@ if(~exist(ciCohChangesfile, 'file') || newRun)
     ciCohs.(baseCond) = ciCoh_base;
     lfptrials_wins.(baseCond) = lfptrials_win_base;
     lfptrialss.(baseCond) = lfptrials_base;
-    psedociCohs.(baseCond) = psedociCohs_base;
+    psedociCohss.(baseCond) = psedociCohs_base;
     
     ciCohs.(compCond) = ciCoh_comp;
     lfptrials_wins.(compCond) = lfptrials_win_comp;
